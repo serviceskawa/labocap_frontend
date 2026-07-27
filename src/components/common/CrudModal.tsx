@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { X, Loader2 } from "lucide-react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
 
 interface CrudModalProps {
   isOpen: boolean;
@@ -13,7 +14,8 @@ interface CrudModalProps {
   contentClassName?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  onSubmit?: () => void;
+  /** Peut être asynchrone : le bouton se verrouille alors jusqu'à résolution. */
+  onSubmit?: () => unknown;
   submitLabel?: string;
   isSubmitting?: boolean;
   /**
@@ -134,15 +136,15 @@ export function CrudModal({
               >
                 Annuler
               </button>
-              <button
-                type="button"
+              {/* Bouton partagé : spinner pendant `isSubmitting` et, si `onSubmit`
+                  est asynchrone, verrou automatique contre un second clic. */}
+              <Button
                 onClick={onSubmit}
-                disabled={isSubmitting}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                loading={isSubmitting}
+                className="gap-2 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
               >
-                {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 {submitLabel}
-              </button>
+              </Button>
             </div>
           )}
         </div>

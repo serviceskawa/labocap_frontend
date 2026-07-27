@@ -2,13 +2,13 @@
 
 import { useState, Suspense } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { authApi } from "@/lib/api/auth";
+import { Button } from "@/components/ui/Button";
 
 const resetPasswordSchema = z
   .object({
@@ -286,14 +286,13 @@ function ResetPasswordForm() {
               </div>
 
               {/* Bouton submit */}
-              <button
+              <Button
                 type="submit"
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded font-medium text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                loading={isLoading}
+                className="w-full justify-center rounded py-2 text-sm font-medium hover:bg-blue-700"
               >
-                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isLoading ? "Enregistrement..." : "Enregistrer le mot de passe"}
-              </button>
+              </Button>
 
               {/* Lien retour */}
               <p className="text-center mt-4 text-sm text-gray-500">

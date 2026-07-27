@@ -40,7 +40,11 @@ export interface LoginResponse {
 
 export interface TwoFactorRequest {
   code: string;
-  tempToken: string;
+  /**
+   * Optionnel : l'API reprend le token temporaire du cookie HttpOnly `pending_2fa`
+   * posé au login lorsqu'il n'est pas transmis (le client n'a donc pas à le stocker).
+   */
+  tempToken?: string;
 }
 
 export interface ForgotPasswordRequest {

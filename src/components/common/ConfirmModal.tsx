@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
 
 interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  /** Peut être asynchrone : le bouton se verrouille alors jusqu'à résolution. */
+  onConfirm: () => unknown;
   title: string;
   message: string;
   confirmLabel?: string;
@@ -109,18 +111,18 @@ export function ConfirmModal({
           >
             {cancelLabel}
           </button>
-          <button
-            type="button"
+          {/* Bouton partagé : spinner pendant `isLoading` et, si `onConfirm` est
+              asynchrone, verrou automatique contre un second clic. */}
+          <Button
             onClick={onConfirm}
-            disabled={isLoading}
+            loading={isLoading}
             className={cn(
-              "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+              "gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2",
               confirmButtonClass
             )}
           >
-            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             {confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

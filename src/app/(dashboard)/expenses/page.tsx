@@ -27,6 +27,7 @@ import {
 import { downloadDocFile } from "@/lib/api/docs";
 import { suppliersApi } from "@/lib/api/suppliers";
 import { expenseCategoriesApi, type ExpenseCategory } from "@/lib/api/expenses";
+import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -365,13 +366,13 @@ export default function ExpensesPage() {
             </FormField>
 
             <div>
-              <button
+              <Button
                 type="submit"
-                disabled={createMutation.isPending}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+                loading={createMutation.isPending}
+                className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
               >
                 Ajouter
-              </button>
+              </Button>
             </div>
           </div>
         </form>

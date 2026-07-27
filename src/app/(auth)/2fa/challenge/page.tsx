@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,7 +9,12 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authApi } from "@/lib/api/auth";
 import { resolvePostLoginRoute } from "@/lib/auth-flow";
-import { useSessionStorageValue } from "@/hooks/useHydrated";
+import {
+  clearPending2fa,
+  getPending2faEmail,
+  getPending2faExpiry,
+} from "@/lib/auth-2fa";
+import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
 
 const twoFactorSchema = z.object({
@@ -32,16 +36,55 @@ function maskEmail(email: string): string {
   return `${masked}@${domain}`;
 }
 
+/** « 4:07 » — temps restant avant expiration du code. */
+function formatRemaining(ms: number): string {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
 export default function TwoFactorChallengePage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
 
-  const storedEmail = useSessionStorageValue("2fa_email");
+  const storedEmail = remainingMs !== null ? getPending2faEmail() : null;
   const maskedEmail = storedEmail
     ? maskEmail(storedEmail)
     : "votre adresse e-mail";
+
+  /** Fin du challenge : verrou levé, retour à l'écran de connexion. */
+  const backToLogin = useCallback(
+    (message?: string) => {
+      clearPending2fa();
+      if (message) toast.error(message);
+      router.replace("/login");
+    },
+    [router],
+  );
+
+  // Décompte de validité du code. Aucun challenge en cours (route saisie à la
+  // main, code expiré) → retour au login : cet écran n'existe que dans le
+  // prolongement d'une saisie d'identifiants (règle Laravel `/confirm-login`).
+  useEffect(() => {
+    const tick = () => {
+      const until = getPending2faExpiry();
+      if (until === null) {
+        backToLogin();
+        return;
+      }
+      const left = until - Date.now();
+      if (left <= 0) {
+        backToLogin("Le code a expiré, veuillez vous reconnecter.");
+        return;
+      }
+      setRemainingMs(left);
+    };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [backToLogin]);
 
   const {
     register,
@@ -52,31 +95,29 @@ export default function TwoFactorChallengePage() {
   });
 
   const onSubmit = async (data: TwoFactorFormData) => {
-    const tempToken = sessionStorage.getItem("2fa_temp_token") ?? "";
-    // Accès direct / sessionStorage vidé : pas de token → inutile d'envoyer une
-    // requête vide, on renvoie l'utilisateur vers la connexion.
-    if (!tempToken) {
-      toast.error("Session expirée, veuillez vous reconnecter.");
-      router.push("/login");
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const response = await authApi.twoFactor({ code: data.code, tempToken });
+      // Pas de token dans le corps : l'API le lit sur son cookie HttpOnly.
+      const response = await authApi.twoFactor({ code: data.code });
       const result = response.data;
 
       if (result.user) {
-        sessionStorage.removeItem("2fa_email");
-        sessionStorage.removeItem("2fa_temp_token");
+        clearPending2fa();
         setUser(result.user);
         const next = await resolvePostLoginRoute();
-        router.push(next);
+        router.replace(next);
       }
     } catch (err) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
       const message =
         (err as { response?: { data?: { message?: string } } })?.response?.data
           ?.message ?? "Le code saisi est incorrect";
+      // 401 = token temporaire absent/expiré : le challenge est terminé, on
+      // rouvre l'écran de connexion au lieu de laisser l'utilisateur bloqué.
+      if (status === 401) {
+        backToLogin(message);
+        return;
+      }
       toast.error(message);
     } finally {
       setIsLoading(false);
@@ -84,9 +125,9 @@ export default function TwoFactorChallengePage() {
   };
 
   const handleResend = async () => {
-    const email = sessionStorage.getItem("2fa_email");
+    const email = getPending2faEmail();
     if (!email) {
-      toast.error("Adresse e-mail introuvable, veuillez vous reconnecter.");
+      backToLogin("Session expirée, veuillez vous reconnecter.");
       return;
     }
     setIsResending(true);
@@ -140,6 +181,14 @@ export default function TwoFactorChallengePage() {
               Nous avons envoyé un code à 6 caractères à{" "}
               <strong>{maskedEmail}</strong>. Le code expire sous peu, veuillez
               donc le saisir rapidement.
+              {remainingMs !== null && (
+                <>
+                  {" "}
+                  <span className="font-semibold text-gray-700">
+                    Expire dans {formatRemaining(remainingMs)}.
+                  </span>
+                </>
+              )}
             </p>
 
             <form onSubmit={handleSubmit(onSubmit)} noValidate>
@@ -161,15 +210,15 @@ export default function TwoFactorChallengePage() {
                 )}
               </div>
 
-              {/* Bouton submit */}
-              <button
+              {/* Bouton submit — spinner et libellé centrés, bouton neutralisé
+                  pendant la vérification pour empêcher un double envoi. */}
+              <Button
                 type="submit"
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded font-medium text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                loading={isLoading}
+                className="w-full justify-center rounded py-2 text-sm font-medium hover:bg-blue-700"
               >
-                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isLoading ? "Vérification..." : "Confirmer"}
-              </button>
+              </Button>
 
               {/* Lien renvoyer */}
               <p className="text-center mt-4 text-sm text-gray-500">

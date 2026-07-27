@@ -12,6 +12,7 @@ import {
   Star,
 } from "lucide-react";
 import { authApi } from "@/lib/api/auth";
+import { Button } from "@/components/ui/Button";
 import { branchesApi, UserBranch } from "@/lib/api/branches";
 import { useAuthStore } from "@/stores/auth.store";
 import { useBranchStore } from "@/stores/branch.store";
@@ -165,21 +166,17 @@ export default function SelectBranchPage() {
                 </div>
 
                 <div className="text-center mt-6">
-                  <button
-                    type="button"
+                  <Button
                     onClick={handleConfirm}
-                    disabled={!selectedId || isSubmitting}
-                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded font-medium text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    disabled={!selectedId}
+                    loading={isSubmitting}
+                    icon={<CheckCircle className="h-4 w-4" />}
+                    className="rounded px-6 py-2.5 text-sm font-medium hover:bg-blue-700"
                   >
-                    {isSubmitting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4" />
-                    )}
                     {isSubmitting
                       ? "Connexion en cours..."
                       : "Continuer vers le tableau de bord"}
-                  </button>
+                  </Button>
                 </div>
 
                 <p className="text-center mt-3 text-xs text-gray-400">
@@ -193,14 +190,16 @@ export default function SelectBranchPage() {
 
         {/* Déconnexion */}
         <p className="text-center mt-4 text-sm">
-          <button
-            type="button"
+          {/* Handler asynchrone : le Button gère seul son spinner et bloque un
+              second clic pendant l'appel de déconnexion. */}
+          <Button
+            variant="secondary"
             onClick={handleLogout}
-            className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700"
+            icon={<LogOut className="h-4 w-4" />}
+            className="gap-1 border-0 bg-transparent px-0 py-0 text-gray-500 hover:bg-transparent hover:text-gray-700"
           >
-            <LogOut className="h-4 w-4" />
             Se déconnecter
-          </button>
+          </Button>
         </p>
       </div>
     </div>
