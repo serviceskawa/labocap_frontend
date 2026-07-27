@@ -243,6 +243,10 @@ export const cashboxApi = {
   getVoucher: (id: string) =>
     apiClient.get<CashboxVoucherResponseDto>(`/cashbox-tickets/${id}`),
 
+  /** Badge « Caisses » : bons de caisse encore en attente de traitement. */
+  countPendingVouchers: () =>
+    apiClient.get<{ count: number }>("/cashbox-tickets/count-pending"),
+
   addVoucher: (data: CashboxVoucherCreateDto) =>
     apiClient.post<CashboxVoucherResponseDto>("/cashbox-tickets", data),
 

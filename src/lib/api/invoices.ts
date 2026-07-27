@@ -181,6 +181,9 @@ export const invoicesApi = {
   getCounts: () =>
     apiClient.get<{ sales: number; credits: number }>("/invoices/counts"),
 
+  /** Badge « Factures » : factures non encore réglées. */
+  countUnpaid: () => apiClient.get<{ count: number }>("/invoices/count-unpaid"),
+
   getReports: (year?: number, month?: number) =>
     apiClient.get<InvoiceReport>("/invoices/reports", {
       params: { year, month },

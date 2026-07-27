@@ -33,12 +33,13 @@ import { useQuery } from "@tanstack/react-query";
 import { useUIStore } from "@/stores/ui.store";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSettings } from "@/hooks/useAppSettings";
-import { useHydrated } from "@/hooks/useHydrated";
-import { useAuthStore, isSuperAdmin } from "@/stores/auth.store";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { testOrdersApi } from "@/lib/api/testOrders";
 import { inventoryApi } from "@/lib/api/inventory";
 import { refundsApi } from "@/lib/api/refunds";
+import { invoicesApi } from "@/lib/api/invoices";
+import { cashboxApi } from "@/lib/api/cashbox";
+import { supportApi } from "@/lib/api/support";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -237,8 +238,6 @@ export function Sidebar() {
   const { sidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } = useUIStore();
   const { can } = usePermissions();
   const { openTimeoffModal } = useUIStore();
-  const { user } = useAuthStore();
-  const mounted = useHydrated();
   const pathname = usePathname();
 
   // À la navigation (clic sur un lien du menu), on referme le menu overlay mobile
@@ -258,18 +257,6 @@ export function Sidebar() {
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
-
-  // Le rôle médecin est « Docteur » (slug « docteur ») en base — on accepte les
-  // deux orthographes (FR/EN) sur le nom comme sur le slug. Le Super Admin, qui a
-  // tous les droits, accède aussi à « Mon espace ».
-  const isDoctor =
-    mounted &&
-    (isSuperAdmin(user) ||
-      (user?.roles?.some((r) => {
-        const tokens = `${r.name ?? ""} ${r.slug ?? ""}`.toLowerCase();
-        return tokens.includes("docteur") || tokens.includes("doctor");
-      }) ??
-        false));
 
   const { data: immunoPendingCount } = useQuery({
     queryKey: ["immuno-pending-count"],
@@ -291,6 +278,37 @@ export function Sidebar() {
     queryKey: ["refund-pending-count"],
     queryFn: () => refundsApi.countPending().then((r) => r.data.count),
     enabled: can(PERMISSIONS.VIEW_REFUNDS),
+    refetchOnWindowFocus: false,
+  });
+
+  // Badge « Demandes d'examen » : bons cyto/histo en attente (getnbrTestOrderpending).
+  const { data: testOrderPendingCount } = useQuery({
+    queryKey: ["test-order-pending-count"],
+    queryFn: () => testOrdersApi.countPending().then((r) => r.data.count),
+    enabled: can(PERMISSIONS.VIEW_TEST_ORDERS),
+    refetchOnWindowFocus: false,
+  });
+
+  // Badge « Factures » : factures non réglées (getnbrInvoicepending).
+  const { data: invoicePendingCount } = useQuery({
+    queryKey: ["invoice-pending-count"],
+    queryFn: () => invoicesApi.countUnpaid().then((r) => r.data.count),
+    enabled: can(PERMISSIONS.VIEW_INVOICES),
+    refetchOnWindowFocus: false,
+  });
+
+  // Badge « Caisses » : bons de caisse en attente (getnbrBonCaissePending).
+  const { data: voucherPendingCount } = useQuery({
+    queryKey: ["cashbox-voucher-pending-count"],
+    queryFn: () => cashboxApi.countPendingVouchers().then((r) => r.data.count),
+    enabled: can(PERMISSIONS.VIEW_CASHBOXES),
+    refetchOnWindowFocus: false,
+  });
+
+  // Badge « Signaler un problème » : tickets ouverts (getnbrTicketPending).
+  const { data: ticketOpenCount } = useQuery({
+    queryKey: ["ticket-open-count"],
+    queryFn: () => supportApi.countOpen().then((r) => r.data.count),
     refetchOnWindowFocus: false,
   });
 
@@ -378,8 +396,15 @@ export function Sidebar() {
 
         {/* Demandes d'examen */}
         {can(PERMISSIONS.VIEW_TEST_ORDERS) && (
-          <CollapseItem icon={<Stethoscope className="w-5 h-5" />} label="Demandes d'examen" collapsed={collapsed}>
-            {isDoctor && <SubItem href="/test-orders/myspace" label="Mon espace" />}
+          <CollapseItem
+            icon={<Stethoscope className="w-5 h-5" />}
+            label="Demandes d'examen"
+            collapsed={collapsed}
+            badge={testOrderPendingCount ?? 0}
+          >
+            {/* Laravel affiche « Mon espace » à tout utilisateur du menu Demandes
+                d'examen (app2.blade.php) : pas de restriction au rôle Docteur. */}
+            <SubItem href="/test-orders/myspace" label="Mon espace" />
             <SubItem href="/test-orders" label="Toutes les demandes" />
             {can(PERMISSIONS.VIEW_TEST_ORDER_ASSIGNMENTS) && (
               <SubItem href="/test-orders/macroscopy" label="Macroscopie" />
@@ -409,8 +434,8 @@ export function Sidebar() {
         {can(PERMISSIONS.VIEW_REPORTS) && (
           <CollapseItem icon={<FileCheck className="w-5 h-5" />} label="Comptes rendu" collapsed={collapsed}>
             <SubItem href="/reports" label="Tous les comptes rendu" />
-            <SubItem href="/reports/history" label="Historique" />
             {can(PERMISSIONS.VIEW_SETTINGS) && <SubItem href="/reports/templates" label="Templates" />}
+            <SubItem href="/reports/history" label="Historiques" />
             {can(PERMISSIONS.VIEW_SETTINGS) && <SubItem href="/reports/settings" label="Paramètres" />}
           </CollapseItem>
         )}
@@ -439,7 +464,12 @@ export function Sidebar() {
 
         {/* Factures */}
         {can(PERMISSIONS.VIEW_INVOICES) && (
-          <CollapseItem icon={<Receipt className="w-5 h-5" />} label="Factures" collapsed={collapsed}>
+          <CollapseItem
+            icon={<Receipt className="w-5 h-5" />}
+            label="Factures"
+            collapsed={collapsed}
+            badge={invoicePendingCount ?? 0}
+          >
             <SubItem href="/invoices" label="Toutes les Factures" />
             <SubItem href="/invoices/create" label="Créer" />
             {/* NB : « Rapports » et « Paramètre » sont volontairement absents, à la
@@ -451,7 +481,12 @@ export function Sidebar() {
 
         {/* Caisses */}
         {can(PERMISSIONS.VIEW_CASHBOXES) && (
-          <CollapseItem icon={<DollarSign className="w-5 h-5" />} label="Caisses" collapsed={collapsed}>
+          <CollapseItem
+            icon={<DollarSign className="w-5 h-5" />}
+            label="Caisses"
+            collapsed={collapsed}
+            badge={voucherPendingCount ?? 0}
+          >
             <SubItem href="/cashbox/vente" label="Caisse de vente" />
             <SubItem href="/cashbox/depense" label="Caisse de dépense" />
             <SubItem href="/cashbox/ticket" label="Bon de caisse" />
@@ -521,7 +556,12 @@ export function Sidebar() {
         <SectionLabel label="ADMINISTRATIONS" collapsed={collapsed} />
 
         {/* Signaler un problème */}
-        <CollapseItem icon={<AlertCircle className="w-5 h-5" />} label="Signaler un problème" collapsed={collapsed}>
+        <CollapseItem
+          icon={<AlertCircle className="w-5 h-5" />}
+          label="Signaler un problème"
+          collapsed={collapsed}
+          badge={ticketOpenCount ?? 0}
+        >
           <SubItem href="/support" label="Historiques" />
           <SubItem href="/support/signaler" label="Signaler" />
         </CollapseItem>

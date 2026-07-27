@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ChangeEvent } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -94,7 +95,14 @@ export default function TwoFactorChallengePage() {
     resolver: zodResolver(twoFactorSchema),
   });
 
+  // Verrou de soumission : `isLoading` étant asynchrone, il ne suffit pas à
+  // empêcher un second envoi déclenché dans la même frappe (collage du code,
+  // saisie très rapide).
+  const submittingRef = useRef(false);
+
   const onSubmit = async (data: TwoFactorFormData) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setIsLoading(true);
     try {
       // Pas de token dans le corps : l'API le lit sur son cookie HttpOnly.
@@ -120,7 +128,23 @@ export default function TwoFactorChallengePage() {
       }
       toast.error(message);
     } finally {
+      submittingRef.current = false;
       setIsLoading(false);
+    }
+  };
+
+  const codeField = register("code");
+
+  /**
+   * Le code fait exactement 6 chiffres : dès que le dernier est saisi, la
+   * vérification part d'elle-même (et le bouton passe en attente), sans que
+   * l'utilisateur ait à cliquer sur « Confirmer ».
+   */
+  const handleCodeChange = (event: ChangeEvent<HTMLInputElement>) => {
+    void codeField.onChange(event);
+    const value = event.target.value.trim();
+    if (/^\d{6}$/.test(value)) {
+      void onSubmit({ code: value });
     }
   };
 
@@ -177,29 +201,32 @@ export default function TwoFactorChallengePage() {
             <h4 className="text-2xl font-bold text-gray-800 mb-2">
               Vérifiez votre e-mail pour un code
             </h4>
-            <p className="text-gray-500 mb-6 text-sm">
+            <p className="text-gray-500 mb-2 text-sm">
               Nous avons envoyé un code à 6 caractères à{" "}
               <strong>{maskedEmail}</strong>. Le code expire sous peu, veuillez
               donc le saisir rapidement.
-              {remainingMs !== null && (
-                <>
-                  {" "}
-                  <span className="font-semibold text-gray-700">
-                    Expire dans {formatRemaining(remainingMs)}.
-                  </span>
-                </>
-              )}
             </p>
+            {remainingMs !== null && (
+              <p className="mb-6 text-sm font-semibold text-gray-700">
+                Expire dans {formatRemaining(remainingMs)}.
+              </p>
+            )}
 
-            <form onSubmit={handleSubmit(onSubmit)} noValidate>
+            {/* `handleSubmit` est appelé DANS le gestionnaire (et non au rendu) :
+                `onSubmit` lit un ref, que React Compiler interdit de toucher
+                pendant le rendu. */}
+            <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} noValidate>
               {/* Code */}
               <div className="mb-6">
                 <input
                   id="code"
                   type="text"
                   inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
                   placeholder="Entrer le code"
-                  {...register("code")}
+                  {...codeField}
+                  onChange={handleCodeChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg tracking-widest"
                   maxLength={6}
                 />

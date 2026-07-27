@@ -9,7 +9,6 @@ import {
   Loader2,
   LogOut,
   MapPin,
-  Star,
 } from "lucide-react";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/Button";
@@ -21,8 +20,8 @@ import { useBranchStore } from "@/stores/branch.store";
  * Écran de sélection de la branche (agence/site) active — portage de la page
  * `select-branch.blade.php` de Laravel.
  *
- * Reproduit le comportement d'origine : grille de cartes de branches, badge
- * « Par défaut » (étoile), auto-sélection de la branche par défaut, bouton de
+ * Reproduit le comportement d'origine : grille de cartes de branches,
+ * auto-sélection de la branche par défaut, bouton de
  * confirmation désactivé tant qu'aucune branche n'est choisie, lien de
  * déconnexion. À la confirmation, la branche est mémorisée (cookie + store) puis
  * l'utilisateur est redirigé vers le tableau de bord.
@@ -143,12 +142,6 @@ export default function SelectBranchPage() {
                             : "border-gray-200 hover:border-blue-500 hover:shadow-md hover:-translate-y-0.5"
                         }`}
                       >
-                        {branch.isDefault && (
-                          <span className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-green-600 px-2 py-0.5 text-[0.7rem] font-medium text-white">
-                            <Star className="h-3 w-3" />
-                            Par défaut
-                          </span>
-                        )}
                         <Building2 className="mx-auto mb-3 h-10 w-10 text-blue-600" />
                         <h5 className="font-semibold text-gray-800 mb-1">
                           {branch.name}
