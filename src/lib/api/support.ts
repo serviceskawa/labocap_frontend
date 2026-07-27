@@ -65,6 +65,9 @@ export const supportApi = {
     ),
   createTicket: (data: TicketRequest) =>
     apiClient.post<Ticket>("/tickets", data),
+
+  /** Badge « Signaler un problème » : tickets encore ouverts. */
+  countOpen: () => apiClient.get<{ count: number }>("/tickets/count-open"),
   updateTicket: (id: string, data: TicketUpdateRequest) =>
     apiClient.put<Ticket>(`/tickets/${id}`, data),
   closeTicket: (id: string) =>

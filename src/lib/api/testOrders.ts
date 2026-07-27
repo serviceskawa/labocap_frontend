@@ -133,6 +133,10 @@ export const testOrdersApi = {
   countImmunoPending: () =>
     apiClient.get<{ count: number }>("/test-orders/immuno/count-pending"),
 
+  /** Badge « Demandes d'examen » : bons cyto/histo en attente de compte rendu. */
+  countPending: () =>
+    apiClient.get<{ count: number }>("/test-orders/count-pending"),
+
   findById: (id: string) => apiClient.get<TestOrder>(`/test-orders/${id}`),
 
   create: (data: TestOrderRequest) =>
