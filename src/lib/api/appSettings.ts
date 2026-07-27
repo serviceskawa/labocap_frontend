@@ -6,7 +6,7 @@ import apiClient from "./client";
  *  - `setting_apps` (`/setting-apps`) : réglages applicatifs (Général, Email/SMTP,
  *    Communication mobile, en-tête/pied de compte rendu, OurVoice…).
  *  - `settings` (`/settings`) : réglages consommés par le métier — notamment
- *    `token_payment` (MECeF) et `prefixe_code_demande_examen`.
+ *    `token_payment` (MECeF).
  *
  * Les deux exposent un upsert par clé (POST) : créer si la clé n'existe pas,
  * sinon mettre à jour la valeur.
@@ -60,8 +60,10 @@ export const settingsStoreApi = {
 /**
  * Clés stockées dans la table `settings` (et non `setting_apps`) car elles sont
  * lues directement par le métier backend.
+ *
+ * `prefixe_code_demande_examen` n'en fait volontairement PAS partie : comme dans
+ * Laravel (`SettingApp::where('key','prefixe_code_demande_examen')` dans
+ * `generateCodeExamen()`), le préfixe des codes de demande d'examen vit dans
+ * `setting_apps` — c'est là que le backend Java le lit désormais.
  */
-export const SETTINGS_STORE_KEYS = new Set<string>([
-  "token_payment",
-  "prefixe_code_demande_examen",
-]);
+export const SETTINGS_STORE_KEYS = new Set<string>(["token_payment"]);

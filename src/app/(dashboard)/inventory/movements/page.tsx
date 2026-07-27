@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/inventory";
 import type { PageResponse, ApiError } from "@/types/api";
 import { formatDate } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Zod schema — formulaire « Opérations sur le stock » (movements/index.blade.php).
@@ -217,22 +218,21 @@ export default function MovementsPage() {
             </div>
 
             <div className="flex gap-2 sm:col-span-2">
-              <button
-                type="button"
+              <Button
                 onClick={submitWith("IN")}
-                disabled={createMutation.isPending}
-                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                loading={createMutation.isPending}
+                className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
               >
                 Entrer
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="danger"
                 onClick={submitWith("OUT")}
-                disabled={createMutation.isPending}
-                className="inline-flex items-center rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+                loading={createMutation.isPending}
+                className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-red-700"
               >
                 sortir
-              </button>
+              </Button>
             </div>
           </form>
         </div>

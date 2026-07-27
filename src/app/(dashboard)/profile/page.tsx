@@ -10,6 +10,7 @@ import Image from "next/image";
 import { useAuthStore } from "@/stores/auth.store";
 import { meApi } from "@/lib/api/me";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 
 // ── Schemas Zod ──────────────────────────────────────────────────────────────
 
@@ -199,10 +200,14 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="text-right">
-                  <button type="submit" disabled={isProfileSubmitting} className="hyper-btn hyper-btn-success mt-2">
-                    <Save className="h-[1em] w-[1em]" />
+                  <Button
+                    type="submit"
+                    loading={isProfileSubmitting}
+                    icon={<Save className="h-[1em] w-[1em]" />}
+                    className="hyper-btn hyper-btn-success mt-2"
+                  >
                     Mettre à jour
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>
@@ -245,10 +250,14 @@ export default function ProfilePage() {
                 />
 
                 <div className="text-right">
-                  <button type="submit" disabled={isPasswordSubmitting} className="hyper-btn hyper-btn-success mt-2">
-                    <Save className="h-[1em] w-[1em]" />
+                  <Button
+                    type="submit"
+                    loading={isPasswordSubmitting}
+                    icon={<Save className="h-[1em] w-[1em]" />}
+                    className="hyper-btn hyper-btn-success mt-2"
+                  >
                     Mettre à jour
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>

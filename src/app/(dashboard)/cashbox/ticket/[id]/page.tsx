@@ -20,6 +20,7 @@ import { API_ORIGIN } from "@/lib/api/client";
 import { expenseCategoriesApi } from "@/lib/api/expenses";
 import { suppliersApi } from "@/lib/api/suppliers";
 import type { ApiError } from "@/types/api";
+import { Button } from "@/components/ui/Button";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -277,14 +278,14 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
 
               {isEditable && (
                 <div className="mt-4 flex justify-end">
-                  <button
+                  <Button
                     type="submit"
-                    disabled={headerMutation.isPending}
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                    loading={headerMutation.isPending}
+                    icon={<Save className="h-4 w-4" />}
+                    className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
                   >
-                    <Save className="h-4 w-4" />
                     Enregistrer
-                  </button>
+                  </Button>
                 </div>
               )}
             </form>
@@ -340,15 +341,13 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
                     />
                   </div>
                   <div className="sm:col-span-1">
-                    <button
-                      type="button"
+                    <Button
                       onClick={handleAddDetail}
-                      disabled={addDetailMutation.isPending}
-                      className="inline-flex h-[38px] w-full items-center justify-center gap-1 rounded-lg bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      loading={addDetailMutation.isPending}
+                      icon={<Plus className="h-4 w-4" />}
+                      className="h-[38px] w-full gap-1 rounded-lg px-0 py-0 text-sm font-medium hover:bg-blue-700"
                       title="Ajouter l'article"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
+                    />
                   </div>
                 </div>
               )}

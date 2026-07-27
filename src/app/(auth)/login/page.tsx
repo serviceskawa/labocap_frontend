@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authApi } from "@/lib/api/auth";
 import { resolvePostLoginRoute } from "@/lib/auth-flow";
+import { beginPending2fa, hasPending2fa } from "@/lib/auth-2fa";
+import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
 
 const loginSchema = z.object({
@@ -28,6 +29,16 @@ export default function LoginPage() {
   const setUser = useAuthStore((state) => state.setUser);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Un challenge 2FA en cours interdit de revenir sur ce formulaire tant que le
+  // code n'a pas expiré (règle Laravel `RedirectIfAuthenticated`). Le proxy le
+  // fait déjà côté serveur ; ce garde-fou couvre les navigations client (retour
+  // arrière, lien interne) qui ne repassent pas par le serveur.
+  useEffect(() => {
+    if (hasPending2fa()) {
+      router.replace("/2fa/challenge");
+    }
+  }, [router]);
 
   const {
     register,
@@ -52,11 +63,12 @@ export default function LoginPage() {
       const result = response.data;
 
       if (result.requires2fa) {
-        sessionStorage.setItem("2fa_email", data.email);
-        if (result.tempToken) {
-          sessionStorage.setItem("2fa_temp_token", result.tempToken);
-        }
-        router.push("/2fa/challenge");
+        // Le token temporaire est porté par le cookie HttpOnly `pending_2fa` posé
+        // par l'API : rien de sensible à stocker côté navigateur. On mémorise
+        // seulement l'e-mail (affichage masqué) et l'échéance du code (décompte
+        // + verrouillage de /login jusqu'à expiration).
+        beginPending2fa(data.email, result.expiresIn);
+        router.replace("/2fa/challenge");
         return;
       }
 
@@ -225,15 +237,15 @@ export default function LoginPage() {
                 </label>
               </div>
 
-              {/* Bouton submit */}
-              <button
+              {/* Bouton submit — spinner et libellé centrés, bouton neutralisé
+                  pendant l'appel pour empêcher un double envoi. */}
+              <Button
                 type="submit"
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white w-full py-2 rounded font-medium text-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                loading={isLoading}
+                className="w-full justify-center rounded py-2 text-sm font-medium hover:bg-blue-700"
               >
-                {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                 {isLoading ? "Connexion en cours..." : "Connexion"}
-              </button>
+              </Button>
 
               {/* Lien mot de passe oublié */}
               <p className="text-center mt-4 text-sm text-gray-500">

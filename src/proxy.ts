@@ -7,6 +7,10 @@ import { NextRequest, NextResponse } from "next/server";
  * vers /login avant même le rendu de la page protégée (l'ancien dispositif ne
  * reposait que sur le client — intercepteur 401 + PermissionGate).
  *
+ * Gère également l'étape de confirmation par code (2FA) : tant qu'un challenge
+ * court, /login est verrouillé et /2fa/challenge est la seule page d'auth
+ * accessible ; hors challenge, /2fa/challenge renvoie vers /login.
+ *
  * La sécurité réelle reste assurée par l'API (token JWT HttpOnly validé côté
  * Spring Security) ; ici on se contente de vérifier la *présence* du cookie
  * `access_token` (Path=/ donc visible par le proxy) pour orienter la
@@ -16,6 +20,15 @@ import { NextRequest, NextResponse } from "next/server";
 const ACCESS_COOKIE = "access_token";
 const BRANCH_COOKIE = "selected_branch_id";
 const SELECT_BRANCH_PATH = "/select-branch";
+const TWO_FA_PATH = "/2fa/challenge";
+
+// Cookies d'un challenge 2FA en cours (voir src/lib/auth-2fa.ts) : `pending_2fa`
+// est posé par l'API (HttpOnly, porte le token temporaire), `pending_2fa_until`
+// par le front (horodatage d'expiration). L'un ou l'autre suffit à caractériser
+// un challenge en cours — le second garantit la garde même si l'API est servie
+// sur un domaine distinct dont les cookies n'atteignent pas le serveur Next.
+const PENDING_2FA_COOKIE = "pending_2fa";
+const PENDING_2FA_UNTIL_COOKIE = "pending_2fa_until";
 
 // Routes accessibles sans authentification.
 const PUBLIC_PATHS = ["/login", "/2fa", "/forgot-password", "/reset-password"];
@@ -26,14 +39,45 @@ function isPublic(pathname: string): boolean {
   );
 }
 
+function isTwoFaPath(pathname: string): boolean {
+  return pathname === TWO_FA_PATH || pathname.startsWith(`${TWO_FA_PATH}/`);
+}
+
+/**
+ * Un challenge 2FA est-il en cours ? Les cookies expirent d'eux-mêmes avec le
+ * code ; l'horodatage est vérifié en plus pour ne pas rester verrouillé si le
+ * navigateur conserve un cookie périmé.
+ */
+function hasPending2fa(request: NextRequest): boolean {
+  if (request.cookies.has(PENDING_2FA_COOKIE)) return true;
+  const until = Number(request.cookies.get(PENDING_2FA_UNTIL_COOKIE)?.value);
+  return Number.isFinite(until) && until > Date.now();
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasToken = request.cookies.has(ACCESS_COOKIE);
   const hasBranch = request.cookies.has(BRANCH_COOKIE);
+  const pending2fa = hasPending2fa(request);
 
   // Utilisateur authentifié qui revient sur une page d'auth → renvoyé à l'accueil.
   if (hasToken && isPublic(pathname)) {
     return NextResponse.redirect(new URL("/home", request.url));
+  }
+
+  // Challenge 2FA en cours (identifiants validés, code envoyé) : reprise de la
+  // logique Laravel `RedirectIfAuthenticated` — tant que le code n'a pas expiré,
+  // l'écran de connexion (et les autres écrans d'auth) est inaccessible, seule la
+  // saisie du code est autorisée.
+  if (pending2fa && isPublic(pathname) && !isTwoFaPath(pathname)) {
+    return NextResponse.redirect(new URL(TWO_FA_PATH, request.url));
+  }
+
+  // Inversement, l'écran de saisie du code n'existe QUE pendant un challenge :
+  // saisir la route à la main sans avoir validé d'identifiants renvoie au login
+  // (analogue du middleware `auth` sur la route `/confirm-login` de Laravel).
+  if (!pending2fa && !hasToken && isTwoFaPath(pathname)) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
   // Page protégée sans token → redirection vers /login, en mémorisant la cible.

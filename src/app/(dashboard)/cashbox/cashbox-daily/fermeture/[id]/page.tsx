@@ -13,6 +13,7 @@ import { PermissionGate } from "@/components/common/PermissionGate";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { cashboxApi } from "@/lib/api/cashbox";
 import type { ApiError } from "@/types/api";
+import { Button } from "@/components/ui/Button";
 
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
@@ -395,15 +396,14 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                       <Printer className="h-4 w-4" />
                       Imprimer
                     </Link>
-                    <button
-                      type="button"
+                    <Button
                       onClick={handleConfirm}
-                      disabled={closeMutation.isPending}
-                      className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                      loading={closeMutation.isPending}
+                      icon={<Lock className="h-4 w-4" />}
+                      className="rounded-lg bg-green-600 px-5 py-2 text-sm font-medium hover:bg-green-700 hover:shadow-[0_2px_6px_0_rgba(10,207,151,0.5)]"
                     >
-                      <Lock className="h-4 w-4" />
                       Confirmer et fermer la caisse
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>

@@ -18,6 +18,7 @@ import { FormField } from "@/components/ui/FormField";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { refundsApi, refundReasonsApi, type RefundReason } from "@/lib/api/refunds";
 import { invoicesApi, type Invoice } from "@/lib/api/invoices";
+import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Calque `errors_reports/refund/create.blade.php` — page dédiée, pas un modal.
@@ -205,13 +206,13 @@ export default function RefundCreatePage() {
             >
               Annuler
             </button>
-            <button
+            <Button
               type="submit"
-              disabled={createMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+              loading={createMutation.isPending}
+              className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
             >
               Demander un remboursement
-            </button>
+            </Button>
           </div>
         </form>
       </div>

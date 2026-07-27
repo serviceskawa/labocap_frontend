@@ -27,6 +27,7 @@ import {
 import { expenseCategoriesApi } from "@/lib/api/expenses";
 import { suppliersApi } from "@/lib/api/suppliers";
 import type { PageResponse, ApiError } from "@/types/api";
+import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -297,14 +298,14 @@ export default function CashboxTicketsPage() {
             />
 
             <div className="md:col-span-4">
-              <button
+              <Button
                 type="submit"
-                disabled={createMutation.isPending}
-                className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+                loading={createMutation.isPending}
+                icon={<Plus className="h-4 w-4" />}
+                className="rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
               >
-                <Plus className="h-4 w-4" />
                 Ajouter
-              </button>
+              </Button>
             </div>
           </form>
         )}

@@ -6,10 +6,14 @@ import { toast } from "sonner";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
+import { Wallet } from "lucide-react";
+
 import { DataTable } from "@/components/common/DataTable";
+import { Button } from "@/components/ui/Button";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { DEFAULT_REPORT_FOOTER } from "@/lib/constants/report";
 import {
@@ -96,6 +100,15 @@ const lineColumns: ColumnDef<InvoiceLine>[] = [
   },
 ];
 
+/**
+ * Longueur exacte du code de la facture normalisée (MECeF/DGI).
+ *
+ * Règle Laravel (`invoices/show.blade.php`) : l'input porte `minlength="24"` et
+ * `maxlength="24"`, et `updateStatus()` refuse la saisie avec « Code normalisé
+ * doit être 24 caractères » dès que `code.length < 24 || code.length > 24`.
+ */
+const CODE_NORMALISE_LENGTH = 24;
+
 const NOTE_IMPORTANTE =
   "Les résultats de vos analyses seront disponibles dans un délai de 3 semaines. " +
   "Selon la complexité du cas, les résultats peuvent être disponibles plus tôt ou plus tard. " +
@@ -128,23 +141,40 @@ export default function InvoiceDetailPage({
   const reportFooter = appSettings?.report_footer?.trim() || DEFAULT_REPORT_FOOTER;
 
   const markPaidMutation = useMutation({
-    mutationFn: () =>
-      invoicesApi.markAsPaid(id, {
-        payment,
-        ...(codeNormalise ? { codeNormalise } : {}),
-      }),
+    mutationFn: async () => {
+      // Contrôles identiques à `updateStatus()` de Laravel, dans le même ordre :
+      // code obligatoire, exactement 24 caractères, puis unicité vérifiée par
+      // l'API (route `invoices/checkCode`) avant d'encaisser.
+      const code = codeNormalise.trim();
+      if (!code) {
+        throw new Error("Code normalisé requis");
+      }
+      if (code.length !== CODE_NORMALISE_LENGTH) {
+        throw new Error(
+          `Code normalisé doit être ${CODE_NORMALISE_LENGTH} caractères`,
+        );
+      }
+      const { data: check } = await invoicesApi.checkCode(code);
+      if (check?.exists) {
+        throw new Error("Ce Code normalisé existe déjà");
+      }
+      return invoicesApi.markAsPaid(id, { payment, code });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       toast.success("Facture marquée comme payée");
     },
-    onError: (err: AxiosError<ApiError>) => {
-      toast.error(err.response?.data?.message ?? "Erreur lors du paiement");
+    onError: (err: Error) => {
+      // Les refus de saisie sont levés ici même (message déjà formulé) ; les
+      // erreurs d'API portent le leur dans la réponse.
+      const apiMessage = (err as AxiosError<ApiError>).response?.data?.message;
+      toast.error(apiMessage ?? err.message ?? "Erreur lors du paiement");
     },
   });
 
   /** « Voir tout » : ouvre le document complet en PDF. */
-  async function openPdf() {
+  const pdfAction = useAsyncAction(async () => {
     try {
       const res = await invoicesApi.downloadPdf(id);
       const blob = new Blob([res.data as BlobPart], { type: "application/pdf" });
@@ -154,7 +184,7 @@ export default function InvoiceDetailPage({
     } catch {
       toast.error("Erreur lors de la génération du PDF");
     }
-  }
+  });
 
   if (!can(PERMISSIONS.VIEW_INVOICES)) {
     return (
@@ -222,13 +252,13 @@ export default function InvoiceDetailPage({
       {/* ---- Titre de page, suivi du bouton « Voir tout » ---- */}
       <div className="flex items-center gap-3">
         <h4 className="text-xl font-semibold text-gray-700">{title}</h4>
-        <button
-          type="button"
-          onClick={openPdf}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+        <Button
+          onClick={pdfAction.run}
+          loading={pdfAction.pending}
+          className="hover:bg-blue-700"
         >
           Voir tout
-        </button>
+        </Button>
       </div>
 
       {/* ---- Document ---- */}
@@ -373,21 +403,24 @@ export default function InvoiceDetailPage({
                 value={codeNormalise}
                 onChange={(e) => setCodeNormalise(e.target.value)}
                 placeholder="Code MECeF/DGI"
-                minLength={24}
-                maxLength={24}
+                minLength={CODE_NORMALISE_LENGTH}
+                maxLength={CODE_NORMALISE_LENGTH}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                {codeNormalise.trim().length}/{CODE_NORMALISE_LENGTH} caractères
+              </p>
             </div>
 
             <div>
-              <button
-                type="button"
+              <Button
                 onClick={() => markPaidMutation.mutate()}
-                disabled={markPaidMutation.isPending}
-                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                loading={markPaidMutation.isPending}
+                icon={<Wallet className="h-4 w-4" />}
+                className="bg-green-600 hover:bg-green-700 hover:shadow-[0_2px_6px_0_rgba(10,207,151,0.5)]"
               >
                 Terminer la facture
-              </button>
+              </Button>
             </div>
           </div>
         )}

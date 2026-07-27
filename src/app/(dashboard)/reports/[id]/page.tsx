@@ -29,6 +29,7 @@ import { patientsApi } from "@/lib/api/patients";
 import { testOrdersApi, type ImageDto } from "@/lib/api/testOrders";
 import { openDocFile } from "@/lib/api/docs";
 import type { ApiError } from "@/types/api";
+import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -803,14 +804,13 @@ export default function ReportDetailPage({
           )}
 
           {/* Imprimer le compte rendu */}
-          <button
-            type="button"
+          <Button
             onClick={printReport}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gray-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-700"
+            icon={<Printer className="h-4 w-4" />}
+            className="w-full rounded-lg bg-gray-600 px-4 py-2.5 text-sm font-medium hover:bg-gray-700 hover:shadow-none"
           >
-            <Printer className="h-4 w-4" />
             Imprimer le compte rendu
-          </button>
+          </Button>
         </div>
       </div>
 

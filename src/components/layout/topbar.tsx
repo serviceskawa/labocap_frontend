@@ -17,6 +17,7 @@ import { useUIStore } from "@/stores/ui.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { useBranchStore } from "@/stores/branch.store";
 import { authApi } from "@/lib/api/auth";
+import { Button } from "@/components/ui/Button";
 
 export function Topbar() {
   const { toggleSidebar, toggleMobileSidebar } = useUIStore();
@@ -154,13 +155,13 @@ export function Topbar() {
                 <User className="h-4 w-4 text-gray-400" />
                 Mon compte
               </Link>
-              <button
+              <Button
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                icon={<LogOut className="h-4 w-4" />}
+                className="w-full justify-start gap-2.5 rounded-lg bg-transparent px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50 hover:shadow-none"
               >
-                <LogOut className="h-4 w-4" />
                 Se déconnecter
-              </button>
+              </Button>
             </div>
           </div>
         )}

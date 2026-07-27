@@ -48,6 +48,7 @@ import {
 } from "@/lib/api/dashboard";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import apiClient from "@/lib/api/client";
+import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -175,12 +176,12 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
           Voir Facture
         </Link>
       ) : (
-        <button
+        <Button
           onClick={handleCreateInvoice}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+          className="gap-1 rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200 hover:shadow-none"
         >
           Créer Facture
-        </button>
+        </Button>
       )}
 
       <ConfirmModal

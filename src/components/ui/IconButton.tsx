@@ -1,7 +1,9 @@
 "use client";
 
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ButtonHTMLAttributes, MouseEvent, ReactNode } from "react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useClickBusy } from "./Button";
 
 type IconButtonVariant =
   | "default"
@@ -28,22 +30,38 @@ const variantClasses: Record<IconButtonVariant, string> = {
   ghost: "text-gray-500 hover:bg-gray-100 hover:text-gray-700",
 };
 
-interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface IconButtonProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onClick"> {
   icon: ReactNode;
   variant?: IconButtonVariant;
+  /** Remplace l'icône par un spinner et neutralise le bouton pendant l'action. */
+  loading?: boolean;
+  /**
+   * Handler de clic. Un handler `async` (qui renvoie une promesse) met le bouton
+   * en attente jusqu'à résolution, ce qui empêche un second déclenchement.
+   */
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => unknown;
 }
 
 /** Bouton d'action icône seule, au format des boutons de tableau Laravel. */
 export function IconButton({
   icon,
   variant = "default",
+  loading = false,
   className,
   type = "button",
+  disabled,
+  onClick,
   ...props
 }: IconButtonProps) {
+  const { busy, handleClick } = useClickBusy(onClick, loading);
+
   return (
     <button
       type={type}
+      disabled={disabled || busy}
+      aria-busy={busy}
+      onClick={handleClick}
       className={cn(
         // Boutons d'action Laravel = `.btn` pleine taille avec une icône seule :
         // padding .45rem .9rem, radius .15rem, ligne 1.5 (icône ~.9rem ≈ 14px).
@@ -53,7 +71,7 @@ export function IconButton({
       )}
       {...props}
     >
-      {icon}
+      {busy ? <Loader2 className="h-[.9rem] w-[.9rem] animate-spin" /> : icon}
     </button>
   );
 }
