@@ -259,19 +259,38 @@ interface DonutSegment {
   color: string;
 }
 
-function DonutChart({ segments }: { segments: DonutSegment[] }) {
+/**
+ * Donut générique.
+ *
+ * Une part non nulle mais minuscule (3 factures d'avoir sur 12 418, soit
+ * 0,02 %) trace un arc de 0,09° : invisible à l'écran. La légende annonce
+ * alors quatre couleurs alors que le donut n'en montre que deux, ce qui se lit
+ * comme un bug de couleurs. On dessine donc chaque part non nulle avec un arc
+ * plancher (`minSlicePercent` du total), tout en gardant la valeur réelle pour
+ * l'infobulle et pour la légende.
+ */
+function DonutChart({
+  segments,
+  minSlicePercent = 3,
+}: {
+  segments: DonutSegment[];
+  minSlicePercent?: number;
+}) {
   const filtered = segments.filter((s) => s.value > 0);
   if (filtered.length === 0) {
     return (
       <p className="text-center text-gray-400 text-sm py-4">Aucune donnée</p>
     );
   }
+  const total = filtered.reduce((sum, s) => sum + s.value, 0);
+  const floor = (total * minSlicePercent) / 100;
+  const data = filtered.map((s) => ({ ...s, arc: Math.max(s.value, floor) }));
   return (
     <ResponsiveContainer width="100%" height={200}>
       <PieChart>
         <Pie
-          data={filtered}
-          dataKey="value"
+          data={data}
+          dataKey="arc"
           nameKey="name"
           cx="50%"
           cy="50%"
@@ -279,11 +298,16 @@ function DonutChart({ segments }: { segments: DonutSegment[] }) {
           outerRadius={80}
           paddingAngle={3}
         >
-          {filtered.map((entry, i) => (
+          {data.map((entry, i) => (
             <Cell key={i} fill={entry.color} />
           ))}
         </Pie>
-        <Tooltip />
+        <Tooltip
+          formatter={(value, name, item) => {
+            const real = (item?.payload as DonutSegment | undefined)?.value;
+            return [real ?? value, name];
+          }}
+        />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -511,6 +535,40 @@ export default function HomePage() {
     refetchInterval: 5 * 60 * 1000,
     enabled: isFinance,
   });
+
+  // Segments du donut FACTURES — source unique du donut et de sa légende, dans
+  // l'ordre et les couleurs du `data-colors` de dashboardPlus.blade.php.
+  const invoiceSegments: DonutSegment[] = [
+    {
+      name: "Factures de vente payées",
+      value: invoiceStatus?.invoicePaid ?? 0,
+      color: "#727cf5",
+    },
+    {
+      name: "Factures de vente non payées",
+      value: invoiceStatus?.invoiceNoPaid ?? 0,
+      color: "#0acf97",
+    },
+    {
+      name: "Factures d'avoir payées",
+      value: invoiceStatus?.refundPaid ?? 0,
+      color: "#fa5c7c",
+    },
+    {
+      name: "Factures d'avoir non payées",
+      value: invoiceStatus?.refundNoPaid ?? 0,
+      color: "#ffbc00",
+    },
+  ];
+  const invoiceSegmentsTotal = invoiceSegments.reduce((s, x) => s + x.value, 0);
+
+  /** Part d'un segment, sans jamais afficher « 0,0 % » pour un compteur non nul. */
+  const invoiceShare = (value: number) => {
+    if (invoiceSegmentsTotal === 0) return "—";
+    const pct = (value / invoiceSegmentsTotal) * 100;
+    if (value > 0 && pct < 0.1) return "< 0,1 %";
+    return `${pct.toFixed(1).replace(".", ",")} %`;
+  };
 
   // -- Doctor stats
   const { data: doctorStats = [], isLoading: doctorStatsLoading } = useQuery({
@@ -901,72 +959,30 @@ export default function HomePage() {
                 <div className="p-5">
                   {invoiceStatus ? (
                     <>
-                      <DonutChart
-                        segments={[
-                          {
-                            name: "Factures vente payées",
-                            value: invoiceStatus.invoicePaid,
-                            color: "#727cf5",
-                          },
-                          {
-                            name: "Factures vente non payées",
-                            value: invoiceStatus.invoiceNoPaid,
-                            color: "#0acf97",
-                          },
-                          {
-                            name: "Factures avoir payées",
-                            value: invoiceStatus.refundPaid,
-                            color: "#fa5c7c",
-                          },
-                          {
-                            name: "Factures avoir non payées",
-                            value: invoiceStatus.refundNoPaid,
-                            color: "#ffbc00",
-                          },
-                        ]}
-                      />
-                      {/* Légende — couleurs alignées sur les segments réels du donut */}
+                      <DonutChart segments={invoiceSegments} />
+                      {/* Légende — mêmes couleurs et même ordre que les segments
+                          du donut, la part exacte compensant l'arc plancher. */}
                       <div className="space-y-2 mt-3">
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <span
-                            className="h-3 w-3 rounded-sm inline-block"
-                            style={{ backgroundColor: "#727cf5" }}
-                          />
-                          <span className="flex-1">Factures de vente payées</span>
-                          <span className="font-semibold text-gray-800">
-                            {invoiceStatus.invoicePaid}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <span
-                            className="h-3 w-3 rounded-sm inline-block"
-                            style={{ backgroundColor: "#0acf97" }}
-                          />
-                          <span className="flex-1">Factures de vente non payées</span>
-                          <span className="font-semibold text-gray-800">
-                            {invoiceStatus.invoiceNoPaid}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <span
-                            className="h-3 w-3 rounded-sm inline-block"
-                            style={{ backgroundColor: "#fa5c7c" }}
-                          />
-                          <span className="flex-1">Factures d&apos;avoir payées</span>
-                          <span className="font-semibold text-gray-800">
-                            {invoiceStatus.refundPaid}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-600">
-                          <span
-                            className="h-3 w-3 rounded-sm inline-block"
-                            style={{ backgroundColor: "#ffbc00" }}
-                          />
-                          <span className="flex-1">Factures d&apos;avoir non payées</span>
-                          <span className="font-semibold text-gray-800">
-                            {invoiceStatus.refundNoPaid}
-                          </span>
-                        </div>
+                        {invoiceSegments.map((segment) => (
+                          <div
+                            key={segment.name}
+                            className="flex items-center gap-2 text-xs text-gray-600"
+                          >
+                            <span
+                              className="h-3 w-3 rounded-sm inline-block shrink-0"
+                              style={{ backgroundColor: segment.color }}
+                            />
+                            <span className="flex-1 leading-tight">
+                              {segment.name}
+                            </span>
+                            <span className="text-gray-400 whitespace-nowrap">
+                              {invoiceShare(segment.value)}
+                            </span>
+                            <span className="font-semibold text-gray-800 w-12 text-right">
+                              {segment.value}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     </>
                   ) : (
