@@ -268,6 +268,10 @@ interface DonutSegment {
  * comme un bug de couleurs. On dessine donc chaque part non nulle avec un arc
  * plancher (`minSlicePercent` du total), tout en gardant la valeur réelle pour
  * l'infobulle et pour la légende.
+ *
+ * L'anneau est plein : ni `paddingAngle` ni contour blanc entre les parts. Le
+ * seul blanc visible est le trou central du donut ; tout le reste de la
+ * couronne appartient à une couleur de la légende.
  */
 function DonutChart({
   segments,
@@ -296,10 +300,17 @@ function DonutChart({
           cy="50%"
           innerRadius={55}
           outerRadius={80}
-          paddingAngle={3}
+          paddingAngle={0}
         >
           {data.map((entry, i) => (
-            <Cell key={i} fill={entry.color} />
+            // Contour de la couleur de la part : sans lui, recharts trace un
+            // liseré blanc par défaut entre deux secteurs adjacents.
+            <Cell
+              key={i}
+              fill={entry.color}
+              stroke={entry.color}
+              strokeWidth={1}
+            />
           ))}
         </Pie>
         <Tooltip
