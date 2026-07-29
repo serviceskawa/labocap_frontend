@@ -9,13 +9,11 @@ import {
   Trash2,
   Printer,
   Eye,
-  Users,
-  ShoppingCart,
-  Activity,
-  DollarSign,
   Folder,
   BarChart2,
   CalendarIcon,
+  ArrowRight,
+  ArrowUp,
 } from "lucide-react";
 import {
   PieChart,
@@ -28,7 +26,6 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  Legend,
 } from "recharts";
 
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -218,10 +215,10 @@ function ProgressTable({
     <table className="w-full text-sm">
       <thead className="bg-gray-50">
         <tr>
-          <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+          <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
             {headers[0]}
           </th>
-          <th className="py-2 px-3 text-right text-xs font-semibold uppercase text-gray-500">
+          <th className="py-2 px-3 text-right text-[.875rem] font-semibold text-gray-700">
             {headers[1]}
           </th>
           <th className="py-2 px-3 w-32" />
@@ -296,30 +293,67 @@ function DonutChart({ segments }: { segments: DonutSegment[] }) {
 // RevenueLineChart
 // ---------------------------------------------------------------------------
 
+const WEEK_DAYS = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+
+/**
+ * Courbe du chiffre d'affaires, calquée sur le `#revenue-chart` de Laravel :
+ * deux séries lissées (semaine actuelle / précédente) sur les jours Lun→Dim,
+ * axe des ordonnées en milliers, légende masquée (les deux libellés sont déjà
+ * affichés au-dessus du graphique).
+ *
+ * Les points sont placés d'après la DATE renvoyée par l'API et non d'après leur
+ * rang : une série incomplète ne peut donc pas décaler la courbe.
+ */
 function RevenueLineChart({ data }: { data: RevenueData }) {
-  const days = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-  const chartData = days.map((day, i) => ({
+  /** Total du jour de la semaine (0 = lundi) pour une série. */
+  const byWeekday = (serie: RevenueData["currentWeekByDay"]) => {
+    const totals = Array<number>(7).fill(0);
+    for (const point of serie ?? []) {
+      // `date` est un jour ISO (YYYY-MM-DD) : on le lit en UTC pour que le
+      // fuseau local ne fasse pas basculer le point sur la veille.
+      const day = new Date(`${point.date}T00:00:00Z`).getUTCDay();
+      totals[(day + 6) % 7] = point.total ?? 0; // dimanche (0) → index 6
+    }
+    return totals;
+  };
+
+  const current = byWeekday(data.currentWeekByDay);
+  const previous = byWeekday(data.lastWeekByDay);
+  const chartData = WEEK_DAYS.map((day, i) => ({
     name: day,
-    actuelle: data.currentWeekByDay[i]?.total ?? 0,
-    precedente: data.lastWeekByDay[i]?.total ?? 0,
+    actuelle: current[i],
+    precedente: previous[i],
   }));
 
+  // Semaine sans encaissement : sans échelle imposée, l'axe afficherait cinq
+  // graduations « 0k » identiques. On lui donne alors une amplitude par défaut.
+  const maxValue = Math.max(...current, ...previous, 0);
+
   return (
-    <ResponsiveContainer width="100%" height={220}>
+    <ResponsiveContainer width="100%" height={340}>
       <LineChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#f1f3fa" />
+        <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <YAxis
           tick={{ fontSize: 11 }}
-          tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+          tickLine={false}
+          axisLine={false}
+          width={48}
+          domain={[0, maxValue > 0 ? "auto" : 4000]}
+          // Format « k » comme Laravel, avec une décimale au besoin : sans elle,
+          // une échelle courte afficherait deux graduations « 2k » identiques.
+          tickFormatter={(v) =>
+            `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(
+              Number(v) / 1000,
+            )}k`
+          }
         />
         <Tooltip formatter={(v) => formatCFA(Number(v))} />
-        <Legend />
         <Line
           type="monotone"
           dataKey="actuelle"
           stroke="#727cf5"
-          strokeWidth={2}
+          strokeWidth={4}
           dot={false}
           name="Semaine actuelle"
         />
@@ -327,10 +361,9 @@ function RevenueLineChart({ data }: { data: RevenueData }) {
           type="monotone"
           dataKey="precedente"
           stroke="#0acf97"
-          strokeWidth={2}
+          strokeWidth={4}
           dot={false}
           name="Semaine précédente"
-          strokeDasharray="5 5"
         />
       </LineChart>
     </ResponsiveContainer>
@@ -593,39 +626,40 @@ export default function HomePage() {
                     title: "PATIENTS",
                     value: stats?.valeurPatient ?? 0,
                     trend: stats?.crPatient,
-                    icon: <Users className="h-6 w-6" />,
                   },
                   {
                     title: "CLIENTS PRO.",
                     value: stats?.valeurClient ?? 0,
                     trend: stats?.crClient,
-                    icon: <ShoppingCart className="h-6 w-6" />,
                   },
                   {
                     title: "DEMANDE D'EXAMEN",
                     value: stats?.valeurTestOrder ?? 0,
                     trend: stats?.crTestOrder,
-                    icon: <Activity className="h-6 w-6" />,
                   },
                   {
                     title: "CHIFFRE D'AFFAIRES",
                     value: formatCFA(stats?.valeurInvoice ?? 0),
                     trend: stats?.crInvoice,
-                    icon: <DollarSign className="h-6 w-6" />,
                   },
                 ].map((kpi) => (
                   <Card key={kpi.title} className="p-5">
+                    {/* Pas d'icône dans la carte : seuls le libellé, la valeur et
+                        l'évolution mensuelle sont affichés. */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
-                        <p className="text-sm text-gray-500 font-normal mt-0">
+                        {/* Tailles reprises de Laravel : titre h5 .9rem en graisse
+                            normale, valeur h3 1.42rem — le texte tient ainsi dans la
+                            carte (le 30px précédent débordait sur le chiffre d'affaires). */}
+                        <p className="text-[.9rem] text-gray-500 font-normal mt-0">
                           {kpi.title}
                         </p>
-                        <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
+                        <p className="text-[1.42rem] font-bold mt-3 mb-3 text-gray-900">
                           {kpi.value}
                         </p>
                         {kpi.trend !== undefined && (
                           <p
-                            className={`text-xs font-medium ${kpi.trend >= 0 ? "text-green-600" : "text-red-600"}`}
+                            className={`text-[.9rem] font-medium ${kpi.trend >= 0 ? "text-green-600" : "text-red-600"}`}
                           >
                             {kpi.trend >= 0 ? "↑" : "↓"} {kpi.trend}%{" "}
                             <span className="text-gray-400 font-normal">
@@ -634,7 +668,6 @@ export default function HomePage() {
                           </p>
                         )}
                       </div>
-                      <div className="text-gray-400 float-right">{kpi.icon}</div>
                     </div>
                   </Card>
                 ))}
@@ -647,20 +680,9 @@ export default function HomePage() {
               <Card>
                 <CardHeader title="EXAMENS LES PLUS DEMANDÉS" />
                 <div className="overflow-x-auto">
+                  {/* Comme dans Laravel (dashboardPlus.blade.php) : le tableau des
+                      examens les plus demandés n'a pas de ligne d'en-tête. */}
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500 w-10">
-                          N°
-                        </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
-                          Nom examen
-                        </th>
-                        <th className="py-2 px-3 text-right text-xs font-semibold uppercase text-gray-500">
-                          Nb demandes
-                        </th>
-                      </tr>
-                    </thead>
                     <tbody className="divide-y divide-gray-100">
                       {topExamensLoading
                         ? Array.from({ length: 5 }).map((_, i) => (
@@ -671,13 +693,13 @@ export default function HomePage() {
                               key={idx}
                               className="hover:bg-gray-50 transition-colors"
                             >
-                              <td className="py-2 px-3 text-gray-400 text-xs">
+                              <td className="py-2 px-3 text-gray-500 text-sm w-10">
                                 {idx + 1}
                               </td>
                               <td className="py-2 px-3 text-gray-700">
                                 {ex.testName}
                               </td>
-                              <td className="py-2 px-3 text-right font-semibold text-gray-900">
+                              <td className="py-2 px-3 text-gray-700">
                                 {ex.totalDemandes}
                               </td>
                             </tr>
@@ -823,34 +845,43 @@ export default function HomePage() {
               <Card>
                 <CardHeader title="CHIFFRE D'AFFAIRES" />
                 <div className="p-5">
-                  {/* 2 indicateurs */}
-                  <div className="flex gap-6 mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="h-3 w-3 rounded-full bg-blue-500 inline-block" />
-                      <span className="text-sm text-gray-600">
-                        Semaine actuelle
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="h-3 w-3 rounded-full bg-green-500 inline-block" />
-                      <span className="text-sm text-gray-600">
-                        Semaine précédente
-                      </span>
+                  {/* Bandeau des deux totaux hebdomadaires — calque du bloc
+                      `chart-content-bg` de Laravel : libellé au-dessus, montant en
+                      gros précédé d'une puce de la couleur de la série. */}
+                  <div className="rounded bg-gray-50 py-3">
+                    <div className="grid grid-cols-1 text-center sm:grid-cols-2">
+                      <div>
+                        <p className="mb-0 mt-3 text-sm text-gray-500">
+                          Semaine actuelle
+                        </p>
+                        <p className="mb-3 text-2xl font-normal text-gray-900">
+                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-[#727cf5] align-middle" />
+                          {formatCFA(revenueData?.totalCurrentWeek ?? 0)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="mb-0 mt-3 text-sm text-gray-500">
+                          Semaine précédente
+                        </p>
+                        <p className="mb-3 text-2xl font-normal text-gray-900">
+                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-[#0acf97] align-middle" />
+                          {formatCFA(revenueData?.totalLastWeek ?? 0)}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  {/* Sous-bloc Aujourd'hui + lien */}
-                  <div className="mb-4">
-                    <span className="text-sm text-gray-700 font-medium">
-                      Aujourd&apos;hui:{" "}
-                      <span className="text-blue-600 font-semibold">
-                        {formatCFA(revenueData?.totalToday ?? 0)}
-                      </span>
-                    </span>
+                  {/* Total du jour + accès aux relevés (bouton Laravel
+                      « View Statements », classe btn-outline-primary). */}
+                  <div className="mt-4 mb-4">
+                    <h5 className="mb-2 text-base font-semibold text-gray-800">
+                      Aujourd&apos;hui: {formatCFA(revenueData?.totalToday ?? 0)}
+                    </h5>
                     <Link
-                      href="/invoices"
-                      className="ml-4 text-xs text-blue-500 hover:underline"
+                      href="/invoices/business"
+                      className="inline-flex items-center gap-2 rounded-[.15rem] border border-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] text-blue-600 transition-colors hover:bg-blue-600 hover:text-white"
                     >
-                      Voir les relevés →
+                      View Statements
+                      <ArrowRight className="h-4 w-4" />
                     </Link>
                   </div>
                   {/* Graphique ligne */}
@@ -901,28 +932,40 @@ export default function HomePage() {
                             className="h-3 w-3 rounded-sm inline-block"
                             style={{ backgroundColor: "#727cf5" }}
                           />
-                          Factures de vente payées
+                          <span className="flex-1">Factures de vente payées</span>
+                          <span className="font-semibold text-gray-800">
+                            {invoiceStatus.invoicePaid}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-600">
                           <span
                             className="h-3 w-3 rounded-sm inline-block"
                             style={{ backgroundColor: "#0acf97" }}
                           />
-                          Factures de vente non payées
+                          <span className="flex-1">Factures de vente non payées</span>
+                          <span className="font-semibold text-gray-800">
+                            {invoiceStatus.invoiceNoPaid}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-600">
                           <span
                             className="h-3 w-3 rounded-sm inline-block"
                             style={{ backgroundColor: "#fa5c7c" }}
                           />
-                          Factures d&apos;avoir payées
+                          <span className="flex-1">Factures d&apos;avoir payées</span>
+                          <span className="font-semibold text-gray-800">
+                            {invoiceStatus.refundPaid}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-gray-600">
                           <span
                             className="h-3 w-3 rounded-sm inline-block"
                             style={{ backgroundColor: "#ffbc00" }}
                           />
-                          Factures d&apos;avoir non payées
+                          <span className="flex-1">Factures d&apos;avoir non payées</span>
+                          <span className="font-semibold text-gray-800">
+                            {invoiceStatus.refundNoPaid}
+                          </span>
                         </div>
                       </div>
                     </>
@@ -944,13 +987,13 @@ export default function HomePage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Docteurs
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Demandes Affectées
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Demandes Traitées
                         </th>
                       </tr>
@@ -990,13 +1033,13 @@ export default function HomePage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500 w-8">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700 w-8">
                           #
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Nom
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Email
                         </th>
                       </tr>
@@ -1048,16 +1091,16 @@ export default function HomePage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                       Date
                     </th>
-                    <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                       Code
                     </th>
-                    <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                       Patiens
                     </th>
-                    <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                       Action
                     </th>
                   </tr>
@@ -1117,35 +1160,28 @@ export default function HomePage() {
       {isPathologist && (
         <>
           {/* LIGNE 7 : widget-inline (total demandes + productivité) */}
-          <Card className="p-5">
-            <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
-              {/* Gauche : icône dossier + total */}
-              <div className="flex items-center gap-4">
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <Folder className="h-8 w-8 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-3xl font-semibold text-gray-900">
-                    {doctorOrdersTotal}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Total de demandes d&apos;examen affectées
-                  </p>
-                </div>
+          <Card>
+            {/* Calque du `card widget-inline` de Laravel : deux colonnes de même
+                largeur, contenu centré, icône discrète au-dessus de la valeur et
+                filet de séparation entre les deux. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2">
+              <div className="p-5 text-center">
+                <Folder className="mx-auto h-6 w-6 text-gray-400" />
+                <p className="mt-2 text-3xl font-semibold text-gray-900">
+                  {doctorOrdersTotal}
+                </p>
+                <p className="mb-0 text-[15px] text-gray-500">
+                  Total de demandes d&apos;examen affectées
+                </p>
               </div>
-              {/* Droite : icône graphique + productivité */}
-              <div className="flex items-center gap-4">
-                <div className="bg-green-50 rounded-lg p-4">
-                  <BarChart2 className="h-8 w-8 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-3xl font-semibold text-gray-900">
-                    {doctorProductivite === null
-                      ? "—"
-                      : `${doctorProductivite}% ↑`}
-                  </p>
-                  <p className="text-sm text-gray-500">Productivité</p>
-                </div>
+              <div className="border-t border-gray-200 p-5 text-center sm:border-l sm:border-t-0">
+                <BarChart2 className="mx-auto h-6 w-6 text-gray-400" />
+                <p className="mt-2 inline-flex items-center gap-1 text-3xl font-semibold text-gray-900">
+                  {doctorProductivite ?? 0}
+                  {doctorProductivite !== null && "%"}
+                  <ArrowUp className="h-5 w-5 text-green-500" />
+                </p>
+                <p className="mb-0 text-[15px] text-gray-500">Productivité</p>
               </div>
             </div>
           </Card>
@@ -1190,16 +1226,16 @@ export default function HomePage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Date
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Code
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Patient
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Compte rendu
                         </th>
                       </tr>
@@ -1259,16 +1295,16 @@ export default function HomePage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Date
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Code
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Patient
                         </th>
-                        <th className="py-2 px-3 text-left text-xs font-semibold uppercase text-gray-500">
+                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
                           Compte rendu
                         </th>
                       </tr>

@@ -235,6 +235,11 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["all-settings"] });
+      // `app-settings` alimente toute la coque de l'appli (logo de la sidebar,
+      // favicon, titre de l'onglet, pied de page). Son cache dure 5 min : sans
+      // cette invalidation, une valeur enregistrée ici n'apparaissait qu'après
+      // un rechargement complet — l'utilisateur croyait la sauvegarde perdue.
+      queryClient.invalidateQueries({ queryKey: ["app-settings"] });
       toast.success("Paramètres sauvegardés");
     },
     onError: () => toast.error("Erreur lors de la sauvegarde"),

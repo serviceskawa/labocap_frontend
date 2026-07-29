@@ -6,12 +6,15 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+import type { ColumnDef } from "@tanstack/react-table";
+
+import { DataTable } from "@/components/common/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import {
   invoicesApi,
+  type InvoiceMonthlyStats,
   type InvoiceSearchResult,
 } from "@/lib/api/invoices";
 
@@ -20,16 +23,61 @@ function formatFCFA(amount?: number): string {
   return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
 }
 
+/**
+ * Colonnes du tableau « Liste des Factures » — reprise à l'identique du DataTable
+ * Laravel (`viewjs/invoice/business.js`) : Mois, Facturés, Avoirs, Chiffre
+ * d'affaires, Encaissements, une ligne par mois écoulé de l'année.
+ */
+const monthlyColumns: ColumnDef<InvoiceMonthlyStats>[] = [
+  {
+    header: "Mois",
+    accessorKey: "monthName",
+    cell: ({ row }) => (
+      <span className="font-medium text-gray-900">
+        {row.original.monthName} {row.original.year}
+      </span>
+    ),
+  },
+  {
+    header: "Facturés",
+    accessorKey: "facturated",
+    cell: ({ row }) => formatFCFA(row.original.facturated),
+  },
+  {
+    header: "Avoirs",
+    accessorKey: "credits",
+    cell: ({ row }) => (
+      <span className="text-red-600">{formatFCFA(row.original.credits)}</span>
+    ),
+  },
+  {
+    header: "Chiffre d'affaires",
+    accessorKey: "turnover",
+    cell: ({ row }) => (
+      <span className="font-semibold text-green-700">
+        {formatFCFA(row.original.turnover)}
+      </span>
+    ),
+  },
+  {
+    header: "Encaissements",
+    accessorKey: "collections",
+    cell: ({ row }) => (
+      <span className="font-semibold text-blue-700">
+        {formatFCFA(row.original.collections)}
+      </span>
+    ),
+  },
+];
+
 export default function InvoiceBusinessPage() {
   const { can } = usePermissions();
-  const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
 
-  // === Tableau mensuel
+  // === Tableau mensuel — année en cours uniquement, comme Laravel
+  // (getInvoiceforDatatable ne propose aucun choix d'année).
   const { data: monthlyStats, isLoading } = useQuery({
-    queryKey: ["invoice-monthly-stats", selectedYear],
-    queryFn: () =>
-      invoicesApi.getMonthlyStats(selectedYear).then((r) => r.data),
+    queryKey: ["invoice-monthly-stats"],
+    queryFn: () => invoicesApi.getMonthlyStats().then((r) => r.data),
   });
 
   // === Recherche par date
@@ -64,8 +112,6 @@ export default function InvoiceBusinessPage() {
     );
   }
 
-  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -88,86 +134,17 @@ export default function InvoiceBusinessPage() {
 
       {/* === Section 1 : Tableau mensuel === */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-gray-800">
-            Liste des Factures
-          </h2>
-          <NativeSelect
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-          >
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
+        <h2 className="mb-4 text-base font-semibold text-gray-800">
+          Liste des Factures
+        </h2>
 
-        <div className="overflow-hidden rounded-lg border border-gray-200">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Mois
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Facturés
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Avoirs
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Chiffre d&apos;affaires
-                </th>
-                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
-                  Encaissements
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {isLoading ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-8 text-center text-sm text-gray-500"
-                  >
-                    Chargement...
-                  </td>
-                </tr>
-              ) : monthlyStats?.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-8 text-center text-sm text-gray-500"
-                  >
-                    Aucune donnée
-                  </td>
-                </tr>
-              ) : (
-                monthlyStats?.map((stats) => (
-                  <tr key={stats.month} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {stats.monthName}
-                    </td>
-                    <td className="px-4 py-3 text-right text-gray-700">
-                      {formatFCFA(stats.facturated)}
-                    </td>
-                    <td className="px-4 py-3 text-right text-red-600">
-                      {formatFCFA(stats.credits)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-green-700">
-                      {formatFCFA(stats.turnover)}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-blue-700">
-                      {formatFCFA(stats.collections)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={monthlyColumns}
+          data={monthlyStats ?? []}
+          isLoading={isLoading}
+          hideToolbar
+          hideToolbarSearch
+        />
       </div>
 
       {/* === Section 2 : Recherche par date === */}
