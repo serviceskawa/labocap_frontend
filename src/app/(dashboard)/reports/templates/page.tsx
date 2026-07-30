@@ -58,6 +58,20 @@ export default function ReportTemplatesPage() {
     );
   }, [allTemplates, search]);
 
+  // Erreur de saisie du titre, affichée sous le champ plutôt que dans un toast
+  // générique « Erreurs de validation ».
+  const [titleError, setTitleError] = useState<string | null>(null);
+
+  /** Valide le titre avant envoi. Renvoie false et affiche le message si vide. */
+  function titreValide(): boolean {
+    if (!form.title.trim()) {
+      setTitleError("Veuillez renseigner le titre du template");
+      return false;
+    }
+    setTitleError(null);
+    return true;
+  }
+
   // === Mutations
   const createMutation = useMutation({
     mutationFn: (data: ReportTemplateRequest) =>
@@ -233,11 +247,11 @@ export default function ReportTemplatesPage() {
         onClose={() => setCreateOpen(false)}
         title="Ajouter un nouveau template"
         size="xl"
-        onSubmit={() => createMutation.mutate(form)}
+        onSubmit={() => titreValide() && createMutation.mutate(form)}
         submitLabel="Ajouter"
         isSubmitting={createMutation.isPending}
       >
-        <TemplateForm form={form} setForm={setForm} />
+        <TemplateForm form={form} setForm={setForm} titleError={titleError} />
       </CrudModal>
 
       {/* Modale édition */}
@@ -247,13 +261,14 @@ export default function ReportTemplatesPage() {
         title="Modifier le template"
         size="xl"
         onSubmit={() =>
+          titreValide() &&
           editTarget &&
           updateMutation.mutate({ id: editTarget.id, data: form })
         }
         submitLabel="Mettre à jour"
         isSubmitting={updateMutation.isPending}
       >
-        <TemplateForm form={form} setForm={setForm} />
+        <TemplateForm form={form} setForm={setForm} titleError={titleError} />
       </CrudModal>
 
       {/* Confirmation suppression */}
@@ -282,11 +297,13 @@ export default function ReportTemplatesPage() {
 // ---------------------------------------------------------------------------
 
 function TemplateForm({
+  titleError,
   form,
   setForm,
 }: {
   form: ReportTemplateRequest;
   setForm: (f: ReportTemplateRequest) => void;
+  titleError?: string | null;
 }) {
   return (
     <div className="space-y-4">
@@ -299,9 +316,11 @@ function TemplateForm({
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           className={inputClass}
-          required
           placeholder="Ex : Structure CR, Tête fémorale, Amygdale..."
         />
+        {titleError && (
+          <p className="mt-1 text-sm text-red-600">{titleError}</p>
+        )}
       </div>
 
       <div>

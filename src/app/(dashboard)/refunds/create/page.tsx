@@ -19,6 +19,7 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import { refundsApi, refundReasonsApi, type RefundReason } from "@/lib/api/refunds";
 import { invoicesApi, type Invoice } from "@/lib/api/invoices";
 import { Button } from "@/components/ui/Button";
+import { applyFieldErrors } from "@/lib/api/errorMessages";
 
 // ---------------------------------------------------------------------------
 // Calque `errors_reports/refund/create.blade.php` — page dédiée, pas un modal.
@@ -118,10 +119,12 @@ export default function RefundCreatePage() {
       router.push("/refunds");
     },
     onError: (err: AxiosError) => {
-      toast.error(
-        (err.response?.data as { message?: string })?.message ??
-          "Un problème est suvenu lors de l'enrégistrement",
-      );
+      if (!applyFieldErrors(err as never, form.setError as (n: string, e: { type: string; message: string }) => void)) {
+        toast.error(
+          (err.response?.data as { message?: string })?.message ??
+            "Un problème est survenu lors de l'enregistrement",
+        );
+      }
     },
   });
 

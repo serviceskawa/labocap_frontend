@@ -20,7 +20,6 @@ import {
   SIGNAL_TYPES,
   type Signal,
 } from "@/lib/api/signals";
-import { testOrdersApi } from "@/lib/api/testOrders";
 import type { ApiError } from "@/types/api";
 
 const inputClass =
@@ -52,23 +51,16 @@ export default function SignalementsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      // Laravel saisit un CODE ; le backend Java attend l'UUID du bon d'examen.
-      // On résout le code via la recherche des bons d'examen.
-      const code = values.testOrderCode.trim();
-      const res = await testOrdersApi.findAll({ search: code, size: 5 });
-      const match = (res.data.content ?? []).find(
-        (o) => (o.code ?? "").toLowerCase() === code.toLowerCase()
-      );
-      if (!match) {
-        throw new Error(`Aucune demande d'examen trouvée pour le code « ${code} ».`);
-      }
-      return signalsApi.create({
-        testOrderId: match.id,
+    mutationFn: (values: FormValues) =>
+      // Le code part tel quel : c'est le serveur qui le résout en demande
+      // d'examen, comme SignalController::store() en Laravel. La résolution
+      // côté client passait par la recherche et échouait dès que celle-ci ne
+      // ramenait pas le bon exact dans ses premiers résultats.
+      signalsApi.create({
+        testOrderCode: values.testOrderCode.trim(),
         typeSignal: values.typeSignal,
         commentaire: values.commentaire,
-      });
-    },
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       toast.success("Problème signalé avec succès");

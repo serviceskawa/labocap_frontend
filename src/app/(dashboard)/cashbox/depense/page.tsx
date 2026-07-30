@@ -23,19 +23,26 @@ import {
 import { banksApi, type Bank } from "@/lib/api/banks";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import type { ApiError } from "@/types/api";
+import { applyFieldErrors } from "@/lib/api/errorMessages";
 
 // ---------------------------------------------------------------------------
 // Schéma de l'approvisionnement de la caisse
 // ---------------------------------------------------------------------------
 
-// Calque `cashbox/depense/create.blade.php` : aucun champ n'est marqué requis
-// côté HTML Laravel ; on reste souple, seul le montant guide la saisie.
+// Tous les champs sont obligatoires : écart assumé vis-à-vis de
+// `cashbox/depense/create.blade.php`, qui n'en marque aucun. Demandé en recette
+// pour qu'un approvisionnement soit toujours traçable (banque, chèque, motif).
 const supplySchema = z.object({
-  bankId: z.string().optional(),
-  chequeNumber: z.string().optional(),
-  amount: z.string().min(1, "Le montant est requis"),
+  bankId: z.string().min(1, "La banque est requise"),
+  chequeNumber: z.string().min(1, "Le numéro de chèque est requis"),
+  amount: z
+    .string()
+    .min(1, "Le montant est requis")
+    .refine((v) => Number(v) > 0, {
+      message: "Veuillez renseigner un montant supérieur à zéro",
+    }),
   date: z.string().min(1, "La date est requise"),
-  description: z.string().optional(),
+  description: z.string().min(1, "La description est requise"),
 });
 
 type SupplyFormData = z.infer<typeof supplySchema>;
@@ -164,9 +171,11 @@ export default function CashboxDepensePage() {
       });
     },
     onError: (err: AxiosError<ApiError>) => {
-      toast.error(
-        err.response?.data?.message ?? "Erreur lors de l'approvisionnement"
-      );
+      if (!applyFieldErrors(err, supplyForm.setError as (n: string, e: { type: string; message: string }) => void)) {
+        toast.error(
+          err.response?.data?.message ?? "Erreur lors de l'approvisionnement"
+        );
+      }
     },
   });
 
@@ -341,7 +350,7 @@ export default function CashboxDepensePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">
-                Nom de la banque
+                Nom de la banque <span className="text-red-500">*</span>
               </label>
               <NativeSelect {...supplyForm.register("bankId")}>
                 <option value="">Sélectionner une banque</option>
@@ -351,17 +360,27 @@ export default function CashboxDepensePage() {
                   </option>
                 ))}
               </NativeSelect>
+              {supplyForm.formState.errors.bankId && (
+                <p className="text-sm text-red-600">
+                  {supplyForm.formState.errors.bankId.message}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">
-                Numéro de chèque
+                Numéro de chèque <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 {...supplyForm.register("chequeNumber")}
                 className={inputClass}
               />
+              {supplyForm.formState.errors.chequeNumber && (
+                <p className="text-sm text-red-600">
+                  {supplyForm.formState.errors.chequeNumber.message}
+                </p>
+              )}
             </div>
           </div>
 
@@ -411,13 +430,18 @@ export default function CashboxDepensePage() {
           {/* Description (pleine largeur) */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
-              Description
+              Description <span className="text-red-500">*</span>
             </label>
             <textarea
               rows={3}
               {...supplyForm.register("description")}
               className={`${inputClass} resize-none`}
             />
+            {supplyForm.formState.errors.description && (
+              <p className="text-sm text-red-600">
+                {supplyForm.formState.errors.description.message}
+              </p>
+            )}
           </div>
         </div>
       </CrudModal>

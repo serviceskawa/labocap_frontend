@@ -25,10 +25,30 @@ import { clientsApi, type Client, type ClientRequest } from "@/lib/api/clients";
 // Zod schema — calque `clients/create.blade.php` : seul le nom est requis.
 // ---------------------------------------------------------------------------
 
+/**
+ * Numéro de téléphone accepté.
+ *
+ * Chiffres, espaces, points et tirets, avec un « + » facultatif en tête ; 8 à 15
+ * chiffres une fois les séparateurs retirés. Cela refuse la saisie alphabétique
+ * (le défaut signalé) tout en gardant modifiables les fiches existantes, qui
+ * utilisent des formes légitimes : 97000000, +22997324883, 0022996236464.
+ */
+function telephoneValide(v?: string): boolean {
+  if (!v || v.trim() === "") return true; // champ facultatif
+  if (!/^\+?[0-9 .-]+$/.test(v.trim())) return false;
+  const chiffres = v.replace(/\D/g, "");
+  return chiffres.length >= 8 && chiffres.length <= 15;
+}
+const TEL_MESSAGE =
+  "Numéro invalide : 8 à 15 chiffres, indicatif « + » facultatif (ex. 97000000)";
+
 const clientSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   adress: z.string().optional(),
-  contact: z.string().optional(),
+  contact: z
+    .string()
+    .optional()
+    .refine(telephoneValide, { message: TEL_MESSAGE }),
   ifu: z.string().optional(),
 });
 

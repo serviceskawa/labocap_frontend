@@ -28,6 +28,7 @@ import { expenseCategoriesApi } from "@/lib/api/expenses";
 import { suppliersApi } from "@/lib/api/suppliers";
 import type { PageResponse, ApiError } from "@/types/api";
 import { Button } from "@/components/ui/Button";
+import { applyFieldErrors } from "@/lib/api/errorMessages";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -130,8 +131,11 @@ export default function CashboxTicketsPage() {
       toast.success("Bon de caisse créé — ajoutez-y les articles");
       form.reset({ expenseCategoryId: "", supplierId: "" });
     },
-    onError: (e: AxiosError<ApiError>) =>
-      toast.error(e.response?.data?.message ?? "Erreur lors de la création"),
+    onError: (e: AxiosError<ApiError>) => {
+      if (!applyFieldErrors(e, form.setError as (n: string, e: { type: string; message: string }) => void)) {
+        toast.error(e.response?.data?.message ?? "Erreur lors de la création");
+      }
+    },
   });
 
   const statusMutation = useMutation({

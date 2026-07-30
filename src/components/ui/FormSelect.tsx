@@ -9,6 +9,7 @@ import type {
 } from "react-select";
 import { cn } from "@/lib/utils";
 import { LimitedSelect as Select } from "./LimitedSelect";
+import { SELECT_CONTROL_MIN_HEIGHT } from "./selectStyles";
 
 export interface SelectOption {
   value: string;
@@ -45,7 +46,7 @@ type FormSelectProps = FormSelectSingleProps | FormSelectMultiProps;
 const selectStyles: StylesConfig<SelectOption, boolean, GroupBase<SelectOption>> = {
   control: (base, state) => ({
     ...base,
-    minHeight: "38px",
+    minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
     borderRadius: "0.5rem",
     borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
     boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",

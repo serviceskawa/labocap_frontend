@@ -12,9 +12,8 @@ import {
   PaginationState,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import { ChevronUp, ChevronDown, ChevronsUpDown, RefreshCw, Minus, Plus, X } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 
@@ -35,11 +34,6 @@ export interface DataTableProps<T> {
   rowClassName?: (row: T) => string;
   /** Titre affiché dans la barre d'outils du tableau (optionnel). */
   title?: string;
-  /**
-   * Callback du bouton « Actualiser ». Si absent, on invalide les requêtes
-   * react-query actives (rechargement générique des données).
-   */
-  onRefresh?: () => void;
   /**
    * Masque le champ de recherche intégré à la barre d'outils. À utiliser quand
    * la page fournit sa propre recherche (ex. `SearchInput` dans le slot filtres),
@@ -67,32 +61,15 @@ export function DataTable<T>({
   isLoading = false,
   rowClassName,
   title,
-  onRefresh,
   hideToolbarSearch = false,
   hideToolbar = false,
 }: DataTableProps<T>) {
   const isServerSide = pageCount !== undefined;
-  const queryClient = useQueryClient();
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [localSearch, setLocalSearch] = useState("");
 
-  // Barre d'outils du tableau : réduire (masquer le corps) / fermer (masquer la carte).
-  const [collapsed, setCollapsed] = useState(false);
-  const [closed, setClosed] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    if (onRefresh) {
-      onRefresh();
-    } else {
-      queryClient.invalidateQueries();
-    }
-    // Petit retour visuel de rotation, sans bloquer.
-    window.setTimeout(() => setRefreshing(false), 600);
-  };
 
   const [localPagination, setLocalPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -164,34 +141,20 @@ export function DataTable<T>({
     return pages;
   };
 
-  // Bouton « Fermer » : la carte disparaît (revient au rechargement de la page).
-  if (closed) return null;
-
-  // `.card-widgets` Hyper : petits liens-icônes discrets en haut à droite.
-  const widgetBtn = "text-gray-400 transition-colors hover:text-gray-600";
   const showSearch = !hideToolbarSearch && (onSearchChange !== undefined || !isServerSide);
 
   return (
     <div className="w-full">
-      {/* card-widgets (Actualiser · Réduire · Fermer) + card-title, comme Laravel */}
-      {!hideToolbar && (
+      {/* Titre de la carte. Le trio d'icônes Actualiser · Réduire · Fermer,
+          hérité du gabarit Hyper, a été retiré : sans utilité ici, et le bouton
+          « Fermer » faisait disparaître un tableau sans moyen de le rétablir
+          autrement qu'en rechargeant la page. */}
+      {!hideToolbar && title && (
         <div className="relative">
-          <div className="absolute right-0 top-0 flex items-center gap-2">
-            <button type="button" onClick={handleRefresh} className={widgetBtn} title="Actualiser" aria-label="Actualiser">
-              <RefreshCw className={cn("h-[.95rem] w-[.95rem]", refreshing && "animate-spin")} />
-            </button>
-            <button type="button" onClick={() => setCollapsed((c) => !c)} className={widgetBtn} title={collapsed ? "Agrandir" : "Réduire"} aria-label={collapsed ? "Agrandir" : "Réduire"}>
-              {collapsed ? <Plus className="h-[.95rem] w-[.95rem]" /> : <Minus className="h-[.95rem] w-[.95rem]" />}
-            </button>
-            <button type="button" onClick={() => setClosed(true)} className={widgetBtn} title="Fermer" aria-label="Fermer">
-              <X className="h-[.95rem] w-[.95rem]" />
-            </button>
-          </div>
-          {title && <h5 className="mb-0 text-[.9375rem] font-semibold text-gray-800">{title}</h5>}
+          <h5 className="mb-0 text-[.9375rem] font-semibold text-gray-800">{title}</h5>
         </div>
       )}
 
-      {!collapsed && (
       <div className={cn(!hideToolbar && "pt-3")}>
         {/* Contrôles : « Afficher [x] enregistrements par page » (gauche) + « Rechercher: » (droite) */}
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -361,7 +324,6 @@ export function DataTable<T>({
           </div>
         </div>
       </div>
-      )}
     </div>
   );
 }

@@ -18,6 +18,14 @@ export const SELECT_MENU_CLASSNAMES: ClassNamesConfig<
  * Styles react-select partagés (design soigné, cohérent avec l'app).
  * Passe `hasError` à true pour la variante bordure rouge.
  */
+/**
+ * Hauteur commune à TOUS les champs de sélection de l'application — react-select
+ * comme `<select>` natif. Les hauteurs divergeaient d'un écran à l'autre parce
+ * que `LimitedSelect` n'appliquait pas ces styles partagés et retombait sur le
+ * défaut de react-select.
+ */
+export const SELECT_CONTROL_MIN_HEIGHT = 40;
+
 export function buildSelectStyles(
   hasError: boolean
 ): StylesConfig<SelectOption, boolean, GroupBase<SelectOption>> {
@@ -27,7 +35,7 @@ export function buildSelectStyles(
   return {
     control: (base, state) => ({
       ...base,
-      minHeight: "40px",
+      minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
       borderRadius: "0.5rem",
       borderColor: state.isFocused ? focusColor : borderColor,
       boxShadow: state.isFocused ? `0 0 0 1px ${focusColor}` : "none",

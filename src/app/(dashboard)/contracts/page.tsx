@@ -34,6 +34,7 @@ import {
   ContractStatus,
 } from "@/lib/api/contracts";
 import { clientsApi } from "@/lib/api/clients";
+import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -72,7 +73,15 @@ const contractSchema = z
     type: z.string().min(1, { message: "Le type est requis" }),
     description: z.string().min(1, { message: "La description est requise" }),
     clientId: z.string().optional(),
-    nbrTests: z.string().min(1, { message: "Le nombre d'examens est requis" }),
+    // -1 = illimité (convention Laravel, 135 des 146 contrats l'utilisent).
+    // On refuse 0 et les autres négatifs, qui n'ont aucun sens métier.
+    nbrTests: z
+      .string()
+      .min(1, { message: "Le nombre d'examens est requis" })
+      .refine((v) => {
+        const n = Number(v);
+        return Number.isInteger(n) && (n === -1 || n >= 1);
+      }, { message: "Saisissez un nombre entier supérieur ou égal à 1, ou -1 pour illimité" }),
     status: z.enum(["ACTIF", "INACTIF", "CLOTURE"] as const).optional(),
     invoiceUnique: z.boolean().optional(),
   })
@@ -651,7 +660,7 @@ function ContractForm({
                 styles={{
                   control: (base, state) => ({
                     ...base,
-                    minHeight: "38px",
+                    minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
                     borderRadius: "0.375rem",
                     borderColor: errors.clientId
                       ? "#fca5a5"

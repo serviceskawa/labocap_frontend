@@ -27,6 +27,7 @@ import { labTestsApi, type LabTest } from "@/lib/api/examens";
 import type { ApiError } from "@/types/api";
 import { getApiErrorMessage } from "@/lib/api/errorMessages";
 import { openDocFile } from "@/lib/api/docs";
+import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
 
 // ---------------------------------------------------------------------------
 // Types locaux
@@ -197,6 +198,14 @@ export default function TestOrderDetailsPage({ params }: Props) {
       total: number;
     }) => {
       if (!order) return Promise.reject(new Error("Demande introuvable"));
+      // Garde-fou identique à Laravel (details_store) : un même examen ne peut
+      // figurer qu'une fois sur le bon, sinon il est facturé deux fois à la
+      // validation. Le back le refuse aussi (422) ; ce test évite l'aller-retour.
+      if ((order.details ?? []).some((d) => d.labTestId === data.testId)) {
+        return Promise.reject(
+          new Error("Cet examen est déjà ajouté à la demande."),
+        );
+      }
       const newDetails = [
         ...(order.details ?? []).map((d) => ({
           labTestId: d.labTestId,
@@ -226,7 +235,7 @@ export default function TestOrderDetailsPage({ params }: Props) {
       setExamPrice(0);
       setExamDiscount(0);
     },
-    onError: (err: AxiosError<ApiError>) => {
+    onError: (err: AxiosError<ApiError> | Error) => {
       toast.error(getApiErrorMessage(err, "Erreur lors de l'ajout"));
     },
   });
@@ -354,6 +363,11 @@ export default function TestOrderDetailsPage({ params }: Props) {
       total: editCalculatedTotal,
     });
   };
+
+  // Confirmation avant validation : l'opération est irréversible côté métier
+  // (génération du code, création du compte rendu et de la facture, plus aucun
+  // examen ajoutable ensuite). Elle partait auparavant au premier clic.
+  const [confirmValidation, setConfirmValidation] = useState(false);
 
   const handleUpdateStatus = () => {
     // Garde anti double-soumission : empêche deux validations concurrentes
@@ -592,10 +606,14 @@ export default function TestOrderDetailsPage({ params }: Props) {
 
         {/* Formulaire upload */}
         <form onSubmit={handleGalleryUpload} className="flex items-center gap-3 mb-4">
+          {/* Le back n'accepte que JPG et PNG, comme la règle Laravel
+              `files_name.* => file|mimes:jpg,png`. On restreint le sélecteur en
+              conséquence : avec « image/* » l'utilisateur pouvait choisir un HEIC
+              ou un TIFF et ne découvrir le refus qu'après l'envoi. */}
           <input
             type="file"
             multiple
-            accept="image/*"
+            accept=".jpg,.jpeg,.png,image/jpeg,image/png"
             onChange={(e) => setFiles(e.target.files)}
             className="text-sm text-gray-600 file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
           />
@@ -669,7 +687,7 @@ export default function TestOrderDetailsPage({ params }: Props) {
                 styles={{
                   control: (base) => ({
                     ...base,
-                    minHeight: "38px",
+                    minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
                     fontSize: "0.875rem",
                     borderColor: "#d1d5db",
                   }),
@@ -738,12 +756,30 @@ export default function TestOrderDetailsPage({ params }: Props) {
           )}
         </div>
 
-        {/* Bouton finalisation */}
+        <ConfirmModal
+        isOpen={confirmValidation}
+        onClose={() => setConfirmValidation(false)}
+        onConfirm={() => {
+          setConfirmValidation(false);
+          handleUpdateStatus();
+        }}
+        title="Confirmer la demande d'examen"
+        message={
+          `Cette demande sera validée avec ${order?.details?.length ?? 0} examen(s). ` +
+          "Un code, un compte rendu et une facture seront générés, et plus aucun " +
+          "examen ne pourra être ajouté ensuite. Voulez-vous continuer ?"
+        }
+        confirmLabel="Confirmer la demande"
+        cancelLabel="Revenir au formulaire"
+        isLoading={updateStatusMutation.isPending}
+      />
+
+      {/* Bouton finalisation */}
         {canEditDetails && (
           <div className="mt-4">
             <button
               type="button"
-              onClick={handleUpdateStatus}
+              onClick={() => setConfirmValidation(true)}
               disabled={
                 !order.details?.length || updateStatusMutation.isPending
               }
@@ -793,7 +829,7 @@ export default function TestOrderDetailsPage({ params }: Props) {
               styles={{
                 control: (base) => ({
                   ...base,
-                  minHeight: "38px",
+                  minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
                   fontSize: "0.875rem",
                   borderColor: "#d1d5db",
                 }),

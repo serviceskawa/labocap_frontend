@@ -154,11 +154,10 @@ function ReportCell({ row }: { row: ReportSuiviRow }) {
 interface CallCellProps {
   row: ReportSuiviRow;
   onMarkInformed: (row: ReportSuiviRow) => void;
-  onCall: (row: ReportSuiviRow) => void;
-  onSms: (row: ReportSuiviRow) => void;
+  onNotify: (row: ReportSuiviRow) => void;
 }
 
-function CallCell({ row, onMarkInformed, onCall, onSms }: CallCellProps) {
+function CallCell({ row, onMarkInformed, onNotify }: CallCellProps) {
   const { can } = usePermissions();
   const phone = row.patientPhone ?? "";
   const reportTerminated =
@@ -168,25 +167,20 @@ function CallCell({ row, onMarkInformed, onCall, onSms }: CallCellProps) {
   const canNotify =
     can(PERMISSIONS.EDIT_REPORTS) && reportTerminated && !!phone && !!row.reportId;
 
+  // Un seul bouton : c'est le serveur qui choisit le canal, comme l'action
+  // Laravel `callOrSendSms` (SMS si le bon porte l'option, sinon appel vocal et
+  // seulement entre 8h et 18h). Deux boutons distincts laissaient l'utilisateur
+  // contourner cette règle et déclencher un appel en pleine nuit.
   const actions = canNotify ? (
-    <div className="flex items-center gap-1">
-      <button
-        type="button"
-        onClick={() => onCall(row)}
-        title="Lancer l'appel vocal"
-        className="inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-blue-600"
-      >
-        <Phone className="h-3.5 w-3.5" />
-      </button>
-      <button
-        type="button"
-        onClick={() => onSms(row)}
-        title="Envoyer un SMS"
-        className="inline-flex items-center justify-center rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-green-600"
-      >
-        <MessageSquare className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={() => onNotify(row)}
+      title="Prévenir le patient (SMS ou appel vocal selon le bon)"
+      className="inline-flex items-center justify-center gap-1 rounded p-1 text-gray-500 transition-colors hover:bg-gray-100 hover:text-blue-600"
+    >
+      <Phone className="h-3.5 w-3.5" />
+      <MessageSquare className="h-3.5 w-3.5" />
+    </button>
   ) : null;
 
   if (row.isCalled) {
@@ -726,8 +720,7 @@ interface DemandesTabProps {
   isError: boolean;
   typeOrders: TypeOrder[];
   onMarkInformed: (row: ReportSuiviRow) => void;
-  onCall: (row: ReportSuiviRow) => void;
-  onSms: (row: ReportSuiviRow) => void;
+  onNotify: (row: ReportSuiviRow) => void;
   onOpenSignature: (row: ReportSuiviRow) => void;
   onOpenDetail: (row: ReportSuiviRow) => void;
 }
@@ -754,8 +747,7 @@ function DemandesTab({
   isError,
   typeOrders,
   onMarkInformed,
-  onCall,
-  onSms,
+  onNotify,
   onOpenSignature,
   onOpenDetail,
 }: DemandesTabProps) {
@@ -976,8 +968,7 @@ function DemandesTab({
                       <CallCell
                         row={row}
                         onMarkInformed={onMarkInformed}
-                        onCall={onCall}
-                        onSms={onSms}
+                        onNotify={onNotify}
                       />
                     </td>
                     <td className="px-4 py-3 align-top">
@@ -1139,24 +1130,21 @@ export default function ReportsSuiviPage() {
     },
   });
 
-  const callMutation = useMutation({
-    mutationFn: (reportId: string) => reportsApi.callPatient(reportId),
-    onSuccess: () => {
-      toast.success("Appel vocal lancé");
+  // Notification du patient : le canal est décidé côté serveur (SMS si le bon
+  // porte l'option, sinon appel vocal dans la plage 8h–18h), comme l'action
+  // Laravel `callOrSendSms`. La réponse dit ce qui a réellement été fait.
+  const notifyMutation = useMutation({
+    mutationFn: (reportId: string) => reportsApi.notifyPatient(reportId),
+    onSuccess: (res) => {
+      const data = res.data;
+      if (data?.channel === "NONE") toast.warning(data.message);
+      else toast.success(data?.message ?? "Patient notifié");
       queryClient.invalidateQueries({ queryKey: ["reports-suivi-list"] });
     },
     onError: (err: AxiosError<ApiError>) => {
-      toast.error(err.response?.data?.message ?? "Erreur lors de l'appel vocal");
-    },
-  });
-
-  const smsMutation = useMutation({
-    mutationFn: (reportId: string) => reportsApi.sendSms(reportId),
-    onSuccess: () => {
-      toast.success("SMS envoyé");
-    },
-    onError: (err: AxiosError<ApiError>) => {
-      toast.error(err.response?.data?.message ?? "Erreur lors de l'envoi du SMS");
+      toast.error(
+        err.response?.data?.message ?? "Erreur lors de la notification du patient",
+      );
     },
   });
 
@@ -1217,8 +1205,7 @@ export default function ReportsSuiviPage() {
           isError={listQuery.isError}
           typeOrders={typeOrdersQuery.data ?? []}
           onMarkInformed={(r) => setInformRow(r)}
-          onCall={(r) => r.reportId && callMutation.mutate(r.reportId)}
-          onSms={(r) => r.reportId && smsMutation.mutate(r.reportId)}
+          onNotify={(r) => r.reportId && notifyMutation.mutate(r.reportId)}
           onOpenSignature={(r) => setSignatureRow(r)}
           onOpenDetail={(r) => setDetailRow(r)}
         />

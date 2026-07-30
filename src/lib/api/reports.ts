@@ -264,6 +264,19 @@ export const reportsApi = {
   sendSms: (id: string) =>
     apiClient.post<{ status: string }>(`/reports/${id}/sms`),
 
+  /**
+   * Prévient le patient en laissant le serveur choisir le canal — réplique de
+   * l'action Laravel `report.callOrSendSms` : SMS si le bon d'examen porte
+   * l'option, sinon appel vocal et uniquement entre 8h et 18h.
+   */
+  notifyPatient: (id: string) =>
+    apiClient.post<{
+      channel: "SMS" | "CALL" | "NONE";
+      reportId: string;
+      appelId: string | null;
+      message: string;
+    }>(`/reports/${id}/notify`),
+
   /** Statut du dernier appel passé pour ce compte-rendu. */
   getAppelStatus: (id: string) =>
     apiClient.get<{ id: string; reportId: string; appelId: string; createdAt: string }>(

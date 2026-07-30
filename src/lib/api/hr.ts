@@ -177,6 +177,12 @@ export const hrApi = {
     ),
   createTimeOff: (employeeId: string, data: TimeOffRequest) =>
     apiClient.post<TimeOff>(`/employees/${employeeId}/timeoffs`, data),
+  /** Corrige dates et motif d'une demande — route Laravel `employee-timeoff-update`. */
+  updateTimeOff: (employeeId: string, timeoffId: string, data: TimeOffRequest) =>
+    apiClient.put<TimeOff>(
+      `/employees/${employeeId}/timeoffs/${timeoffId}`,
+      data
+    ),
   updateTimeoffStatus: (employeeId: string, timeoffId: string, data: TimeoffStatusUpdate) =>
     apiClient.put<TimeOff>(
       `/employees/${employeeId}/timeoffs/${timeoffId}/status`,
@@ -193,6 +199,12 @@ export const hrApi = {
     ),
   createPayroll: (employeeId: string, data: PayrollRequest) =>
     apiClient.post<Payroll>(`/employees/${employeeId}/payrolls`, data),
+  /** Corrige une fiche de paie — route Laravel `employee.payroll.update`. */
+  updatePayroll: (employeeId: string, id: string, data: PayrollRequest) =>
+    apiClient.put<Payroll>(`/employees/${employeeId}/payrolls/${id}`, data),
+  /** Supprime une fiche de paie — route Laravel `employee.payroll.delete`. */
+  deletePayroll: (employeeId: string, id: string) =>
+    apiClient.delete(`/employees/${employeeId}/payrolls/${id}`),
   downloadPayrollPdf: (employeeId: string, id: string) =>
     apiClient.get(`/employees/${employeeId}/payrolls/${id}/pdf`, {
       responseType: "blob",

@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   FileText,
   Trash2,
@@ -45,6 +46,7 @@ import {
 } from "@/lib/api/dashboard";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import apiClient from "@/lib/api/client";
+import { reportsApi } from "@/lib/api/reports";
 import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
@@ -100,6 +102,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -109,6 +112,26 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
     } finally {
       setIsDeleting(false);
       setConfirmOpen(false);
+    }
+  };
+
+  /**
+   * Ouvre le PDF du compte rendu — équivalent de la route Laravel `report.pdf`.
+   *
+   * L'ancien lien pointait sur `/reports/{id}/print`, une route qui n'existe pas
+   * dans `src/app` : le bouton renvoyait une 404.
+   */
+  const handlePrintReport = async () => {
+    setIsPrinting(true);
+    try {
+      const res = await reportsApi.downloadPdf(report.id);
+      const url = URL.createObjectURL(res.data as Blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("Erreur lors de la génération du PDF");
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -153,14 +176,14 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
             <FileText className="h-3.5 w-3.5" />
             CR terminé
           </Link>
-          <Link
-            href={`/reports/${report.id}/print`}
-            target="_blank"
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+          <Button
+            onClick={handlePrintReport}
+            disabled={isPrinting}
+            className="gap-1 rounded bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 hover:bg-yellow-200 hover:shadow-none"
           >
             <Printer className="h-3.5 w-3.5" />
-            Imprimer
-          </Link>
+            {isPrinting ? "Génération…" : "Imprimer"}
+          </Button>
         </>
       )}
 

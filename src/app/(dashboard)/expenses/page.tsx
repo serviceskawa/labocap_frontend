@@ -28,6 +28,7 @@ import { downloadDocFile } from "@/lib/api/docs";
 import { suppliersApi } from "@/lib/api/suppliers";
 import { expenseCategoriesApi, type ExpenseCategory } from "@/lib/api/expenses";
 import { Button } from "@/components/ui/Button";
+import { applyFieldErrors } from "@/lib/api/errorMessages";
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -134,7 +135,13 @@ export default function ExpensesPage() {
       createForm.reset();
       router.push(`/expenses/${res.data.id}`);
     },
-    onError: (err: AxiosError) => toast.error(apiMessage(err)),
+    onError: (err: AxiosError) => {
+      // Les erreurs de validation du backend sont posées sous les champs
+      // concernés ; le toast ne sert plus que de repli.
+      if (!applyFieldErrors(err as never, createForm.setError as (n: string, e: { type: string; message: string }) => void)) {
+        toast.error(apiMessage(err));
+      }
+    },
   });
 
   const payMutation = useMutation({
