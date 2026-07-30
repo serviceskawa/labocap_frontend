@@ -6,7 +6,8 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "eslint"
+    "lint": "eslint",
+    "csp:hashes": "node scripts/check-csp-hashes.mjs"
   },
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.21",

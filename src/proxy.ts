@@ -1,7 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  applyCspHeaders,
+  buildCspPolicy,
+  CSP_REPORT_PATH,
+  generateNonce,
+} from "@/lib/security/csp";
 
 /**
  * Garde de routes côté serveur (Proxy Next.js 16, ex-`middleware`).
+ *
+ * Assure deux rôles distincts :
+ *  1. la garde d'authentification décrite ci-dessous ;
+ *  2. la pose de la Content Security Policy, avec un nonce régénéré à chaque
+ *     requête (cf. src/lib/security/csp.ts). C'est le seul endroit où un nonce
+ *     par requête est possible : la fonction `headers()` de next.config.ts est
+ *     statique et s'évalue au build.
  *
  * Première ligne de défense UX : redirige les utilisateurs non authentifiés
  * vers /login avant même le rendu de la page protégée (l'ancien dispositif ne
@@ -54,7 +67,11 @@ function hasPending2fa(request: NextRequest): boolean {
   return Number.isFinite(until) && until > Date.now();
 }
 
-export function proxy(request: NextRequest) {
+/**
+ * Applique la garde d'authentification et renvoie l'URL vers laquelle rediriger,
+ * ou `null` si la requête peut poursuivre son chemin.
+ */
+function resolveAuthRedirect(request: NextRequest): URL | null {
   const { pathname } = request.nextUrl;
   const hasToken = request.cookies.has(ACCESS_COOKIE);
   const hasBranch = request.cookies.has(BRANCH_COOKIE);
@@ -62,7 +79,7 @@ export function proxy(request: NextRequest) {
 
   // Utilisateur authentifié qui revient sur une page d'auth → renvoyé à l'accueil.
   if (hasToken && isPublic(pathname)) {
-    return NextResponse.redirect(new URL("/home", request.url));
+    return new URL("/home", request.url);
   }
 
   // Challenge 2FA en cours (identifiants validés, code envoyé) : reprise de la
@@ -70,21 +87,21 @@ export function proxy(request: NextRequest) {
   // l'écran de connexion (et les autres écrans d'auth) est inaccessible, seule la
   // saisie du code est autorisée.
   if (pending2fa && isPublic(pathname) && !isTwoFaPath(pathname)) {
-    return NextResponse.redirect(new URL(TWO_FA_PATH, request.url));
+    return new URL(TWO_FA_PATH, request.url);
   }
 
   // Inversement, l'écran de saisie du code n'existe QUE pendant un challenge :
   // saisir la route à la main sans avoir validé d'identifiants renvoie au login
   // (analogue du middleware `auth` sur la route `/confirm-login` de Laravel).
   if (!pending2fa && !hasToken && isTwoFaPath(pathname)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return new URL("/login", request.url);
   }
 
   // Page protégée sans token → redirection vers /login, en mémorisant la cible.
   if (!hasToken && !isPublic(pathname)) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    return loginUrl;
   }
 
   // Authentifié mais aucune branche sélectionnée → écran de sélection de branche
@@ -96,10 +113,43 @@ export function proxy(request: NextRequest) {
     pathname !== SELECT_BRANCH_PATH &&
     !isPublic(pathname)
   ) {
-    return NextResponse.redirect(new URL(SELECT_BRANCH_PATH, request.url));
+    return new URL(SELECT_BRANCH_PATH, request.url);
   }
 
-  return NextResponse.next();
+  return null;
+}
+
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Le collecteur de violations doit rester joignable sans authentification :
+  // le navigateur y poste les rapports hors de toute session, et il ne suivrait
+  // de toute façon pas une redirection sur un POST de reporting.
+  if (pathname === CSP_REPORT_PATH) {
+    return NextResponse.next();
+  }
+
+  const nonce = generateNonce();
+  const policy = buildCspPolicy(nonce);
+
+  const redirect = resolveAuthRedirect(request);
+  if (redirect) {
+    const response = NextResponse.redirect(redirect);
+    applyCspHeaders(response.headers, policy);
+    return response;
+  }
+
+  // Le nonce voyage sur les en-têtes de REQUÊTE : Next.js relit la politique au
+  // moment du rendu pour apposer le nonce sur ses propres balises (runtime
+  // React, chunks de page), et le layout racine le relit via `headers()` pour
+  // le transmettre à Emotion (cf. src/components/providers.tsx).
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-nonce", nonce);
+  applyCspHeaders(requestHeaders, policy);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  applyCspHeaders(response.headers, policy);
+  return response;
 }
 
 /**

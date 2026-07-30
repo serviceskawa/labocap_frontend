@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Nunito } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
@@ -19,11 +20,20 @@ export const metadata: Metadata = {
   other: { google: "notranslate" },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Nonce de la requête, posé par le proxy (cf. src/proxy.ts). Next.js l'appose
+  // seul sur ses propres balises ; on ne le relit ici que pour le transmettre à
+  // Emotion, qui injecte les styles de react-select à l'exécution.
+  //
+  // Conséquence assumée : lire `headers()` fait sortir toutes les routes du
+  // rendu statique. Sans impact réel ici — l'application est entièrement
+  // authentifiée, donc jamais mise en cache par un CDN.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     // translate="no" (+ classe notranslate) : empêche la traduction automatique
     // du navigateur. Sur une appli React en français, la traduction réécrit les
@@ -34,8 +44,15 @@ export default function RootLayout({
       translate="no"
       className={`h-full notranslate ${nunito.variable}`}
     >
+      {/* styled-jsx ne lit pas le nonce dans l'en-tête CSP : il le cherche
+          exclusivement dans cette balise (`document.querySelector(
+          'meta[property="csp-nonce"]')`) avant d'injecter ses `<style>` côté
+          client. Sans elle, les styles d'impression de la feuille de route
+          (test-orders/assignments/[id]/print) seraient bloqués par
+          style-src-elem. React 19 la remonte automatiquement dans <head>. */}
+      {nonce ? <meta property="csp-nonce" content={nonce} /> : null}
       <body className="h-full bg-[#fafbfe] antialiased font-sans">
-        <Providers>{children}</Providers>
+        <Providers nonce={nonce}>{children}</Providers>
       </body>
     </html>
   );
