@@ -36,7 +36,13 @@ export interface Signal {
 }
 
 export interface SignalRequest {
-  testOrderId: string;
+  /** Identifiant du bon, si on l'a déjà. */
+  testOrderId?: string;
+  /**
+   * Code saisi par l'utilisateur (« 26-0008 »). Le serveur le résout lui-même,
+   * comme SignalController::store() en Laravel.
+   */
+  testOrderCode?: string;
   typeSignal: string;
   commentaire?: string;
 }

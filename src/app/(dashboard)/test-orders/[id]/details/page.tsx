@@ -27,6 +27,7 @@ import { labTestsApi, type LabTest } from "@/lib/api/examens";
 import type { ApiError } from "@/types/api";
 import { getApiErrorMessage } from "@/lib/api/errorMessages";
 import { openDocFile } from "@/lib/api/docs";
+import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
 
 // ---------------------------------------------------------------------------
 // Types locaux
@@ -363,6 +364,11 @@ export default function TestOrderDetailsPage({ params }: Props) {
     });
   };
 
+  // Confirmation avant validation : l'opération est irréversible côté métier
+  // (génération du code, création du compte rendu et de la facture, plus aucun
+  // examen ajoutable ensuite). Elle partait auparavant au premier clic.
+  const [confirmValidation, setConfirmValidation] = useState(false);
+
   const handleUpdateStatus = () => {
     // Garde anti double-soumission : empêche deux validations concurrentes
     // (double-clic) qui provoquaient un conflit de génération de code.
@@ -681,7 +687,7 @@ export default function TestOrderDetailsPage({ params }: Props) {
                 styles={{
                   control: (base) => ({
                     ...base,
-                    minHeight: "38px",
+                    minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
                     fontSize: "0.875rem",
                     borderColor: "#d1d5db",
                   }),
@@ -750,12 +756,30 @@ export default function TestOrderDetailsPage({ params }: Props) {
           )}
         </div>
 
-        {/* Bouton finalisation */}
+        <ConfirmModal
+        isOpen={confirmValidation}
+        onClose={() => setConfirmValidation(false)}
+        onConfirm={() => {
+          setConfirmValidation(false);
+          handleUpdateStatus();
+        }}
+        title="Confirmer la demande d'examen"
+        message={
+          `Cette demande sera validée avec ${order?.details?.length ?? 0} examen(s). ` +
+          "Un code, un compte rendu et une facture seront générés, et plus aucun " +
+          "examen ne pourra être ajouté ensuite. Voulez-vous continuer ?"
+        }
+        confirmLabel="Confirmer la demande"
+        cancelLabel="Revenir au formulaire"
+        isLoading={updateStatusMutation.isPending}
+      />
+
+      {/* Bouton finalisation */}
         {canEditDetails && (
           <div className="mt-4">
             <button
               type="button"
-              onClick={handleUpdateStatus}
+              onClick={() => setConfirmValidation(true)}
               disabled={
                 !order.details?.length || updateStatusMutation.isPending
               }
@@ -805,7 +829,7 @@ export default function TestOrderDetailsPage({ params }: Props) {
               styles={{
                 control: (base) => ({
                   ...base,
-                  minHeight: "38px",
+                  minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
                   fontSize: "0.875rem",
                   borderColor: "#d1d5db",
                 }),

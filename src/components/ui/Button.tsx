@@ -63,12 +63,18 @@ export function useClickBusy(
   const runningRef = useRef(false);
   const mountedRef = useRef(true);
 
-  useEffect(
-    () => () => {
+  // `mountedRef` doit être RÉARMÉ au montage. React remonte le composant après
+  // avoir joué le nettoyage (StrictMode, et tout remontage de modale) : sans
+  // cette ligne, `mountedRef` restait à false pour toujours, `setAutoBusy(false)`
+  // n'était jamais appliqué et le bouton gardait son spinner indéfiniment —
+  // typiquement après un envoi refusé par la validation, où l'action se termine
+  // sans que la page change.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
       mountedRef.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   const busy = externallyBusy || autoBusy;
 

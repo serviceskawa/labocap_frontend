@@ -17,6 +17,12 @@ export interface ApiError {
   status: number;
   message: string;
   errors?: Record<string, string[]>;
+  /**
+   * Détail des erreurs de validation, champ par champ, tel que le renvoie le
+   * GlobalExceptionHandler du backend :
+   * `{ "message": "Erreurs de validation", "data": { "phone": "Numéro invalide…" } }`
+   */
+  data?: Record<string, string> | null;
   timestamp?: string;
 }
 

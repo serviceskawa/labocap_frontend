@@ -30,7 +30,14 @@ import { Button } from "@/components/ui/Button";
 
 const movementSchema = z.object({
   articleId: z.string().min(1, "L'article est obligatoire"),
-  quantity: z.string().min(1, "La quantité est requise"),
+  // Plage bornée : au-delà, la colonne en base déborde et l'erreur remontée
+  // au testeur était indéterminée.
+  quantity: z
+    .string()
+    .min(1, "La quantité est requise")
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 1_000_000, {
+      message: "La quantité doit être un entier compris entre 1 et 1 000 000",
+    }),
 });
 
 type MovementFormData = z.infer<typeof movementSchema>;

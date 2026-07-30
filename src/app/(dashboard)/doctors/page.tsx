@@ -29,7 +29,12 @@ const doctorSchema = z.object({
   name: z.string().min(1, "Le nom complet est requis"),
   telephone: z.string().optional(),
   email: z.string().email("Email invalide").optional().or(z.literal("")),
-  commission: z.string().optional(),
+  commission: z
+    .string()
+    .optional()
+    .refine((v) => v === undefined || v === "" || Number(v) >= 0, {
+      message: "La commission ne peut pas être négative",
+    }),
 });
 
 type DoctorFormValues = z.infer<typeof doctorSchema>;

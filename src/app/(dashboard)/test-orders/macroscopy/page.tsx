@@ -428,6 +428,25 @@ export default function MacroscopyGlobalPage() {
   const macrosArray: MacroListItem[] = Array.isArray(macrosRaw) ? macrosRaw : [];
   const pendingArray: PendingMacroOrder[] = Array.isArray(pendingRaw) ? pendingRaw : [];
 
+  /**
+   * Laborantins proposés au filtre : uniquement ceux qui apparaissent
+   * réellement dans la colonne « Macro réalisé par ».
+   *
+   * Le filtre listait auparavant tout l'annuaire des employés (200 premiers),
+   * si bien qu'un laborantin ayant réalisé des macros pouvait figurer dans la
+   * colonne sans être proposé au filtre — et que des employés n'en ayant jamais
+   * réalisé encombraient la liste.
+   */
+  const laborantinOptions = Array.from(
+    new Map(
+      macrosArray
+        .filter((m) => m.employeeId && m.employeeName)
+        .map((m) => [m.employeeId as string, m.employeeName as string]),
+    ),
+  )
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, "fr"));
+
   const macros: MacroListItem[] = macrosArray.filter((m) => {
     if (filterOrderId && m.testOrderId !== filterOrderId) return false;
     if (filterDate && m.macroDate && !m.macroDate.startsWith(filterDate))
@@ -543,10 +562,7 @@ export default function MacroscopyGlobalPage() {
                 Réalisé par
               </label>
               <SelectField
-                options={employees.map((emp) => ({
-                  value: emp.id,
-                  label: `${emp.firstName} ${emp.lastName}`,
-                }))}
+                options={laborantinOptions}
                 value={filterEmployeeId || null}
                 onChange={(v) => setFilterEmployeeId(v ?? "")}
                 placeholder="Tous les laborantins"

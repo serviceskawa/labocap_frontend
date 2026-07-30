@@ -59,3 +59,32 @@ export function getApiErrorMessage(
   if (!axiosErr.isAxiosError) return err.message || fallback;
   return fallback;
 }
+
+/**
+ * Reporte les erreurs de validation du backend sur les champs du formulaire.
+ *
+ * Le backend renvoie déjà le détail champ par champ :
+ * `{ "message": "Erreurs de validation", "data": { "phone": "Numéro invalide…" } }`
+ * mais le front n'affichait que `message` dans un toast générique, d'où les
+ * « Erreur de validation » sans indication de la cause remontés en recette.
+ *
+ * @param err     erreur Axios reçue
+ * @param setError setter de react-hook-form (`form.setError`)
+ * @returns `true` si au moins un champ a reçu son message — l'appelant peut
+ *          alors se dispenser du toast.
+ */
+export function applyFieldErrors(
+  err: AxiosError<ApiError>,
+  setError: (name: string, error: { type: string; message: string }) => void,
+): boolean {
+  const details = err.response?.data?.data;
+  if (!details || typeof details !== "object") return false;
+  let applied = false;
+  for (const [field, message] of Object.entries(details as Record<string, unknown>)) {
+    if (typeof message === "string" && message.trim() !== "") {
+      setError(field, { type: "server", message });
+      applied = true;
+    }
+  }
+  return applied;
+}

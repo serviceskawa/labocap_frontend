@@ -40,6 +40,19 @@ export default function ReportSettingsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TitleReport | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TitleReport | null>(null);
+  // Message d'erreur du titre, affiché sous le champ au lieu du toast générique.
+  const [titleError, setTitleError] = useState<string | null>(null);
+
+  /** Valide le titre avant envoi. */
+  function titreValide(nom: string): boolean {
+    if (!nom.trim()) {
+      setTitleError("Veuillez renseigner le titre");
+      return false;
+    }
+    setTitleError(null);
+    return true;
+  }
+
   const [titleForm, setTitleForm] = useState<TitleReportRequest>({
     name: "",
     isDefault: false,
@@ -242,7 +255,9 @@ export default function ReportSettingsPage() {
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         title="Ajouter un nouveau titre"
-        onSubmit={() => createMutation.mutate(titleForm)}
+        onSubmit={() =>
+          titreValide(titleForm.name) && createMutation.mutate(titleForm)
+        }
         submitLabel="Ajouter un nouveau titre"
         isSubmitting={createMutation.isPending}
       >
@@ -264,8 +279,10 @@ export default function ReportSettingsPage() {
                 })
               }
               className={`${inputClass} uppercase`}
-              required
             />
+            {titleError && (
+              <p className="mt-1 text-sm text-red-600">{titleError}</p>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
@@ -295,6 +312,7 @@ export default function ReportSettingsPage() {
         title="Modifier le titre"
         onSubmit={() =>
           editTarget &&
+          titreValide(titleForm.name) &&
           updateMutation.mutate({ id: editTarget.id, data: titleForm })
         }
         submitLabel="Mettre à jour"

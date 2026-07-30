@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   useForm,
@@ -27,6 +27,7 @@ import { formatCFA, generatePatientCode } from "@/lib/utils";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { patientsApi, Patient, PatientRequest } from "@/lib/api/patients";
 import type { PageResponse, ApiError } from "@/types/api";
+import type { UseFormWatch, UseFormSetValue } from "react-hook-form";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -58,6 +59,8 @@ interface PatientFormFieldsProps {
   errors: FieldErrors<PatientFormData>;
   /** Code patient généré automatiquement, affiché en lecture seule. */
   code: string;
+  watch: UseFormWatch<PatientFormData>;
+  setValue: UseFormSetValue<PatientFormData>;
 }
 
 const GENRE_OPTIONS = [
@@ -76,10 +79,50 @@ const YEAR_OR_MONTH_OPTIONS = [
   { value: "true", label: "Ans" },
 ];
 
+/**
+ * Âge en années révolues à partir d'une date de naissance ISO.
+ * Renvoie `null` si la date est absente, invalide ou dans le futur.
+ */
+function calculerAge(birthday?: string): number | null {
+  if (!birthday) return null;
+  const naissance = new Date(birthday);
+  if (Number.isNaN(naissance.getTime())) return null;
+  const today = new Date();
+  if (naissance > today) return null;
+  let age = today.getFullYear() - naissance.getFullYear();
+  const moisEcoule =
+    today.getMonth() - naissance.getMonth() ||
+    today.getDate() - naissance.getDate();
+  if (moisEcoule < 0) age -= 1;
+  return age >= 0 ? age : null;
+}
+
 const fieldInput =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-function PatientFormFields({ register, control, errors, code }: PatientFormFieldsProps) {
+function PatientFormFields({
+  register,
+  control,
+  errors,
+  code,
+  watch,
+  setValue,
+}: PatientFormFieldsProps) {
+  // Âge déduit de la date de naissance dès qu'elle est saisie : les deux champs
+  // coexistaient et pouvaient se contredire. On garde l'âge modifiable quand
+  // aucune date n'est donnée — c'est le cas de 99,7 % des fiches existantes,
+  // le laboratoire relevant l'âge et rarement la date de naissance.
+  const birthday = watch("birthday");
+  const ageCalcule = useMemo(() => calculerAge(birthday), [birthday]);
+
+  useEffect(() => {
+    if (ageCalcule != null) {
+      setValue("age", String(ageCalcule), { shouldValidate: true });
+      // Une date de naissance implique un âge exprimé en années.
+      setValue("yearOrMonth", "true");
+    }
+  }, [ageCalcule, setValue]);
+
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       {/* 1. Code (readonly) — pleine largeur en haut, comme Laravel */}
@@ -150,7 +193,18 @@ function PatientFormFields({ register, control, errors, code }: PatientFormField
         <label className="text-sm font-medium text-gray-700">
           Âge <span className="text-red-500">*</span>
         </label>
-        <input type="number" min={0} {...register("age")} className={fieldInput} />
+        <input
+          type="number"
+          min={0}
+          {...register("age")}
+          readOnly={ageCalcule != null}
+          className={`${fieldInput} ${ageCalcule != null ? "bg-gray-50 text-gray-600" : ""}`}
+        />
+        {ageCalcule != null && (
+          <p className="text-xs text-gray-500">
+            Calculé depuis la date de naissance
+          </p>
+        )}
         {errors.age && (
           <p className="text-xs text-red-500">{errors.age.message}</p>
         )}
@@ -245,6 +299,8 @@ export default function PatientsPage() {
   const {
     register: registerCreate,
     control: controlCreate,
+    watch: watchCreate,
+    setValue: setValueCreate,
     handleSubmit: handleSubmitCreate,
     formState: { errors: createErrors },
     reset: resetCreate,
@@ -261,6 +317,8 @@ export default function PatientsPage() {
   const {
     register: registerEdit,
     control: controlEdit,
+    watch: watchEdit,
+    setValue: setValueEdit,
     handleSubmit: handleSubmitEdit,
     formState: { errors: editErrors },
     reset: resetEdit,
@@ -570,6 +628,8 @@ export default function PatientsPage() {
           control={controlCreate}
           errors={createErrors}
           code={generatedCode}
+          watch={watchCreate}
+          setValue={setValueCreate}
         />
       </CrudModal>
 
@@ -590,6 +650,8 @@ export default function PatientsPage() {
           control={controlEdit}
           errors={editErrors}
           code={selectedPatient?.code ?? ""}
+          watch={watchEdit}
+          setValue={setValueEdit}
         />
       </CrudModal>
 

@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -62,9 +62,19 @@ const expenseSchema = z.object({
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 const detailSchema = z.object({
-  articleName: z.string().min(1, { message: "Ajouter un article" }),
-  unitPrice: z.string().min(1, { message: "Le prix de l'article est requis" }),
-  quantity: z.string().min(1, { message: "La quantité de l'article est requise" }),
+  articleName: z.string().min(1, { message: "L'article est requis" }),
+  unitPrice: z
+    .string()
+    .min(1, { message: "Le prix de l'article est requis" })
+    .refine((v) => Number(v) > 0, {
+      message: "Veuillez renseigner un prix supérieur à zéro",
+    }),
+  quantity: z
+    .string()
+    .min(1, { message: "La quantité de l'article est requise" })
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, {
+      message: "La quantité doit être un entier supérieur ou égal à 1",
+    }),
 });
 
 type DetailFormValues = z.infer<typeof detailSchema>;
@@ -133,9 +143,19 @@ export default function ExpenseDetailPage({
     defaultValues: { articleName: "", unitPrice: "", quantity: "" },
   });
 
-  // Total de la ligne, recalculé dès que le prix OU la quantité change.
-  const watchedPrice = detailForm.watch("unitPrice");
-  const watchedQty = detailForm.watch("quantity");
+  // `useWatch` et non `detailForm.watch(...)` : cette dernière ne re-rendait pas
+  // le composant ici, le « Total » de la ligne restait bloqué à 0 quoi qu'on
+  // saisisse. `useWatch` souscrit explicitement au champ et déclenche le rendu.
+  const watchedPrice = useWatch({ control: detailForm.control, name: "unitPrice" });
+  const watchedQty = useWatch({ control: detailForm.control, name: "quantity" });
+  const watchedArticle = useWatch({ control: detailForm.control, name: "articleName" });
+
+  // Le bouton restait actif sur un formulaire vide : on l'active seulement quand
+  // les trois champs obligatoires sont renseignés.
+  const ligneComplete =
+    !!watchedArticle?.trim() &&
+    Number(watchedPrice) > 0 &&
+    Number(watchedQty) >= 1;
   const lineTotal = Math.round(
     (Number(watchedPrice) || 0) * (Number(watchedQty) || 0),
   );
@@ -372,8 +392,18 @@ export default function ExpenseDetailPage({
           <h2 className="mb-4 text-lg font-semibold text-gray-900">Liste des articles</h2>
 
           {paid === 0 && can(PERMISSIONS.CREATE_EXPENCE_DETAILS) && (
-            <div className="mb-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <FormField label="Article" error={detailForm.formState.errors.articleName?.message}>
+            /* Encadré distinct et intitulé : noyé dans la page, ce formulaire
+               ne se lisait pas comme une action à faire. */
+            <div className="mb-5 rounded-lg border border-dashed border-blue-300 bg-blue-50/40 p-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                Ajouter un article à cette dépense
+              </h3>
+              <p className="mb-3 mt-1 text-xs text-gray-600">
+                Renseignez chaque article couvert par la dépense. Le total de la
+                dépense est la somme des articles ajoutés ici.
+              </p>
+              <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <FormField label="Article" required error={detailForm.formState.errors.articleName?.message}>
                 <input
                   type="text"
                   list="expense-articles"
@@ -387,11 +417,11 @@ export default function ExpenseDetailPage({
                 </datalist>
               </FormField>
 
-              <FormField label="Prix" error={detailForm.formState.errors.unitPrice?.message}>
+              <FormField label="Prix" required error={detailForm.formState.errors.unitPrice?.message}>
                 <input type="number" step="1" min={0} className={inputClass} {...detailForm.register("unitPrice")} />
               </FormField>
 
-              <FormField label="Quantité" error={detailForm.formState.errors.quantity?.message}>
+              <FormField label="Quantité" required error={detailForm.formState.errors.quantity?.message}>
                 <input type="number" step="1" className={inputClass} {...detailForm.register("quantity")} />
               </FormField>
 
@@ -403,11 +433,12 @@ export default function ExpenseDetailPage({
                 <button
                   type="button"
                   onClick={detailForm.handleSubmit((v) => addDetailMutation.mutate(v))}
-                  disabled={addDetailMutation.isPending}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+                  disabled={!ligneComplete || addDetailMutation.isPending}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Ajouter
+                  Ajouter l&apos;article
                 </button>
+              </div>
               </div>
             </div>
           )}

@@ -34,9 +34,19 @@ import { unitesMesureApi, type UniteMesure } from "@/lib/api/examens";
 
 const articleSchema = z.object({
   name: z.string().min(1, "Le nom de l'article est requis"),
-  initialQuantity: z.string().min(1, "La quantité en stock est requise"),
+  initialQuantity: z
+    .string()
+    .min(1, "La quantité en stock est requise")
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, {
+      message: "La quantité en stock doit être un entier supérieur ou égal à 1",
+    }),
   unit: z.string().min(1, "L'unité de mesure est requise"),
-  minimumStock: z.string().min(1, "Le seuil d'alerte est requis"),
+  minimumStock: z
+    .string()
+    .min(1, "Le seuil d'alerte est requis")
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, {
+      message: "Le seuil d'alerte doit être un entier supérieur ou égal à 1",
+    }),
   expirationDate: z.string().optional(),
 });
 
