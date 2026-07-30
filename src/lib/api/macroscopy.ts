@@ -49,6 +49,12 @@ export interface PendingMacroOrder {
   isUrgent: boolean;
   createdAt: string;
   typeOrderTitle: string;
+  /**
+   * Slug du type de bon (`histologie`, `biopsie`, `cytologie`,
+   * `pièce-opératoire`…). C'est lui qui répartit les demandes entre les onglets
+   * de la macroscopie, comme les requêtes Laravel `whereIn('slug', …)`.
+   */
+  typeOrderSlug: string | null;
 }
 
 export interface AssignMacroRequest {

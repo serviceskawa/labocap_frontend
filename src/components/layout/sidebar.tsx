@@ -26,7 +26,6 @@ import {
   ChevronDown,
   ChevronRight,
   FlaskConical,
-  Search,
   Syringe,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -406,6 +405,9 @@ export function Sidebar() {
                 d'examen (app2.blade.php) : pas de restriction au rôle Docteur. */}
             <SubItem href="/test-orders/myspace" label="Mon espace" />
             <SubItem href="/test-orders" label="Toutes les demandes" />
+            {/* NB : « Ajouter » (route test_order.create) est commenté dans
+                app2.blade.php : absent des deux menus, pas un écart. La page
+                /test-orders/create reste atteignable depuis la liste. */}
             {can(PERMISSIONS.VIEW_TEST_ORDER_ASSIGNMENTS) && (
               <SubItem href="/test-orders/macroscopy" label="Macroscopie" />
             )}
@@ -583,16 +585,19 @@ export function Sidebar() {
         {/* ══════════════ EQUIPES ══════════════ */}
         <SectionLabel label="EQUIPES" collapsed={collapsed} />
 
-        {can(PERMISSIONS.VIEW_EMPLOYEES) && (
-          <CollapseItem icon={<Users2 className="w-5 h-5" />} label="Equipes" collapsed={collapsed}>
-            {/* Noms calqués sur le menu Laravel (layouts/app2 : EQUIPES) :
-                Tous les employés / Demande de congé / Toutes les demandes.
-                Laravel n'a aucune entrée « Paie » (la paie vit dans la fiche employé). */}
+        {/* Noms calqués sur le menu Laravel (layouts/app2 : EQUIPES) :
+            Tous les employés / Demande de congé / Toutes les demandes.
+            Laravel n'a aucune entrée « Paie » (la paie vit dans la fiche employé).
+            Seul « Tous les employés » est sous permission (view-employees) ; les deux
+            entrées de congés sont ouvertes à tous, sinon un employé sans droit RH ne
+            peut plus déposer sa propre demande de congé. */}
+        <CollapseItem icon={<Users2 className="w-5 h-5" />} label="Equipes" collapsed={collapsed}>
+          {can(PERMISSIONS.VIEW_EMPLOYEES) && (
             <SubItem href="/hr/employees" label="Tous les employés" />
-            {can(PERMISSIONS.MANAGE_TIMEOFF) && <SubItem label="Demande de congé" onClick={openTimeoffModal} />}
-            {can(PERMISSIONS.MANAGE_TIMEOFF) && <SubItem href="/hr/timeoff" label="Toutes les demandes" />}
-          </CollapseItem>
-        )}
+          )}
+          <SubItem label="Demande de congé" onClick={openTimeoffModal} />
+          <SubItem href="/hr/timeoff" label="Toutes les demandes" />
+        </CollapseItem>
 
         {/* ══════════════ DOCUMENTATIONS ══════════════ */}
         <SectionLabel label="DOCUMENTATIONS" collapsed={collapsed} />
@@ -606,7 +611,9 @@ export function Sidebar() {
           <SubItem href="/docs/categories" label="Toutes les catégories" />
         </CollapseItem>
 
-        <NavItem href="/search" icon={<Search className="w-5 h-5" />} label="Recherche" collapsed={collapsed} />
+        {/* NB : pas d'entrée « Recherche » à la racine — Laravel n'expose
+            « Rechercher » que sous « Demandes d'examen » (app2.blade.php), où
+            elle figure déjà. Ce doublon a été retiré. */}
 
         {/* Bottom padding */}
         <div className="h-4" />

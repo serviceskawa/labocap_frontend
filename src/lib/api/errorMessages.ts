@@ -41,10 +41,21 @@ export function translateApiError(message?: string | null): string | undefined {
 /**
  * Extrait et traduit le message d'une erreur Axios, avec repli sur un message
  * générique fourni par l'appelant.
+ *
+ * Accepte aussi une `Error` simple : certaines mutations rejettent côté client
+ * avant tout appel réseau (garde-fous de saisie). Sans ce cas, `err.response`
+ * est absent et le message précis est remplacé par le repli générique.
  */
 export function getApiErrorMessage(
-  err: AxiosError<ApiError>,
+  err: AxiosError<ApiError> | Error,
   fallback = "Une erreur est survenue"
 ): string {
-  return translateApiError(err.response?.data?.message) ?? fallback;
+  const axiosErr = err as AxiosError<ApiError>;
+  const apiMessage = translateApiError(axiosErr.response?.data?.message);
+  if (apiMessage) return apiMessage;
+  // Erreur non-Axios : son `message` est écrit par nous, donc déjà lisible.
+  // Sur une vraie erreur Axios on garde le repli, car `err.message` vaudrait
+  // « Request failed with status code 500 ».
+  if (!axiosErr.isAxiosError) return err.message || fallback;
+  return fallback;
 }

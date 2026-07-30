@@ -298,11 +298,29 @@ function PendingByTypeTable({
 // Page principale
 // ---------------------------------------------------------------------------
 
+/**
+ * Onglets de la file d'attente macroscopie.
+ *
+ * Chaque onglet porte les slugs de types de bon que Laravel regroupe dans la
+ * requête correspondante (`TestPathologyMacroController` :
+ * `whereIn('slug', [...])`). L'onglet « Histologie-Biopsie » en couvre deux —
+ * c'est pour cela qu'un filtre sur le seul titre ne peut pas marcher.
+ */
 const TAB_TYPES = [
-  { key: "Histologie-Biopsie", label: "Histologie-Biopsie" },
-  { key: "Pièce opératoire", label: "Pièce opératoire" },
-  { key: "Cytologie", label: "Cytologie" },
+  { key: "Histologie-Biopsie", label: "Histologie-Biopsie", slugs: ["histologie", "biopsie"] },
+  { key: "Pièce opératoire", label: "Pièce opératoire", slugs: ["pièce-opératoire"] },
+  { key: "Cytologie", label: "Cytologie", slugs: ["cytologie"] },
 ];
+
+/**
+ * Ramène un slug de type de bon à sa forme de base en retirant le suffixe
+ * numérique des doublons issus de la migration (`biopsie-1` → `biopsie`).
+ * Laravel compare le slug brut et laisse donc de côté les bons portant un type
+ * dupliqué ; on les rattache à leur onglet plutôt que de les rendre invisibles.
+ */
+function baseSlug(slug: string | null | undefined): string {
+  return (slug ?? "").toLowerCase().replace(/-\d+$/, "");
+}
 
 export default function MacroscopyGlobalPage() {
   const queryClient = useQueryClient();
@@ -432,12 +450,16 @@ export default function MacroscopyGlobalPage() {
     return true;
   });
 
-  const tabPending = (tab: string): PendingMacroOrder[] =>
-    pendingArray.filter(
-      (o) =>
-        !o.isUrgent &&
-        o.typeOrderTitle?.toLowerCase().includes(tab.toLowerCase().split("-")[0])
+  // Répartition par slug de type de bon, comme les trois requêtes Laravel.
+  // L'ancien filtre testait « le titre contient le premier mot de l'onglet » :
+  // les bons de type Biopsie (plusieurs milliers) n'apparaissaient dans aucun
+  // onglet, et un titre voisin pouvait atterrir dans le mauvais.
+  const tabPending = (tab: string): PendingMacroOrder[] => {
+    const slugs = TAB_TYPES.find((t) => t.key === tab)?.slugs ?? [];
+    return pendingArray.filter(
+      (o) => !o.isUrgent && slugs.includes(baseSlug(o.typeOrderSlug)),
     );
+  };
 
   // ---- Handlers ---------------------------------------------------------------
 

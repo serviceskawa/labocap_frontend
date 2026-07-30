@@ -35,6 +35,7 @@ import {
   type EmployeeContratRequest,
   type EmployeeDocument,
   type TimeOff,
+  type TimeOffRequest,
   type TimeoffStatus,
 } from "@/lib/api/hr";
 import { usersApi, type User } from "@/lib/api/users";
@@ -367,6 +368,33 @@ export default function EmployeeDetailPage({
   );
 
   const [deleteConge, setDeleteConge] = useState<TimeOff | null>(null);
+  const [editConge, setEditConge] = useState<TimeOff | null>(null);
+  const [congeForm, setCongeForm] = useState({ startDate: "", endDate: "", reason: "" });
+
+  /** Ouvre la modale de correction pré-remplie avec la demande choisie. */
+  function openEditConge(conge: TimeOff) {
+    setCongeForm({
+      startDate: conge.startDate?.slice(0, 10) ?? "",
+      endDate: conge.endDate?.slice(0, 10) ?? "",
+      reason: conge.reason ?? "",
+    });
+    setEditConge(conge);
+  }
+
+  // Correction des dates et du motif — route Laravel `employee-timeoff-update`,
+  // qui n'avait pas d'équivalent : on pouvait approuver ou refuser une demande
+  // mais pas en corriger le contenu.
+  const updateCongeMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: TimeOffRequest }) =>
+      hrApi.updateTimeOff(employeeId, id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employee-timeoffs", employeeId] });
+      toast.success("Demande de congé mise à jour");
+      setEditConge(null);
+    },
+    onError: (e: AxiosError<ApiError>) =>
+      toast.error(e.response?.data?.message ?? "Erreur lors de la modification"),
+  });
 
   const updateCongeStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: TimeoffStatus }) =>
@@ -434,6 +462,14 @@ export default function EmployeeDetailPage({
       id: "actions",
       cell: ({ row }) =>
         canEdit ? (
+          <div className="flex items-center gap-1">
+          <IconButton
+            variant="edit"
+            title="Modifier"
+            aria-label="Modifier"
+            onClick={() => openEditConge(row.original)}
+            icon={<Pencil className="h-4 w-4" />}
+          />
           <IconButton
             variant="delete"
             title="Supprimer"
@@ -441,6 +477,7 @@ export default function EmployeeDetailPage({
             onClick={() => setDeleteConge(row.original)}
             icon={<Trash2 className="h-4 w-4" />}
           />
+          </div>
         ) : null,
     },
   ];
@@ -916,6 +953,53 @@ export default function EmployeeDetailPage({
         confirmVariant="danger"
         isLoading={deleteContratMutation.isPending}
       />
+      {/* Correction d'une demande de congé — dates et motif */}
+      <CrudModal
+        isOpen={editConge !== null}
+        onClose={() => setEditConge(null)}
+        title="Modifier la demande de congé"
+        onSubmit={() => {
+          if (!editConge) return;
+          updateCongeMutation.mutate({ id: editConge.id, data: congeForm });
+        }}
+        submitLabel="Enregistrer"
+        isSubmitting={updateCongeMutation.isPending}
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="Date de début" required>
+            <input
+              type="date"
+              value={congeForm.startDate}
+              onChange={(e) =>
+                setCongeForm((f) => ({ ...f, startDate: e.target.value }))
+              }
+              className={inputClass}
+            />
+          </FormField>
+          <FormField label="Date de fin" required>
+            <input
+              type="date"
+              value={congeForm.endDate}
+              onChange={(e) =>
+                setCongeForm((f) => ({ ...f, endDate: e.target.value }))
+              }
+              className={inputClass}
+            />
+          </FormField>
+          <FormField label="Motif" className="sm:col-span-2">
+            <input
+              type="text"
+              value={congeForm.reason}
+              onChange={(e) =>
+                setCongeForm((f) => ({ ...f, reason: e.target.value }))
+              }
+              placeholder="Congé annuel, maladie…"
+              className={inputClass}
+            />
+          </FormField>
+        </div>
+      </CrudModal>
+
       <ConfirmModal
         isOpen={deleteConge !== null}
         onClose={() => setDeleteConge(null)}
