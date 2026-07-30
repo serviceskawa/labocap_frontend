@@ -143,9 +143,10 @@ export default function ExpenseDetailPage({
     defaultValues: { articleName: "", unitPrice: "", quantity: "" },
   });
 
-  // `useWatch` et non `detailForm.watch(...)` : cette dernière ne re-rendait pas
-  // le composant ici, le « Total » de la ligne restait bloqué à 0 quoi qu'on
-  // saisisse. `useWatch` souscrit explicitement au champ et déclenche le rendu.
+  // `useWatch` plutôt que `detailForm.watch(...)` : souscription explicite au
+  // champ, et cela évite l'avertissement du React Compiler sur `watch()`, qui
+  // renvoie une fonction non mémoïsable. Alimente le total de la ligne et
+  // l'activation du bouton d'ajout.
   const watchedPrice = useWatch({ control: detailForm.control, name: "unitPrice" });
   const watchedQty = useWatch({ control: detailForm.control, name: "quantity" });
   const watchedArticle = useWatch({ control: detailForm.control, name: "articleName" });
