@@ -26,6 +26,11 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { DEFAULT_REPORT_FOOTER } from "@/lib/constants/report";
@@ -800,6 +805,7 @@ function BanksSection() {
     queryFn: () => banksApi.findAll({ size: 100 }).then((r) => r.data),
   });
   const banks = data?.content ?? [];
+  const banksPagination = useTablePagination(banks);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["banks", "settings"] });
@@ -888,6 +894,7 @@ function BanksSection() {
         </PermissionGate>
       </div>
 
+      <TableLengthControl pagination={banksPagination} />
       <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
@@ -912,7 +919,7 @@ function BanksSection() {
                 </td>
               </tr>
             ) : (
-              banks.map((b) => (
+              banksPagination.pageRows.map((b) => (
                 <tr key={b.id} className="transition-colors hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">{b.name}</td>
                   <td className="px-4 py-3 text-gray-600">{b.accountNumber || "—"}</td>
@@ -947,6 +954,7 @@ function BanksSection() {
           </tbody>
         </table>
       </div>
+      <TablePaginationFooter pagination={banksPagination} />
 
       <CrudModal
         isOpen={createOpen}
@@ -1000,6 +1008,7 @@ function TitleReportsSection({ canManage }: { canManage: boolean }) {
     queryFn: () => titleReportsApi.findAll({ size: 100 }).then((r) => r.data),
   });
   const titles = data?.content ?? [];
+  const titlesPagination = useTablePagination(titles);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["title-reports", "settings"] });
@@ -1085,6 +1094,7 @@ function TitleReportsSection({ canManage }: { canManage: boolean }) {
         </div>
       )}
 
+      <TableLengthControl pagination={titlesPagination} />
       <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
@@ -1108,7 +1118,7 @@ function TitleReportsSection({ canManage }: { canManage: boolean }) {
                 </td>
               </tr>
             ) : (
-              titles.map((t) => (
+              titlesPagination.pageRows.map((t) => (
                 <tr key={t.id} className="transition-colors hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">{t.name}</td>
                   <td className="px-4 py-3">
@@ -1148,6 +1158,7 @@ function TitleReportsSection({ canManage }: { canManage: boolean }) {
           </tbody>
         </table>
       </div>
+      <TablePaginationFooter pagination={titlesPagination} />
 
       <CrudModal
         isOpen={createOpen}

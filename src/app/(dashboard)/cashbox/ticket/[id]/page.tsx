@@ -14,6 +14,11 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { RHFSelect } from "@/components/ui/RHFSelect";
 import { FormField } from "@/components/ui/FormField";
 import { PermissionGate } from "@/components/common/PermissionGate";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { cashboxApi } from "@/lib/api/cashbox";
 import { API_ORIGIN } from "@/lib/api/client";
@@ -171,6 +176,7 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
   // ---- Render --------------------------------------------------------------
 
   const details = voucher?.details ?? [];
+  const detailsPagination = useTablePagination(details);
 
   return (
     <PermissionGate
@@ -355,6 +361,7 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
               )}
 
               {/* Tableau des articles */}
+              <TableLengthControl pagination={detailsPagination} />
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
@@ -377,9 +384,11 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
                       </td>
                     </tr>
                   ) : (
-                    details.map((d, i) => (
+                    detailsPagination.pageRows.map((d, i) => (
                       <tr key={d.id}>
-                        <td className="py-2 pr-4 text-gray-500">{i + 1}</td>
+                        <td className="py-2 pr-4 text-gray-500">
+                          {detailsPagination.offset + i + 1}
+                        </td>
                         <td className="py-2 pr-4 font-medium">{d.itemName}</td>
                         <td className="py-2 pr-4 text-right text-gray-600">
                           {formatAmount(d.unitPrice)}
@@ -416,6 +425,7 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
                   </tr>
                 </tfoot>
               </table>
+              <TablePaginationFooter pagination={detailsPagination} />
             </div>
           </>
         )}

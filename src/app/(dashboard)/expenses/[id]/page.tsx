@@ -12,6 +12,11 @@ import type { AxiosError } from "axios";
 
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FormField } from "@/components/ui/FormField";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
@@ -247,6 +252,10 @@ export default function ExpenseDetailPage({
       setToDelete(null);
     },
   });
+
+  // Pagination des lignes d'articles. Appelée avant les retours anticipés
+  // ci-dessous : un hook ne peut pas être conditionnel.
+  const detailsPagination = useTablePagination(expense?.details ?? []);
 
   // ---- Garde d'accès -------------------------------------------------------
 
@@ -503,6 +512,7 @@ export default function ExpenseDetailPage({
             </div>
           )}
 
+          <TableLengthControl pagination={detailsPagination} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -523,9 +533,11 @@ export default function ExpenseDetailPage({
                     </td>
                   </tr>
                 ) : (
-                  details.map((d, i) => (
+                  detailsPagination.pageRows.map((d, i) => (
                     <tr key={d.id} className="border-b border-gray-100">
-                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
+                      <td className="px-3 py-2 text-gray-500">
+                        {detailsPagination.offset + i + 1}
+                      </td>
                       <td className="px-3 py-2">{d.articleName ?? "—"}</td>
                       <td className="px-3 py-2">{formatAmount(d.unitPrice ?? 0)}</td>
                       <td className="px-3 py-2">{d.quantity}</td>
@@ -557,6 +569,7 @@ export default function ExpenseDetailPage({
               </tfoot>
             </table>
           </div>
+          <TablePaginationFooter pagination={detailsPagination} />
 
           <button
             type="submit"

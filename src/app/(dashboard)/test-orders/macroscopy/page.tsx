@@ -16,6 +16,11 @@ import {
 } from "@/lib/api/optionLoaders";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { IconButton } from "@/components/ui/IconButton";
 import { formatDate } from "@/lib/utils";
 import {
@@ -151,15 +156,9 @@ function PendingByTypeTable({
   employees: Employee[];
   onAssign: (testOrderId: string, employeeId: string) => void;
 }) {
-  const [page, setPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-
-  // Reset à la page 0 si le nombre d'éléments change (filtres)
-  const total = orders.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const safePage = Math.min(page, totalPages - 1);
-  const start = safePage * pageSize;
-  const pageOrders = orders.slice(start, start + pageSize);
+  // Contrôles de pagination partagés avec `DataTable` (voir `TablePagination`).
+  const pagination = useTablePagination(orders);
+  const pageOrders = pagination.pageRows;
 
   if (orders.length === 0) {
     return (
@@ -171,6 +170,7 @@ function PendingByTypeTable({
 
   return (
     <div className="space-y-3">
+      <TableLengthControl pagination={pagination} />
       <div className="overflow-x-auto">
         <table className="w-full text-sm [&_th]:border-r [&_th]:border-gray-300 [&_th:last-child]:border-r-0 [&_td]:border-r [&_td]:border-gray-200 [&_td:last-child]:border-r-0">
           <thead>
@@ -232,63 +232,8 @@ function PendingByTypeTable({
       </div>
 
       {/* Pagination */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-3 text-sm">
-        <div className="flex items-center gap-2 text-gray-600">
-          <span>Afficher</span>
-          <NativeSelect
-            value={pageSize}
-            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}
-          >
-            {[5, 10, 25, 50, 100].map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-          </NativeSelect>
-          <span>par page</span>
-        </div>
-
-        <div className="text-gray-600">
-          {total === 0
-            ? "Aucun résultat"
-            : `${start + 1} – ${Math.min(start + pageSize, total)} sur ${total}`}
-        </div>
-
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            onClick={() => setPage(0)}
-            disabled={safePage === 0}
-            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            « Premier
-          </button>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={safePage === 0}
-            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            ‹ Précédent
-          </button>
-          <span className="px-2 text-xs font-medium text-gray-700">
-            {safePage + 1} / {totalPages}
-          </span>
-          <button
-            type="button"
-            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={safePage >= totalPages - 1}
-            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Suivant ›
-          </button>
-          <button
-            type="button"
-            onClick={() => setPage(totalPages - 1)}
-            disabled={safePage >= totalPages - 1}
-            className="rounded border border-gray-300 px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Dernier »
-          </button>
-        </div>
+      <div className="border-t border-gray-100 pt-3">
+        <TablePaginationFooter pagination={pagination} />
       </div>
     </div>
   );
@@ -460,6 +405,9 @@ export default function MacroscopyGlobalPage() {
     return true;
   });
 
+  // Historique des macroscopies : paginé comme les autres tableaux.
+  const macrosPagination = useTablePagination(macros);
+
   const urgentPending: PendingMacroOrder[] = pendingArray.filter((o) => {
     if (!o.isUrgent) return false;
     if (filterTypeId) {
@@ -599,6 +547,8 @@ export default function MacroscopyGlobalPage() {
                 Aucune macroscopie enregistrée.
               </p>
             ) : (
+              <>
+              <TableLengthControl pagination={macrosPagination} />
               <table className="w-full text-sm [&_th]:border-r [&_th]:border-gray-300 [&_th:last-child]:border-r-0 [&_td]:border-r [&_td]:border-gray-200 [&_td:last-child]:border-r-0">
                 <thead>
                   <tr className="border-b-2 border-gray-300 bg-gray-200">
@@ -629,7 +579,7 @@ export default function MacroscopyGlobalPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {macros.map((macro) => (
+                  {macrosPagination.pageRows.map((macro) => (
                     <tr
                       key={macro.id}
                       className="border-b border-gray-200 hover:bg-gray-50"
@@ -677,6 +627,8 @@ export default function MacroscopyGlobalPage() {
                   ))}
                 </tbody>
               </table>
+              <TablePaginationFooter pagination={macrosPagination} />
+              </>
             )}
           </div>
         </div>

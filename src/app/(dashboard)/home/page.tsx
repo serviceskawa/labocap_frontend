@@ -30,6 +30,11 @@ import {
 } from "recharts";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { IconButton } from "@/components/ui/IconButton";
 
@@ -234,7 +239,12 @@ function ProgressTable({
   color = "bg-blue-500",
 }: ProgressTableProps) {
   const max = data.length > 0 ? Math.max(...data.map((d) => d.value)) : 1;
+  // La barre reste proportionnelle au maximum de TOUTE la série, pas seulement
+  // de la page affichée : sinon l'échelle changerait d'une page à l'autre.
+  const pagination = useTablePagination(data);
   return (
+    <>
+    <TableLengthControl pagination={pagination} />
     <table className="w-full text-sm">
       <thead className="bg-gray-50">
         <tr>
@@ -248,7 +258,7 @@ function ProgressTable({
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
-        {data.map((item, i) => {
+        {pagination.pageRows.map((item, i) => {
           const ratio = Math.round((item.value / (max || 1)) * 100);
           return (
             <tr key={i} className="hover:bg-gray-50">
@@ -269,6 +279,8 @@ function ProgressTable({
         })}
       </tbody>
     </table>
+    <TablePaginationFooter pagination={pagination} />
+    </>
   );
 }
 
@@ -673,6 +685,13 @@ export default function HomePage() {
     },
   ];
 
+  // Pagination des tableaux du tableau de bord dont la liste n'est pas bornée.
+  const doctorStatsPagination = useTablePagination(doctorStats, 10);
+  const connectedUsersPagination = useTablePagination(connectedUsers, 10);
+  const reportsDeliveredPagination = useTablePagination(reportsDelivered, 10);
+  const doctorOrdersPagination = useTablePagination(doctorOrders, 10);
+  const doctorOrdersTodayPagination = useTablePagination(doctorOrdersToday, 10);
+
   const doctorOrdersTermine = doctorOrders.filter(
     (o) => o.reportStatus === 1
   ).length;
@@ -1033,6 +1052,7 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Statistique par docteurs" />
+                <TableLengthControl pagination={doctorStatsPagination} />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -1053,7 +1073,7 @@ export default function HomePage() {
                         ? Array.from({ length: 4 }).map((_, i) => (
                             <SkeletonRow key={i} cols={3} />
                           ))
-                        : doctorStats.map((ds: DoctorStat, i) => (
+                        : doctorStatsPagination.pageRows.map((ds: DoctorStat, i) => (
                             <tr
                               key={i}
                               className="hover:bg-gray-50 transition-colors"
@@ -1072,6 +1092,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePaginationFooter pagination={doctorStatsPagination} />
               </Card>
             </div>
 
@@ -1079,6 +1100,7 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Utilisateurs connectés" />
+                <TableLengthControl pagination={connectedUsersPagination} />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -1099,7 +1121,7 @@ export default function HomePage() {
                         ? Array.from({ length: 3 }).map((_, i) => (
                             <SkeletonRow key={i} cols={3} />
                           ))
-                        : connectedUsers.map((u, idx) => (
+                        : connectedUsersPagination.pageRows.map((u, idx) => (
                             <tr
                               key={u.id}
                               className="hover:bg-gray-50 transition-colors"
@@ -1123,6 +1145,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePaginationFooter pagination={connectedUsersPagination} />
               </Card>
             </div>
           </div>
@@ -1137,6 +1160,7 @@ export default function HomePage() {
           {/* LIGNE 6 : Comptes rendu dsponible aujourd'hui (full width) */}
           <Card>
             <CardHeader title="Comptes rendu dsponible aujourd'hui" />
+            <TableLengthControl pagination={reportsDeliveredPagination} />
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -1170,7 +1194,7 @@ export default function HomePage() {
                       </td>
                     </tr>
                   ) : (
-                    reportsDelivered.map((report: ReportToday) => (
+                    reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
                       <tr
                         key={report.id}
                         className="hover:bg-gray-50 transition-colors"
@@ -1200,6 +1224,7 @@ export default function HomePage() {
                 </tbody>
               </table>
             </div>
+            <TablePaginationFooter pagination={reportsDeliveredPagination} />
           </Card>
         </>
       )}
@@ -1272,6 +1297,7 @@ export default function HomePage() {
                     {doctorOrdersTotal}
                   </p>
                 </div>
+                <TableLengthControl pagination={doctorOrdersPagination} />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -1295,7 +1321,7 @@ export default function HomePage() {
                         ? Array.from({ length: 4 }).map((_, i) => (
                             <SkeletonRow key={i} cols={4} />
                           ))
-                        : doctorOrders.map((order: DoctorOrder) => (
+                        : doctorOrdersPagination.pageRows.map((order: DoctorOrder) => (
                             <tr
                               key={order.id}
                               className="hover:bg-gray-50 transition-colors"
@@ -1331,6 +1357,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePaginationFooter pagination={doctorOrdersPagination} />
               </Card>
             </div>
           </div>
@@ -1341,6 +1368,7 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Activités récentes" />
+                <TableLengthControl pagination={doctorOrdersTodayPagination} />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -1374,7 +1402,7 @@ export default function HomePage() {
                             </td>
                           </tr>
                         ) : (
-                          doctorOrdersToday.map((order: DoctorOrder) => (
+                          doctorOrdersTodayPagination.pageRows.map((order: DoctorOrder) => (
                             <tr
                               key={order.id}
                               className="hover:bg-gray-50 transition-colors"
@@ -1412,6 +1440,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePaginationFooter pagination={doctorOrdersTodayPagination} />
               </Card>
             </div>
 

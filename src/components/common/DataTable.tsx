@@ -15,7 +15,10 @@ import {
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { NativeSelect } from "@/components/ui/NativeSelect";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+} from "@/components/common/TablePagination";
 
 export interface DataTableProps<T> {
   columns: ColumnDef<T>[];
@@ -125,20 +128,17 @@ export function DataTable<T>({
     }
   };
 
-  const getPageNumbers = (): (number | "...")[] => {
-    const pages: (number | "...")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 0; i < totalPages; i++) pages.push(i);
-    } else {
-      pages.push(0);
-      if (currentPageIndex > 2) pages.push("...");
-      const start = Math.max(1, currentPageIndex - 1);
-      const end = Math.min(totalPages - 2, currentPageIndex + 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-      if (currentPageIndex < totalPages - 3) pages.push("...");
-      pages.push(totalPages - 1);
-    }
-    return pages;
+  // Contrôles partagés avec les tableaux écrits à la main (voir
+  // `TablePagination`) : une seule apparence de pagination dans l'application.
+  const paginationState = {
+    pageIndex: currentPageIndex,
+    pageSize: currentPageSize,
+    pageCount: totalPages,
+    setPageIndex: (index: number) => table.setPageIndex(index),
+    setPageSize: (size: number) => {
+      if (isServerSide) onPageSizeChange?.(size);
+      else table.setPageSize(size);
+    },
   };
 
   const showSearch = !hideToolbarSearch && (onSearchChange !== undefined || !isServerSide);
@@ -157,27 +157,7 @@ export function DataTable<T>({
 
       <div className={cn(!hideToolbar && "pt-3")}>
         {/* Contrôles : « Afficher [x] enregistrements par page » (gauche) + « Rechercher: » (droite) */}
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex items-center gap-2 text-[.9rem] text-gray-700">
-            <span>Afficher</span>
-            <NativeSelect
-              className="w-auto"
-              value={currentPageSize}
-              onChange={(e) => {
-                const size = Number(e.target.value);
-                if (isServerSide) onPageSizeChange?.(size);
-                else table.setPageSize(size);
-              }}
-            >
-              {[10, 25, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </NativeSelect>
-            <span>enregistrements par page</span>
-          </label>
-
+        <TableLengthControl pagination={paginationState}>
           {showSearch && (
             <label className="flex items-center gap-2 text-[.9rem] text-gray-700">
               <span>Rechercher:</span>
@@ -189,7 +169,7 @@ export function DataTable<T>({
               />
             </label>
           )}
-        </div>
+        </TableLengthControl>
 
         {/* Tableau */}
         <div className="overflow-x-auto">
@@ -274,55 +254,7 @@ export function DataTable<T>({
         </div>
 
         {/* Bas : « Afficher page X sur N » (gauche) + pagination « Précédent/Suivant » (droite) */}
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="mb-0 text-[.9rem] text-gray-600">
-            Afficher page {currentPageIndex + 1} sur {Math.max(totalPages, 1)}
-          </p>
-
-          {/* pagination-rounded Hyper : liens ronds sans bordure, actif en primaire */}
-          <div className="flex items-center gap-[3px]">
-            <button
-              type="button"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex h-8 items-center justify-center rounded-full px-3 text-[.9rem] text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Précédent
-            </button>
-
-            {totalPages > 0 &&
-              getPageNumbers().map((page, idx) =>
-                page === "..." ? (
-                  <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => table.setPageIndex(page as number)}
-                    className={cn(
-                      "flex h-8 min-w-[2rem] items-center justify-center rounded-full px-2 text-[.9rem] transition-colors",
-                      currentPageIndex === page
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    )}
-                  >
-                    {(page as number) + 1}
-                  </button>
-                )
-              )}
-
-            <button
-              type="button"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex h-8 items-center justify-center rounded-full px-3 text-[.9rem] text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Suivant
-            </button>
-          </div>
-        </div>
+        <TablePaginationFooter pagination={paginationState} />
       </div>
     </div>
   );
