@@ -90,7 +90,13 @@ export default function CashboxTicketsPage() {
   const canProcess = can(PERMISSIONS.VIEW_PROCESS_CASHBOX_TICKETS);
   const canCreate = can(PERMISSIONS.CREATE_CASHBOX_TICKETS);
 
-  const form = useForm<FormData>({ resolver: zodResolver(schema) });
+  // `defaultValues` explicites : sans eux les champs valaient `undefined`, et
+  // zod signalait un type manquant (message générique) au lieu du message
+  // « La catégorie est requise » / « Le fournisseur est requis ».
+  const form = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: { expenseCategoryId: "", supplierId: "" },
+  });
 
   // ---- Queries -------------------------------------------------------------
 

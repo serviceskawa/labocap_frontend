@@ -760,7 +760,10 @@ export default function EmployeeDetailPage({
             <input type="text" {...empForm.register("placeOfBirth")} className={inputClass} />
           </FormField>
           <FormField label="Sexe">
-            <NativeSelect {...empForm.register("gender")}>
+            <NativeSelect
+              value={empForm.watch("gender") ?? ""}
+              onChange={(e) => empForm.setValue("gender", e.target.value)}
+            >
               <option value="">Selectionner le sexe</option>
               <option value="Masculin">Masculin</option>
               <option value="Feminin">Feminin</option>
@@ -853,7 +856,10 @@ export default function EmployeeDetailPage({
         {contratTab === "contrat" && (
           <div key="contrat" className="wizard-pane grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Type de contrat" className="sm:col-span-2">
-              <NativeSelect {...contratForm.register("type")}>
+              <NativeSelect
+                value={contratForm.watch("type") ?? ""}
+                onChange={(e) => contratForm.setValue("type", e.target.value)}
+              >
                 <option value="">Selectionner un type de contrat</option>
                 {CONTRACT_TYPES.map((t) => (
                   <option key={t} value={t}>
