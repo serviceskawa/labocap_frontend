@@ -7,6 +7,11 @@ import Link from "next/link";
 import { ArrowLeft, Download, Eye, FileText, Upload, Calendar } from "lucide-react";
 
 import { PermissionGate } from "@/components/common/PermissionGate";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { formatDate } from "@/lib/utils";
 import {
@@ -55,6 +60,7 @@ export default function DocDetailPage({
 
   const sortedVersions = [...(versions ?? [])].sort((a, b) => b.version - a.version);
   const maxVersion = sortedVersions[0]?.version ?? 0;
+  const versionsPagination = useTablePagination(sortedVersions);
 
   return (
     <div className="space-y-6">
@@ -166,7 +172,9 @@ export default function DocDetailPage({
               ) : sortedVersions.length === 0 ? (
                 <p className="text-sm text-gray-500">Aucune version enregistrée.</p>
               ) : (
-                <div className="overflow-x-auto">
+                <div>
+                  <TableLengthControl pagination={versionsPagination} />
+                  <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 text-left">
@@ -178,7 +186,7 @@ export default function DocDetailPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedVersions.map((v) => (
+                      {versionsPagination.pageRows.map((v) => (
                         <tr key={v.id} className="border-b border-gray-100 last:border-0">
                           <td className="py-3 pr-4">
                             {v.version === maxVersion ? (
@@ -210,6 +218,8 @@ export default function DocDetailPage({
                       ))}
                     </tbody>
                   </table>
+                  </div>
+                  <TablePaginationFooter pagination={versionsPagination} />
                 </div>
               )}
             </div>

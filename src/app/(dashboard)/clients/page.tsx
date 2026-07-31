@@ -27,13 +27,14 @@ import { clientsApi, type Client, type ClientRequest } from "@/lib/api/clients";
 
 /**
  * Formats imposés en recette :
- * - contact : obligatoire, exactement 8 chiffres (ex. 97000000) ;
+ * - contact : obligatoire, 8 à 15 chiffres (ex. 0197000000) ;
  * - IFU : facultatif, exactement 13 chiffres (ex. 1234567890123).
  *
  * Les deux champs n'acceptent que des chiffres — la saisie alphabétique est
- * d'ailleurs bloquée à la frappe (voir `champNumerique`).
+ * d'ailleurs bloquée à la frappe (voir `chiffresSeulement`).
  */
-const TEL_MESSAGE = "Le contact doit contenir exactement 8 chiffres (ex. 97000000)";
+const TEL_MESSAGE =
+  "Le contact doit contenir entre 8 et 15 chiffres (ex. 0197000000)";
 const IFU_MESSAGE =
   "Le numéro IFU doit contenir exactement 13 chiffres (ex. 1234567890123)";
 
@@ -44,7 +45,7 @@ const clientSchema = z.object({
     .string()
     .trim()
     .min(1, "Le contact est requis")
-    .regex(/^\d{8}$/, TEL_MESSAGE),
+    .regex(/^\d{8,15}$/, TEL_MESSAGE),
   ifu: z
     .string()
     .trim()
@@ -377,13 +378,13 @@ function ClientForm({ form }: { form: UseFormReturn<ClientFormValues> }) {
       <FormField
         label="Contact"
         required
-        hint="8 chiffres — ex. 97000000"
+        hint="8 à 15 chiffres — ex. 0197000000"
         error={errors.contact?.message}
       >
         <input
           type="text"
-          placeholder="97000000"
-          {...chiffresSeulement(register("contact"), 8)}
+          placeholder="0197000000"
+          {...chiffresSeulement(register("contact"), 15)}
           className={inputClass}
         />
       </FormField>

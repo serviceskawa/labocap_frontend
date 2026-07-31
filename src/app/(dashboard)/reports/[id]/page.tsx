@@ -18,6 +18,11 @@ import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { AuthThumbnail } from "@/components/ui/AuthThumbnail";
 import { QRCodeSVG } from "qrcode.react";
 import { PermissionGate } from "@/components/common/PermissionGate";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { formatDate } from "@/lib/utils";
@@ -113,6 +118,9 @@ export default function ReportDetailPage({
     queryFn: () => reportsApi.findById(id).then((r) => r.data),
     enabled: !!id,
   });
+
+  // Historique des opérations du compte rendu, paginé comme les autres tableaux.
+  const logsPagination = useTablePagination(report?.logs ?? []);
 
   // --- Bon d'examen lié (patient + galerie)
   const { data: testOrder } = useQuery({
@@ -835,27 +843,31 @@ export default function ReportDetailPage({
         {(report.logs?.length ?? 0) === 0 ? (
           <p className="text-sm italic text-gray-400">Aucune activité enregistrée.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left text-gray-500">
-                  <th className="px-3 py-2 font-medium">#</th>
-                  <th className="px-3 py-2 font-medium">Date</th>
-                  <th className="px-3 py-2 font-medium">Opération</th>
-                  <th className="px-3 py-2 font-medium">Utilisateur</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {(report.logs ?? []).map((log, idx) => (
-                  <tr key={idx} className="text-gray-700">
-                    <td className="px-3 py-2">{idx + 1}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatDate(log.createdAt)}</td>
-                    <td className="px-3 py-2">{log.action}</td>
-                    <td className="px-3 py-2">{log.userName}</td>
+          <div>
+            <TableLengthControl pagination={logsPagination} />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left text-gray-500">
+                    <th className="px-3 py-2 font-medium">#</th>
+                    <th className="px-3 py-2 font-medium">Date</th>
+                    <th className="px-3 py-2 font-medium">Opération</th>
+                    <th className="px-3 py-2 font-medium">Utilisateur</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {logsPagination.pageRows.map((log, idx) => (
+                    <tr key={logsPagination.offset + idx} className="text-gray-700">
+                      <td className="px-3 py-2">{logsPagination.offset + idx + 1}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(log.createdAt)}</td>
+                      <td className="px-3 py-2">{log.action}</td>
+                      <td className="px-3 py-2">{log.userName}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <TablePaginationFooter pagination={logsPagination} />
           </div>
         )}
       </Card>

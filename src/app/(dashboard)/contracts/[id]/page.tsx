@@ -24,6 +24,11 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { FormField } from "@/components/ui/FormField";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { contractsApi, type ContractDetail } from "@/lib/api/contracts";
@@ -174,6 +179,10 @@ export default function ContractDetailPage({
     onError: (e: AxiosError<ApiError>) =>
       toast.error(getApiErrorMessage(e, "Erreur")),
   });
+
+  // Pagination du tableau « Examens prises en compte ». Appelée avant les
+  // retours anticipés ci-dessous : un hook ne peut pas être conditionnel.
+  const detailsPagination = useTablePagination(contract?.details ?? []);
 
   // ---- Render --------------------------------------------------------------
 
@@ -514,6 +523,10 @@ export default function ContractDetailPage({
           </h2>
         </div>
 
+        <div className="px-5 pt-4">
+          <TableLengthControl pagination={detailsPagination} />
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
@@ -546,7 +559,7 @@ export default function ContractDetailPage({
                   </td>
                 </tr>
               ) : (
-                details.map((d) => (
+                detailsPagination.pageRows.map((d) => (
                   <tr key={d.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-gray-900">
                       {d.labTestName ?? "—"}
@@ -601,6 +614,10 @@ export default function ContractDetailPage({
               </tfoot>
             )}
           </table>
+        </div>
+
+        <div className="px-5 pb-4">
+          <TablePaginationFooter pagination={detailsPagination} />
         </div>
 
         {!isClose && (
