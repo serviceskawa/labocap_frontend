@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -594,7 +595,11 @@ export default function ReportDetailPage({
             </Card>
           )}
 
-          {/* --- Pièces jointes --- */}
+          {/* --- Pièces jointes ---
+              Section en lecture seule, comme `reports/show.blade.php` : les
+              images affichées ici sont celles de la galerie du bon d'examen.
+              Elles s'ajoutent depuis la page « détails » du bon, jamais depuis
+              le compte rendu — d'où le lien explicite ci-dessous. */}
           <Card title="Pièces jointes">
             {(galleryImages?.length ?? 0) === 0 ? (
               <p className="flex items-center gap-2 text-sm italic text-gray-400">
@@ -612,6 +617,17 @@ export default function ReportDetailPage({
                   />
                 ))}
               </div>
+            )}
+            {report?.testOrderId && (
+              <p className="mt-3 text-xs text-gray-500">
+                Les pièces jointes proviennent de la galerie du bon d&apos;examen.{" "}
+                <Link
+                  href={`/test-orders/${report.testOrderId}/details`}
+                  className="font-medium text-blue-600 hover:underline"
+                >
+                  Ajouter ou retirer une image
+                </Link>
+              </p>
             )}
           </Card>
 

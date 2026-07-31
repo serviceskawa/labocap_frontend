@@ -280,8 +280,15 @@ export default function DoctorsPage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            {/* `autoComplete="off"` + nom neutre : après l'ajout d'un médecin,
+                le navigateur ré-injectait l'email saisi dans ce champ (il le
+                prend pour un champ de formulaire mémorisable). La liste étant
+                déjà triée du plus récent au plus ancien, ce pré-remplissage ne
+                servait qu'à masquer le médecin qu'on venait de créer. */}
             <input
               type="text"
+              name="doctors-filter"
+              autoComplete="off"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher (nom, téléphone, email, rôle)..."

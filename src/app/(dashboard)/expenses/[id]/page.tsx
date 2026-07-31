@@ -48,12 +48,15 @@ function formatAmount(amount: number): string {
   );
 }
 
+// Le montant ne figure plus dans le formulaire : il vaut toujours la somme des
+// articles de la dépense (le backend le recalcule à chaque ajout/retrait de
+// ligne). Le saisir à part de l'article n'avait pas de sens et permettait
+// d'enregistrer un montant sans rapport avec les lignes.
 const expenseSchema = z.object({
   expenseCategorieId: z.string().min(1, { message: "La catégorie est requise" }),
   supplierId: z.string().optional(),
   description: z.string().optional(),
   date: z.string().optional(),
-  amount: z.string().min(1, { message: "Le montant est requis" }),
   payment: z.enum(["ESPECES", "CHEQUES", "MOBILEMONEY", "VIREMENT"] as const).optional(),
   invoiceNumber: z.string().optional(),
   paid: z.string(),
@@ -94,6 +97,8 @@ export default function ExpenseDetailPage({
   const queryClient = useQueryClient();
 
   const [toDelete, setToDelete] = useState<ExpenseDetail | null>(null);
+  // Preuve d'achat choisie mais pas encore envoyée (envoi au « Soumettre »).
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   // ---- Queries -------------------------------------------------------------
 
@@ -130,7 +135,6 @@ export default function ExpenseDetailPage({
           supplierId: expense.supplierId ?? "",
           description: expense.description ?? "",
           date: expense.date ?? new Date().toISOString().slice(0, 10),
-          amount: String(Math.round(Number(expense.amount ?? 0))),
           payment: (expense.payment as PaymentMethod) ?? "ESPECES",
           invoiceNumber: expense.invoiceNumber ?? "",
           paid: String(expense.paid ?? 0),
@@ -179,10 +183,18 @@ export default function ExpenseDetailPage({
       const current = expense?.paid ?? 0;
       const target = Number(values.paid);
 
+      // La pièce jointe part avant la mise à jour : le PUT réécrit la colonne
+      // `receipt`, il doit donc voir le chemin du fichier tout juste stocké et
+      // non celui, périmé, du cache.
+      let receipt = expense?.receipt;
+      if (receiptFile) {
+        receipt = (await expensesApi.uploadReceipt(id, receiptFile)).data.receipt;
+      }
+
       // Les champs verrouillés retombent sur la valeur enregistrée : un select
       // désactivé ne doit jamais effacer silencieusement ce qu'il affiche.
+      // `amount` n'est pas transmis : il est dérivé des articles côté backend.
       await expensesApi.update(id, {
-        amount: Number(values.amount),
         expenseCategorieId: values.expenseCategorieId,
         description: values.description || undefined,
         supplierId: values.supplierId || undefined,
@@ -190,7 +202,7 @@ export default function ExpenseDetailPage({
         date: values.date || undefined,
         payment: values.payment ?? expense?.payment,
         // Repris tel quel : sans lui, le back remettrait la pièce jointe à vide.
-        receipt: expense?.receipt,
+        receipt,
       });
 
       // Le statut n'est pas porté par l'update : on déclenche les mêmes
@@ -286,15 +298,25 @@ export default function ExpenseDetailPage({
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Détails de la dépense</h2>
-            <span className="text-xs text-gray-500">*champs obligatoires</span>
+            <span className="text-xs text-gray-600">
+              <span className="text-red-500">*</span>champs obligatoires
+            </span>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <FormField
-              label="Catégorie de dépense*"
+              label="Catégorie de dépense"
+              required
               error={form.formState.errors.expenseCategorieId?.message}
             >
-              <NativeSelect {...form.register("expenseCategorieId")}>
+              <NativeSelect
+                value={form.watch("expenseCategorieId") ?? ""}
+                onChange={(e) =>
+                  form.setValue("expenseCategorieId", e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+              >
                 <option value="">Sélectionner une catégorie</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -304,8 +326,15 @@ export default function ExpenseDetailPage({
               </NativeSelect>
             </FormField>
 
-            <FormField label="Fournisseur*">
-              <NativeSelect {...form.register("supplierId")}>
+            <FormField label="Fournisseur" required>
+              <NativeSelect
+                value={form.watch("supplierId") ?? ""}
+                onChange={(e) =>
+                  form.setValue("supplierId", e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+              >
                 <option value="">Sélectionner le fournisseur</option>
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -333,19 +362,26 @@ export default function ExpenseDetailPage({
               />
             </FormField>
 
-            <FormField label="Montant*" error={form.formState.errors.amount?.message}>
+            <FormField
+              label="Montant"
+              hint="Calculé automatiquement à partir des articles ajoutés ci-dessous."
+            >
               <input
-                type="number"
-                step="1"
-                min={0}
+                type="text"
                 className={inputClass}
-                readOnly={lockedWhenPaid}
-                {...form.register("amount")}
+                readOnly
+                value={formatAmount(detailsTotal)}
               />
             </FormField>
 
             <FormField label="Type de paiement">
-              <NativeSelect {...form.register("payment")} disabled={lockedWhenPaid}>
+              <NativeSelect
+                value={form.watch("payment") ?? ""}
+                onChange={(e) =>
+                  form.setValue("payment", e.target.value as PaymentMethod)
+                }
+                disabled={lockedWhenPaid}
+              >
                 {PAYMENT_OPTIONS.map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label}
@@ -363,23 +399,46 @@ export default function ExpenseDetailPage({
               />
             </FormField>
 
-            <FormField label="Pièce jointe">
+            {/* Pièce jointe (« Preuve » d'achat) : champ fichier comme
+                `expenses/show.blade.php`. Elle n'était affichée qu'en lecture,
+                sans moyen d'en déposer une. Le fichier est envoyé au moment du
+                « Soumettre », avec le reste du formulaire. */}
+            <FormField
+              label="Pièce jointe"
+              hint={
+                expense.receipt
+                  ? "Choisir un fichier remplace la pièce jointe actuelle."
+                  : undefined
+              }
+            >
+              <input
+                type="file"
+                disabled={lockedWhenDelivered}
+                onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+                className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100`}
+              />
               {expense.receipt ? (
                 <button
                   type="button"
                   onClick={() => downloadDocFile(expense.receipt!)}
-                  className="inline-flex w-fit items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+                  className="mt-1 inline-flex w-fit items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
                 >
                   <Paperclip className="h-4 w-4" />
-                  Télécharger le reçu
+                  Télécharger le reçu actuel
                 </button>
               ) : (
-                <span className="text-sm text-gray-400">Aucune pièce jointe</span>
+                <span className="mt-1 block text-sm text-gray-400">
+                  Aucune pièce jointe
+                </span>
               )}
             </FormField>
 
             <FormField label="Status de la dépense">
-              <NativeSelect {...form.register("paid")} disabled={lockedWhenDelivered}>
+              <NativeSelect
+                value={form.watch("paid") ?? "0"}
+                onChange={(e) => form.setValue("paid", e.target.value)}
+                disabled={lockedWhenDelivered}
+              >
                 <option value="0">Non payé</option>
                 <option value="1">Payé</option>
                 <option value="2">Payé et Livré</option>

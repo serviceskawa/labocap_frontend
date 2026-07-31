@@ -1,15 +1,10 @@
 "use client";
 
 import { useId } from "react";
-import type {
-  MultiValue,
-  SingleValue,
-  StylesConfig,
-  GroupBase,
-} from "react-select";
+import type { MultiValue, SingleValue, StylesConfig } from "react-select";
 import { cn } from "@/lib/utils";
 import { LimitedSelect as Select } from "./LimitedSelect";
-import { SELECT_CONTROL_MIN_HEIGHT } from "./selectStyles";
+import { buildSelectStyles, SELECT_MENU_CLASSNAMES } from "./selectStyles";
 
 export interface SelectOption {
   value: string;
@@ -43,109 +38,11 @@ interface FormSelectMultiProps extends FormSelectBaseProps {
 
 type FormSelectProps = FormSelectSingleProps | FormSelectMultiProps;
 
-const selectStyles: StylesConfig<SelectOption, boolean, GroupBase<SelectOption>> = {
-  control: (base, state) => ({
-    ...base,
-    minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
-    borderRadius: "0.5rem",
-    borderColor: state.isFocused ? "#3b82f6" : "#d1d5db",
-    boxShadow: state.isFocused ? "0 0 0 1px #3b82f6" : "none",
-    backgroundColor: state.isDisabled ? "#f9fafb" : "white",
-    "&:hover": {
-      borderColor: state.isFocused ? "#3b82f6" : "#9ca3af",
-    },
-    fontSize: "0.875rem",
-  }),
-  placeholder: (base) => ({
-    ...base,
-    color: "#9ca3af",
-    fontSize: "0.875rem",
-  }),
-  option: (base, state) => ({
-    ...base,
-    // Sélection (statique) en BLEU PUR ; curseur (survol/navigation) en BLEU CLAIR.
-    backgroundColor: state.isSelected
-      ? "#2563eb"
-      : state.isFocused
-        ? "#eff6ff"
-        : "white",
-    color: state.isSelected ? "white" : "#374151",
-    fontSize: "0.875rem",
-    cursor: "pointer",
-    "&:active": {
-      backgroundColor: "#dbeafe",
-    },
-  }),
-  menu: (base) => ({
-    ...base,
-    borderRadius: "0.5rem",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)",
-    border: "1px solid #e5e7eb",
-    zIndex: 50,
-  }),
-  menuList: (base) => ({
-    ...base,
-    padding: "4px",
-  }),
-  multiValue: (base) => ({
-    ...base,
-    backgroundColor: "#dbeafe",
-    borderRadius: "0.375rem",
-  }),
-  multiValueLabel: (base) => ({
-    ...base,
-    color: "#1d4ed8",
-    fontSize: "0.75rem",
-    fontWeight: 500,
-  }),
-  multiValueRemove: (base) => ({
-    ...base,
-    color: "#1d4ed8",
-    "&:hover": {
-      backgroundColor: "#bfdbfe",
-      color: "#1e40af",
-    },
-  }),
-  clearIndicator: (base) => ({
-    ...base,
-    color: "#9ca3af",
-    "&:hover": { color: "#4b5563" },
-    cursor: "pointer",
-  }),
-  dropdownIndicator: (base) => ({
-    ...base,
-    color: "#9ca3af",
-    "&:hover": { color: "#4b5563" },
-  }),
-  indicatorSeparator: (base) => ({
-    ...base,
-    backgroundColor: "#e5e7eb",
-  }),
-  input: (base) => ({
-    ...base,
-    fontSize: "0.875rem",
-    color: "#111827",
-  }),
-  singleValue: (base) => ({
-    ...base,
-    fontSize: "0.875rem",
-    color: "#111827",
-  }),
-  noOptionsMessage: (base) => ({
-    ...base,
-    fontSize: "0.875rem",
-    color: "#9ca3af",
-  }),
-};
-
-const errorSelectStyles: StylesConfig<SelectOption, boolean, GroupBase<SelectOption>> = {
-  ...selectStyles,
-  control: (base, state) => ({
-    ...(selectStyles.control?.(base, state) as object),
-    borderColor: state.isFocused ? "#ef4444" : "#fca5a5",
-    boxShadow: state.isFocused ? "0 0 0 1px #ef4444" : "none",
-  }),
-};
+// Styles react-select partagés — voir `selectStyles.ts`. Ce fichier en
+// redéfinissait une copie légèrement différente (rayon, hauteur, taille de
+// police), ce qui faisait diverger l'apparence des selects d'un écran à l'autre.
+const selectStyles = buildSelectStyles(false);
+const errorSelectStyles = buildSelectStyles(true);
 
 export function FormSelect(props: FormSelectProps) {
   const {
@@ -197,6 +94,7 @@ export function FormSelect(props: FormSelectProps) {
           isDisabled={isDisabled}
           styles={styles as StylesConfig<SelectOption, true>}
           noOptionsMessage={() => "Aucune option"}
+          classNames={SELECT_MENU_CLASSNAMES}
           classNamePrefix="react-select"
         />
       ) : (
@@ -213,6 +111,7 @@ export function FormSelect(props: FormSelectProps) {
           isDisabled={isDisabled}
           styles={styles as StylesConfig<SelectOption, false>}
           noOptionsMessage={() => "Aucune option"}
+          classNames={SELECT_MENU_CLASSNAMES}
           classNamePrefix="react-select"
         />
       )}

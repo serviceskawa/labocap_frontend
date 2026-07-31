@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -90,6 +90,7 @@ interface EditPageProps {
 export default function TestOrderEditPage({ params }: EditPageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -247,6 +248,15 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
           toast.error("Demande mise à jour, mais échec de l'envoi de la pièce jointe");
         }
       }
+      // La page détails lit la demande depuis le cache react-query : sans
+      // invalidation elle affichait l'ancienne version (pièce jointe absente)
+      // jusqu'à un rechargement manuel. On attend le refetch avant de naviguer
+      // pour que la page s'ouvre déjà à jour.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["test-order", id] }),
+        queryClient.invalidateQueries({ queryKey: ["test-order-images", id] }),
+        queryClient.invalidateQueries({ queryKey: ["test-orders"] }),
+      ]);
       toast.success("Demande mise à jour avec succès");
       router.push(`/test-orders/${id}/details`);
     },

@@ -379,7 +379,12 @@ function SupplierForm({ form, categories, isEdit = false }: SupplierFormProps) {
         required
         error={errors.categoryId?.message}
       >
-        <NativeSelect {...register("categoryId")}>
+        <NativeSelect
+          value={form.watch("categoryId") ?? ""}
+          onChange={(e) =>
+            form.setValue("categoryId", e.target.value, { shouldValidate: true })
+          }
+        >
           <option value="">Sélectionner une catégorie</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>

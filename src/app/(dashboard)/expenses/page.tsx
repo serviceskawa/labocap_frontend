@@ -350,10 +350,18 @@ export default function ExpensesPage() {
         >
           <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <FormField
-              label="Catégorie de dépense*"
+              label="Catégorie de dépense"
+              required
               error={createForm.formState.errors.expenseCategorieId?.message}
             >
-              <NativeSelect {...createForm.register("expenseCategorieId")}>
+              <NativeSelect
+                value={createForm.watch("expenseCategorieId")}
+                onChange={(e) =>
+                  createForm.setValue("expenseCategorieId", e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+              >
                 <option value="">Sélectionner une catégorie</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -364,7 +372,8 @@ export default function ExpensesPage() {
             </FormField>
 
             <FormField
-              label="Fournisseur*"
+              label="Fournisseur"
+              required
               error={createForm.formState.errors.supplierName?.message}
             >
               <input
@@ -381,7 +390,8 @@ export default function ExpensesPage() {
             </FormField>
 
             <FormField
-              label="Objet*"
+              label="Objet"
+              required
               error={createForm.formState.errors.description?.message}
             >
               <input type="text" className={inputClass} {...createForm.register("description")} />
@@ -403,23 +413,32 @@ export default function ExpensesPage() {
       {/* Filtres serveur (catégorie / statut) */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <NativeSelect
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            <option value="">Toutes les catégories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </NativeSelect>
-          <NativeSelect value={paidFilter} onChange={(e) => setPaidFilter(e.target.value)}>
-            <option value="">Tous les statuts</option>
-            <option value="0">Non payée</option>
-            <option value="1">Payée non livrée</option>
-            <option value="2">Payée et livrée</option>
-          </NativeSelect>
+          <FormField label="Catégorie de dépense">
+            <NativeSelect
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              placeholder="Toutes les catégories"
+            >
+              <option value="">Toutes les catégories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </FormField>
+          <FormField label="Statut">
+            <NativeSelect
+              value={paidFilter}
+              onChange={(e) => setPaidFilter(e.target.value)}
+              placeholder="Tous les statuts"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="0">Non payée</option>
+              <option value="1">Payée non livrée</option>
+              <option value="2">Payée et livrée</option>
+            </NativeSelect>
+          </FormField>
         </div>
       </div>
 

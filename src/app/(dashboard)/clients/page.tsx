@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
-import type { UseFormReturn } from "react-hook-form";
+import type { UseFormRegisterReturn, UseFormReturn } from "react-hook-form";
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DataTable } from "@/components/common/DataTable";
@@ -26,31 +26,61 @@ import { clientsApi, type Client, type ClientRequest } from "@/lib/api/clients";
 // ---------------------------------------------------------------------------
 
 /**
- * Numéro de téléphone accepté.
+ * Formats imposés en recette :
+ * - contact : obligatoire, exactement 8 chiffres (ex. 97000000) ;
+ * - IFU : facultatif, exactement 13 chiffres (ex. 1234567890123).
  *
- * Chiffres, espaces, points et tirets, avec un « + » facultatif en tête ; 8 à 15
- * chiffres une fois les séparateurs retirés. Cela refuse la saisie alphabétique
- * (le défaut signalé) tout en gardant modifiables les fiches existantes, qui
- * utilisent des formes légitimes : 97000000, +22997324883, 0022996236464.
+ * Les deux champs n'acceptent que des chiffres — la saisie alphabétique est
+ * d'ailleurs bloquée à la frappe (voir `champNumerique`).
  */
-function telephoneValide(v?: string): boolean {
-  if (!v || v.trim() === "") return true; // champ facultatif
-  if (!/^\+?[0-9 .-]+$/.test(v.trim())) return false;
-  const chiffres = v.replace(/\D/g, "");
-  return chiffres.length >= 8 && chiffres.length <= 15;
-}
-const TEL_MESSAGE =
-  "Numéro invalide : 8 à 15 chiffres, indicatif « + » facultatif (ex. 97000000)";
+const TEL_MESSAGE = "Le contact doit contenir exactement 8 chiffres (ex. 97000000)";
+const IFU_MESSAGE =
+  "Le numéro IFU doit contenir exactement 13 chiffres (ex. 1234567890123)";
 
 const clientSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   adress: z.string().optional(),
   contact: z
     .string()
+    .trim()
+    .min(1, "Le contact est requis")
+    .regex(/^\d{8}$/, TEL_MESSAGE),
+  ifu: z
+    .string()
+    .trim()
     .optional()
-    .refine(telephoneValide, { message: TEL_MESSAGE }),
-  ifu: z.string().optional(),
+    .refine((v) => !v || /^\d{13}$/.test(v), { message: IFU_MESSAGE }),
 });
+
+/**
+ * Enrobe l'enregistrement react-hook-form d'un champ pour n'y laisser passer
+ * que des chiffres, dans la limite de `maxLength`. Le filtrage est appliqué à
+ * la valeur du DOM *avant* que react-hook-form ne la lise, sinon une lettre
+ * collée resterait dans l'état du formulaire.
+ *
+ * `inputMode="numeric"` sort le pavé numérique sur mobile. Un
+ * `<input type="number">` ne conviendrait pas : il accepte « e », « + » et les
+ * décimales, et masque la longueur réelle saisie.
+ */
+function chiffresSeulement(
+  field: UseFormRegisterReturn,
+  maxLength: number,
+): UseFormRegisterReturn & {
+  inputMode: "numeric";
+  maxLength: number;
+} {
+  return {
+    ...field,
+    inputMode: "numeric",
+    maxLength,
+    onChange: (event: { target: HTMLInputElement; type?: unknown }) => {
+      event.target.value = event.target.value
+        .replace(/\D/g, "")
+        .slice(0, maxLength);
+      return field.onChange(event);
+    },
+  };
+}
 
 type ClientFormValues = z.infer<typeof clientSchema>;
 
@@ -344,12 +374,31 @@ function ClientForm({ form }: { form: UseFormReturn<ClientFormValues> }) {
         <input type="text" {...register("adress")} className={inputClass} />
       </FormField>
 
-      <FormField label="Contact" error={errors.contact?.message}>
-        <input type="text" {...register("contact")} className={inputClass} />
+      <FormField
+        label="Contact"
+        required
+        hint="8 chiffres — ex. 97000000"
+        error={errors.contact?.message}
+      >
+        <input
+          type="text"
+          placeholder="97000000"
+          {...chiffresSeulement(register("contact"), 8)}
+          className={inputClass}
+        />
       </FormField>
 
-      <FormField label="Numéro IFU" error={errors.ifu?.message}>
-        <input type="text" {...register("ifu")} className={inputClass} />
+      <FormField
+        label="Numéro IFU"
+        hint="Facultatif — 13 chiffres — ex. 1234567890123"
+        error={errors.ifu?.message}
+      >
+        <input
+          type="text"
+          placeholder="1234567890123"
+          {...chiffresSeulement(register("ifu"), 13)}
+          className={inputClass}
+        />
       </FormField>
     </div>
   );

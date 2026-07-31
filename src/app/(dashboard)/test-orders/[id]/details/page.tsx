@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
@@ -40,6 +40,16 @@ interface SelectOption {
   discount: number;
 }
 
+/**
+ * Nom lisible d'une image de la galerie. Le backend renvoie un chemin de
+ * stockage (`examen_images/<code>/<fichier>`) : seul le dernier segment
+ * intéresse l'utilisateur, affiché entre parenthèses à côté de « Image N ».
+ */
+function imageBaseName(filename: string): string {
+  const segments = filename.split(/[\\/]/);
+  return segments[segments.length - 1] || filename;
+}
+
 // ---------------------------------------------------------------------------
 // Page principale
 // ---------------------------------------------------------------------------
@@ -53,6 +63,10 @@ export default function TestOrderDetailsPage({ params }: Props) {
   // ---- État galerie
   const [files, setFiles] = useState<FileList | null>(null);
   const [deleteImageIndex, setDeleteImageIndex] = useState<number | null>(null);
+  // Un `<input type="file">` garde le nom du fichier choisi tant que sa valeur
+  // n'est pas vidée : remettre l'état React à null ne suffit pas, le nom restait
+  // affiché à côté du champ après l'ajout.
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ---- État examens
   const [selectedExam, setSelectedExam] = useState<SelectOption | null>(null);
@@ -169,6 +183,7 @@ export default function TestOrderDetailsPage({ params }: Props) {
       queryClient.invalidateQueries({ queryKey: ["test-order-images", orderId] });
       toast.success("Images ajoutées");
       setFiles(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     },
     onError: (err: AxiosError<ApiError>) => {
       toast.error(getApiErrorMessage(err, "Erreur lors de l'upload"));
@@ -611,6 +626,7 @@ export default function TestOrderDetailsPage({ params }: Props) {
               conséquence : avec « image/* » l'utilisateur pouvait choisir un HEIC
               ou un TIFF et ne découvrir le refus qu'après l'envoi. */}
           <input
+            ref={fileInputRef}
             type="file"
             multiple
             accept=".jpg,.jpeg,.png,image/jpeg,image/png"
@@ -637,8 +653,14 @@ export default function TestOrderDetailsPage({ params }: Props) {
                 key={img.index}
                 className="flex items-center gap-3 py-2"
               >
-                <span className="text-sm text-gray-700 font-medium w-20 flex-shrink-0">
+                <span className="flex-shrink-0 text-sm font-medium text-gray-700">
                   Image {img.index + 1}
+                  <span
+                    className="ml-1 font-normal text-gray-500"
+                    title={imageBaseName(img.filename)}
+                  >
+                    ({imageBaseName(img.filename)})
+                  </span>
                 </span>
                 <IconButton
                   variant="view"

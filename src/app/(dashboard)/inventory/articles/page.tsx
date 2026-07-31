@@ -250,6 +250,40 @@ export default function ArticlesPage() {
 
   // ---- Columns -------------------------------------------------------
 
+  // Historique des mouvements affiché dans la modale « Détail ».
+  const movementColumns: ColumnDef<StockMovement>[] = [
+    {
+      header: "Action",
+      id: "action",
+      accessorFn: (m) => movementActionLabel(m),
+    },
+    {
+      header: "Quantité",
+      accessorKey: "quantity",
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.quantity}</span>
+      ),
+    },
+    {
+      header: "Date",
+      id: "date",
+      accessorFn: (m) =>
+        m.movementDate
+          ? new Date(m.movementDate).toLocaleDateString("fr-FR")
+          : "",
+    },
+    {
+      header: "Fait par",
+      id: "user",
+      accessorFn: (m) => m.userFullName ?? "",
+    },
+    {
+      header: "Description",
+      id: "notes",
+      accessorFn: (m) => m.notes ?? "",
+    },
+  ];
+
   const columns: ColumnDef<Article>[] = [
     {
       header: "Nom de l'article",
@@ -423,43 +457,15 @@ export default function ArticlesPage() {
                 ✕
               </button>
             </div>
-            <div className="max-h-96 overflow-y-auto p-6">
-              {movementsLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                </div>
-              ) : (movementsData?.content ?? []).length === 0 ? (
-                <p className="py-8 text-center text-sm text-gray-500">
-                  Aucun enregistrement disponible
-                </p>
-              ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
-                      <th className="pb-2 pr-4">Action</th>
-                      <th className="pb-2 pr-4">Quantité</th>
-                      <th className="pb-2 pr-4">Date</th>
-                      <th className="pb-2 pr-4">Fait par</th>
-                      <th className="pb-2">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {(movementsData?.content ?? []).map((m: StockMovement) => (
-                      <tr key={m.id}>
-                        <td className="py-2 pr-4">{movementActionLabel(m)}</td>
-                        <td className="py-2 pr-4 font-medium">{m.quantity}</td>
-                        <td className="py-2 pr-4 text-gray-500">
-                          {m.movementDate
-                            ? new Date(m.movementDate).toLocaleDateString("fr-FR")
-                            : ""}
-                        </td>
-                        <td className="py-2 pr-4">{m.userFullName ?? ""}</td>
-                        <td className="py-2 text-gray-500">{m.notes ?? ""}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+            {/* `DataTable` : même pagination et même recherche que les autres
+                tableaux de l'application — l'historique d'un article peut
+                compter des centaines de mouvements. */}
+            <div className="max-h-[70vh] overflow-y-auto p-6">
+              <DataTable<StockMovement>
+                columns={movementColumns}
+                data={movementsData?.content ?? []}
+                isLoading={movementsLoading}
+              />
             </div>
           </div>
         </div>
@@ -488,7 +494,7 @@ function ArticleForm({ form, units, isEdit = false }: ArticleFormProps) {
   return (
     <div className="space-y-4">
       <p className="text-right text-sm text-gray-600">
-        <span className="text-red-600">*</span>
+        <span className="text-red-500">*</span>
         {isEdit ? "Champs obligatoires" : "champs obligatoires"}
       </p>
 
@@ -515,7 +521,12 @@ function ArticleForm({ form, units, isEdit = false }: ArticleFormProps) {
         <FormField label="Unité de mesure" required error={errors.unit?.message}>
           {/* Laravel stocke une FK ; le schéma actuel porte un libellé texte
               (`articles.unit`) : on alimente le select avec les mêmes options. */}
-          <NativeSelect {...register("unit")}>
+          <NativeSelect
+            value={form.watch("unit") ?? ""}
+            onChange={(e) =>
+              form.setValue("unit", e.target.value, { shouldValidate: true })
+            }
+          >
             <option value="">Sélectionner l&apos;unité de mesure de la quantité</option>
             {units.map((u) => (
               <option key={u.id} value={u.name}>

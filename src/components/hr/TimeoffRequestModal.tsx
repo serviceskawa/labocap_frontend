@@ -154,7 +154,12 @@ export function TimeoffRequestModal() {
         </FormField>
         <FormField label="status" required error={form.formState.errors.status?.message}>
           {canSetStatus ? (
-            <NativeSelect {...form.register("status")}>
+            <NativeSelect
+              value={form.watch("status") ?? ""}
+              onChange={(e) =>
+                form.setValue("status", e.target.value, { shouldValidate: true })
+              }
+            >
               <option value="">Selectionner un statut</option>
               <option value="active">Active</option>
               <option value="non active">Non Active</option>

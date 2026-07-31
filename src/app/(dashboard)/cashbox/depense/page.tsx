@@ -352,7 +352,14 @@ export default function CashboxDepensePage() {
               <label className="text-sm font-medium text-gray-700">
                 Nom de la banque <span className="text-red-500">*</span>
               </label>
-              <NativeSelect {...supplyForm.register("bankId")}>
+              <NativeSelect
+                value={supplyForm.watch("bankId") ?? ""}
+                onChange={(e) =>
+                  supplyForm.setValue("bankId", e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+              >
                 <option value="">Sélectionner une banque</option>
                 {banks.map((b) => (
                   <option key={b.id} value={b.id}>
@@ -386,7 +393,9 @@ export default function CashboxDepensePage() {
 
           {/* Montant (pleine largeur) */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Montant</label>
+            <label className="text-sm font-medium text-gray-700">
+              Montant <span className="text-red-500">*</span>
+            </label>
             <input
               type="number"
               min={0}
@@ -404,7 +413,9 @@ export default function CashboxDepensePage() {
           {/* Date + Attachement (une ligne) */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Date</label>
+              <label className="text-sm font-medium text-gray-700">
+                Date <span className="text-red-500">*</span>
+              </label>
               <input
                 type="date"
                 {...supplyForm.register("date")}

@@ -219,7 +219,9 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
                 <h2 className="text-base font-semibold text-gray-800">
                   Informations du bon
                 </h2>
-                <span className="text-xs text-gray-400">* champs obligatoires</span>
+                <span className="text-xs text-gray-600">
+                  <span className="text-red-500">*</span> champs obligatoires
+                </span>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

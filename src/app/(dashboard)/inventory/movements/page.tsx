@@ -185,7 +185,14 @@ export default function MovementsPage() {
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Article <span className="text-red-600">*</span>
               </label>
-              <NativeSelect {...form.register("articleId")}>
+              <NativeSelect
+                value={form.watch("articleId") ?? ""}
+                onChange={(e) =>
+                  form.setValue("articleId", e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+              >
                 {articles.length === 0 ? (
                   <option value="">Aucun article existant</option>
                 ) : (
