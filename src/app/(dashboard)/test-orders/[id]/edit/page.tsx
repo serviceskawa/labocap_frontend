@@ -22,6 +22,7 @@ import type { AxiosError } from "axios";
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FormToggle } from "@/components/ui/FormToggle";
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { testOrdersApi, type TestOrderRequest } from "@/lib/api/testOrders";
 import { openDocFile } from "@/lib/api/docs";
 import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
@@ -98,6 +99,7 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
     control,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<EditOrderFormData>({
     resolver: zodResolver(editOrderSchema),
@@ -628,14 +630,15 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
               <label className="text-sm font-medium text-gray-700">
                 Option d&apos;envoi des résultats
               </label>
-              <select
-                {...register("option")}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              <NativeSelect
+                value={watch("option") ?? ""}
+                onChange={(e) => setValue("option", e.target.value)}
+                placeholder="Sélectionner une option d'envoi"
               >
                 <option value="">Sélectionner une option d&apos;envoi</option>
                 <option value="0">Appel</option>
                 <option value="1">SMS</option>
-              </select>
+              </NativeSelect>
             </div>
 
           </div>

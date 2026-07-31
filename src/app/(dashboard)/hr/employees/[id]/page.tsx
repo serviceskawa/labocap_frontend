@@ -782,14 +782,19 @@ export default function EmployeeDetailPage({
             <input type="text" {...empForm.register("cnssNumber")} className={inputClass} />
           </FormField>
           <FormField label="Utilisateur" className="sm:col-span-2">
-            <select {...empForm.register("userId")} className={inputClass}>
+            {/* Liste alimentée par la table des utilisateurs : cherchable. */}
+            <NativeSelect
+              value={empForm.watch("userId") ?? ""}
+              onChange={(e) => empForm.setValue("userId", e.target.value)}
+              placeholder="Associer à un utilisateur"
+            >
               <option value="">Associer à un utilisateur</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.firstname} {u.lastname}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </FormField>
           <FormField label="Photo de l'employé" className="sm:col-span-2">
             <input

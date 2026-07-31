@@ -14,6 +14,7 @@ import type { AxiosError } from "axios";
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { AuthThumbnail } from "@/components/ui/AuthThumbnail";
 import { QRCodeSVG } from "qrcode.react";
@@ -694,15 +695,15 @@ export default function ReportDetailPage({
               <label className={labelClass}>
                 Etat du compte rendu <span className="text-red-500">*</span>
               </label>
-              <select
+              <NativeSelect
+                className="mt-1"
                 value={statusValue}
                 onChange={(e) => setStatusValue(e.target.value as "0" | "1")}
                 disabled={!canEdit}
-                className={`mt-1 ${inputClass}`}
               >
                 <option value="0">En attente de relecture</option>
                 <option value="1">Terminé</option>
-              </select>
+              </NativeSelect>
             </div>
 
             {/* Mettre à jour (Laravel : bouton unique qui enregistre + applique le statut) */}

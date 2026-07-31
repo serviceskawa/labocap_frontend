@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { DataTable } from "@/components/common/DataTable";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FormField } from "@/components/ui/FormField";
+import { CreatableSelectField } from "@/components/ui/CreatableSelectField";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
@@ -376,17 +377,22 @@ export default function ExpensesPage() {
               required
               error={createForm.formState.errors.supplierName?.message}
             >
-              <input
-                type="text"
-                list="expense-suppliers"
-                className={inputClass}
-                {...createForm.register("supplierName")}
+              {/* Liste issue de la table des fournisseurs : select cherchable.
+                  Le `<datalist>` précédent n'offrait pas de vraie liste
+                  déroulante et sa présentation ne suivait pas les autres
+                  champs. La saisie libre reste possible — un nom inconnu crée
+                  le fournisseur, comme dans Laravel. */}
+              <CreatableSelectField
+                id="expense-supplier"
+                options={suppliers.map((s) => ({ value: s.name, label: s.name }))}
+                value={createForm.watch("supplierName") || null}
+                onChange={(v) =>
+                  createForm.setValue("supplierName", v ?? "", {
+                    shouldValidate: true,
+                  })
+                }
+                placeholder="Rechercher ou saisir un fournisseur…"
               />
-              <datalist id="expense-suppliers">
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.name} />
-                ))}
-              </datalist>
             </FormField>
 
             <FormField
