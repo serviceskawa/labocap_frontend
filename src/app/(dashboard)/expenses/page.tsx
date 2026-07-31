@@ -59,10 +59,19 @@ const inputClass =
 
 // Formulaire de création en ligne : « Catégorie de dépense », « Fournisseur »,
 // « Objet ». Le montant est saisi ensuite sur la page détail.
+// Les trois champs sont marqués obligatoires (astérisque) : seule la catégorie
+// était réellement validée, si bien qu'une dépense pouvait être créée sans
+// fournisseur ni objet, et les deux autres champs ne signalaient rien.
 const createSchema = z.object({
   expenseCategorieId: z.string().min(1, { message: "La catégorie est requise" }),
-  supplierName: z.string().optional(),
-  description: z.string().optional(),
+  supplierName: z
+    .string()
+    .trim()
+    .min(1, { message: "Le fournisseur est requis" }),
+  description: z
+    .string()
+    .trim()
+    .min(1, { message: "L'objet de la dépense est requis" }),
 });
 
 type CreateFormValues = z.infer<typeof createSchema>;
@@ -354,7 +363,10 @@ export default function ExpensesPage() {
               </NativeSelect>
             </FormField>
 
-            <FormField label="Fournisseur*">
+            <FormField
+              label="Fournisseur*"
+              error={createForm.formState.errors.supplierName?.message}
+            >
               <input
                 type="text"
                 list="expense-suppliers"
@@ -368,7 +380,10 @@ export default function ExpensesPage() {
               </datalist>
             </FormField>
 
-            <FormField label="Objet*">
+            <FormField
+              label="Objet*"
+              error={createForm.formState.errors.description?.message}
+            >
               <input type="text" className={inputClass} {...createForm.register("description")} />
             </FormField>
 

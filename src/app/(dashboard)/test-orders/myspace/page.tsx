@@ -9,10 +9,6 @@ import {
   Check,
   Trash2,
   Printer,
-  RefreshCw,
-  Minus,
-  Plus,
-  X,
   Loader2,
 } from "lucide-react";
 import type { AxiosError } from "axios";
@@ -192,71 +188,27 @@ function ReportBadge({ order }: { order: TestOrder }) {
 }
 
 // ---------------------------------------------------------------------------
-// Carte avec widgets (réplique Laravel/Hyper : réactualiser / réduire / fermer)
+// Carte de section
 // ---------------------------------------------------------------------------
 
+/**
+ * Le gabarit Hyper posait ici un trio d'icônes « réactualiser · réduire ·
+ * fermer ». Il a été retiré comme sur les autres tableaux de l'application :
+ * sans utilité (les listes se rafraîchissent seules), et « fermer » faisait
+ * disparaître une section sans moyen de la rétablir autrement qu'en rechargeant
+ * la page.
+ */
 function WidgetCard({
   title,
-  onReload,
-  reloading = false,
   children,
 }: {
   title: string;
-  onReload: () => void;
-  reloading?: boolean;
   children: React.ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [visible, setVisible] = useState(true);
-
-  // « Fermer » masque la carte (comme le remove de Hyper) ; elle réapparaît au
-  // rechargement de la page.
-  if (!visible) return null;
-
-  const btnClass =
-    "rounded p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600";
-
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <h2 className="text-base font-semibold text-gray-800">{title}</h2>
-        <div className="flex items-center gap-0.5">
-          <button
-            type="button"
-            onClick={onReload}
-            title="Réactualiser"
-            aria-label="Réactualiser"
-            className={btnClass}
-          >
-            <RefreshCw className={`h-4 w-4 ${reloading ? "animate-spin" : ""}`} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setCollapsed((c) => !c)}
-            title={collapsed ? "Agrandir" : "Réduire"}
-            aria-label={collapsed ? "Agrandir" : "Réduire"}
-            aria-expanded={!collapsed}
-            className={btnClass}
-          >
-            {collapsed ? (
-              <Plus className="h-4 w-4" />
-            ) : (
-              <Minus className="h-4 w-4" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setVisible(false)}
-            title="Fermer"
-            aria-label="Fermer"
-            className={btnClass}
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {!collapsed && children}
+      <h2 className="mb-4 text-base font-semibold text-gray-800">{title}</h2>
+      {children}
     </div>
   );
 }
@@ -304,8 +256,6 @@ export default function MySpacePage() {
   const {
     data: pendingData,
     isLoading: pendingLoading,
-    isFetching: pendingFetching,
-    refetch: refetchPending,
   } = useQuery<PageResponse<TestOrder>>({
       queryKey: [
         "myspace-pending",
@@ -333,8 +283,6 @@ export default function MySpacePage() {
   const {
     data: doneData,
     isLoading: doneLoading,
-    isFetching: doneFetching,
-    refetch: refetchDone,
   } = useQuery<PageResponse<TestOrder>>({
       queryKey: [
         "myspace-done",
@@ -505,11 +453,7 @@ export default function MySpacePage() {
       {/* =================================================================
           DataTable 1 — Demandes en attente
       ================================================================= */}
-      <WidgetCard
-        title="Liste des demandes en attente"
-        onReload={() => refetchPending()}
-        reloading={pendingFetching}
-      >
+      <WidgetCard title="Liste des demandes en attente">
         <div className="flex flex-wrap gap-3 mb-4">
           <NativeSelect
             value={pendingTypeOrderId}
@@ -559,11 +503,7 @@ export default function MySpacePage() {
       {/* =================================================================
           DataTable 2 — Demandes terminées
       ================================================================= */}
-      <WidgetCard
-        title="Liste des demandes terminées"
-        onReload={() => refetchDone()}
-        reloading={doneFetching}
-      >
+      <WidgetCard title="Liste des demandes terminées">
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <label className="mb-1 block text-xs font-medium text-gray-600">
