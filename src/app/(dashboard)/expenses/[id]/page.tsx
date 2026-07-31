@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useWatch, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import type { AxiosError } from "axios";
 
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FormField } from "@/components/ui/FormField";
+import { CreatableSelectField } from "@/components/ui/CreatableSelectField";
 import {
   TableLengthControl,
   TablePaginationFooter,
@@ -44,6 +45,24 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
 const inputClass =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 read-only:bg-gray-50 read-only:text-gray-500";
 
+/**
+ * Enrobe l'enregistrement react-hook-form d'un champ pour n'y laisser passer
+ * que des chiffres. Le filtrage porte sur la valeur du DOM *avant* que
+ * react-hook-form ne la lise, sinon un caractère collé resterait dans l'état
+ * du formulaire.
+ */
+function chiffresSeulement(
+  field: UseFormRegisterReturn,
+): UseFormRegisterReturn {
+  return {
+    ...field,
+    onChange: (event: { target: HTMLInputElement; type?: unknown }) => {
+      event.target.value = event.target.value.replace(/\D/g, "");
+      return field.onChange(event);
+    },
+  };
+}
+
 function formatAmount(amount: number): string {
   // FCFA n'a pas de sous-unité : on affiche des entiers, jamais de décimales.
   return (
@@ -71,11 +90,12 @@ type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 const detailSchema = z.object({
   articleName: z.string().min(1, { message: "L'article est requis" }),
+  // Le FCFA n'a pas de sous-unité : le prix est un entier d'au moins 1.
   unitPrice: z
     .string()
     .min(1, { message: "Le prix de l'article est requis" })
-    .refine((v) => Number(v) > 0, {
-      message: "Veuillez renseigner un prix supérieur à zéro",
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, {
+      message: "Le prix doit être un nombre entier d'au moins 1 FCFA",
     }),
   quantity: z
     .string()
@@ -473,25 +493,42 @@ export default function ExpenseDetailPage({
               </p>
               <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <FormField label="Article" required error={detailForm.formState.errors.articleName?.message}>
-                <input
-                  type="text"
-                  list="expense-articles"
-                  className={inputClass}
-                  {...detailForm.register("articleName")}
+                {/* Liste issue de la table des articles : select cherchable.
+                    La saisie libre reste possible (un article hors stock peut
+                    figurer sur une dépense), comme avec l'autocomplétion
+                    Laravel. */}
+                <CreatableSelectField
+                  id="expense-article"
+                  options={articles.map((a) => ({ value: a.name, label: a.name }))}
+                  value={detailForm.watch("articleName") || null}
+                  onChange={(v) =>
+                    detailForm.setValue("articleName", v ?? "", {
+                      shouldValidate: true,
+                    })
+                  }
+                  placeholder="Rechercher ou saisir un article…"
                 />
-                <datalist id="expense-articles">
-                  {articles.map((a) => (
-                    <option key={a.id} value={a.name} />
-                  ))}
-                </datalist>
               </FormField>
 
+              {/* `type="text"` + filtrage : `type="number"` laisse saisir
+                  « 1,5 », « 1e3 » ou un signe moins sans jamais remonter la
+                  valeur au champ. */}
               <FormField label="Prix" required error={detailForm.formState.errors.unitPrice?.message}>
-                <input type="number" step="1" min={0} className={inputClass} {...detailForm.register("unitPrice")} />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className={inputClass}
+                  {...chiffresSeulement(detailForm.register("unitPrice"))}
+                />
               </FormField>
 
               <FormField label="Quantité" required error={detailForm.formState.errors.quantity?.message}>
-                <input type="number" step="1" className={inputClass} {...detailForm.register("quantity")} />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className={inputClass}
+                  {...chiffresSeulement(detailForm.register("quantity"))}
+                />
               </FormField>
 
               <FormField label="Total">
