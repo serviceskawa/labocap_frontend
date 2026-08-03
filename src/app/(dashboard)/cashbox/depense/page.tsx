@@ -24,6 +24,7 @@ import { banksApi, type Bank } from "@/lib/api/banks";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import type { ApiError } from "@/types/api";
 import { applyFieldErrors } from "@/lib/api/errorMessages";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Schéma de l'approvisionnement de la caisse
@@ -47,8 +48,6 @@ const supplySchema = z.object({
 
 type SupplyFormData = z.infer<typeof supplySchema>;
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 // ---------------------------------------------------------------------------
 // Helpers

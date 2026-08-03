@@ -20,6 +20,7 @@ import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { clientsApi, type Client, type ClientRequest } from "@/lib/api/clients";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema — calque `clients/create.blade.php` : seul le nom est requis.
@@ -89,8 +90,6 @@ type ClientFormValues = z.infer<typeof clientSchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 const actionBtn =
   "inline-flex h-8 w-9 items-center justify-center rounded-md text-white transition-colors";

@@ -24,22 +24,30 @@ interface ButtonProps
   onClick?: (event: MouseEvent<HTMLButtonElement>) => unknown;
 }
 
-// Thème Hyper : couleurs pleines + ombre portée teintée au survol (comme
-// `.btn-primary:hover { box-shadow: 0 2px 6px 0 rgba(114,124,245,.5) }`).
+// Le survol assombrit d'un cran et pose une ombre teintée courte. Le thème
+// d'origine gardait le même fond et diffusait une ombre à 50 % d'opacité, qui
+// bavait sur les surfaces claires sans donner de retour franc au pointeur.
+// `secondary` gagne une vraie hiérarchie : bordure au repos, fond au survol.
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    "bg-blue-600 text-white hover:bg-blue-600 hover:shadow-[0_2px_6px_0_rgba(114,124,245,0.5)]",
+    "bg-blue-600 text-white shadow-sm hover:bg-blue-700 " +
+    "hover:shadow-[0_4px_10px_-2px_rgba(46,75,216,0.35)] " +
+    "focus-visible:ring-blue-500/40",
   danger:
-    "bg-red-600 text-white hover:bg-red-600 hover:shadow-[0_2px_6px_0_rgba(250,92,124,0.5)]",
+    "bg-red-600 text-white shadow-sm hover:bg-red-700 " +
+    "hover:shadow-[0_4px_10px_-2px_rgba(220,40,72,0.35)] " +
+    "focus-visible:ring-red-500/40",
   secondary:
-    "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50",
+    "border border-gray-300 bg-white text-gray-700 shadow-sm " +
+    "hover:border-gray-400 hover:bg-gray-50 focus-visible:ring-gray-400/40",
 };
 
-// Bootstrap/Hyper exact : `.btn { padding:.45rem .9rem; font-size:.9rem;
-// border-radius:.15rem }` et `.btn-sm { padding:.28rem .8rem; font-size:.875rem }`.
+// Rayon 8px et graisse 500 : à .9rem, un libellé en poids normal sur fond
+// coloré paraît délavé. Les angles quasi vifs de Bootstrap (.15rem ≈ 2px)
+// dataient l'ensemble plus que n'importe quel autre détail.
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "gap-1 rounded-[.15rem] px-[.8rem] py-[.28rem] text-[.875rem]",
-  md: "gap-2 rounded-[.15rem] px-[.9rem] py-[.45rem] text-[.9rem]",
+  sm: "gap-1.5 rounded-lg px-3 py-1.5 text-[.8125rem]",
+  md: "gap-2 rounded-lg px-[.9rem] py-2 text-[.9rem]",
 };
 
 const spinnerSize: Record<ButtonSize, string> = {
@@ -125,8 +133,10 @@ export function Button({
       aria-busy={busy}
       onClick={handleClick}
       className={cn(
-        // `.btn` : font-weight 400, line-height 1.5 (Bootstrap/Hyper).
-        "inline-flex items-center justify-center font-normal leading-normal transition-[background-color,box-shadow] disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex items-center justify-center font-medium leading-normal",
+        "transition-[background-color,border-color,box-shadow] duration-150",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
+        "disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none",
         variantClasses[variant],
         sizeClasses[size],
         className

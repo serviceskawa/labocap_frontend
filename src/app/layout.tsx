@@ -34,7 +34,7 @@ export default function RootLayout({
       translate="no"
       className={`h-full notranslate ${nunito.variable}`}
     >
-      <body className="h-full bg-[#fafbfe] antialiased font-sans">
+      <body className="h-full bg-gray-50 antialiased font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -146,22 +146,22 @@ export default function ProfilePage() {
                 {/* Nom */}
                 <div className="hyper-field">
                   <label className="hyper-form-label">
-                    Nom<span className="text-[#fa5c7c]">*</span>
+                    Nom<span className="text-red-600">*</span>
                   </label>
                   <input type="text" {...registerProfile("lastname")} className="hyper-form-control" />
                   {profileErrors.lastname && (
-                    <p className="mt-1 text-xs text-[#fa5c7c]">{profileErrors.lastname.message}</p>
+                    <p className="mt-1 text-xs text-red-600">{profileErrors.lastname.message}</p>
                   )}
                 </div>
 
                 {/* Prénom */}
                 <div className="hyper-field">
                   <label className="hyper-form-label">
-                    Prénom<span className="text-[#fa5c7c]">*</span>
+                    Prénom<span className="text-red-600">*</span>
                   </label>
                   <input type="text" {...registerProfile("firstname")} className="hyper-form-control" />
                   {profileErrors.firstname && (
-                    <p className="mt-1 text-xs text-[#fa5c7c]">{profileErrors.firstname.message}</p>
+                    <p className="mt-1 text-xs text-red-600">{profileErrors.firstname.message}</p>
                   )}
                 </div>
 
@@ -179,7 +179,7 @@ export default function ProfilePage() {
                         unoptimized
                       />
                     ) : (
-                      <span className="text-[14px] leading-[22px] text-[#777]">
+                      <span className="text-[14px] leading-[22px] text-gray-600">
                         Glisser-déposer un fichier ici ou cliquer
                       </span>
                     )}
@@ -299,13 +299,13 @@ function PasswordField({
           type="button"
           tabIndex={-1}
           onClick={onToggle}
-          className="absolute right-0 top-0 flex h-full items-center px-3 text-[#6c757d]"
+          className="absolute right-0 top-0 flex h-full items-center px-3 text-gray-600"
           aria-label={show ? "Masquer" : "Afficher"}
         >
           {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
         </button>
       </div>
-      {error && <p className="mt-1 text-xs text-[#fa5c7c]">{error}</p>}
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );
 }

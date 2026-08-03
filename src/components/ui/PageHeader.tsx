@@ -77,12 +77,13 @@ export function PageHeader({
       {/* Title row */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          {/* Hyper : `.page-title { font-size: 18px }` */}
-          <h1 className="text-[18px] font-semibold text-gray-900 truncate">
+          {/* 20px et interlettrage légèrement resserré : à 18px/normal, le titre
+              se distinguait mal des en-têtes de carte juste en dessous. */}
+          <h1 className="truncate text-[1.25rem] font-semibold leading-tight tracking-[-0.015em] text-gray-900">
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+            <p className="mt-1.5 text-sm text-gray-500">{subtitle}</p>
           )}
         </div>
         {action && <div className="flex-shrink-0">{action}</div>}

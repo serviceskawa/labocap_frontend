@@ -30,6 +30,7 @@ import { expenseCategoriesApi, type ExpenseCategory } from "@/lib/api/expenses";
 import { downloadDocFile } from "@/lib/api/docs";
 import { suppliersApi } from "@/lib/api/suppliers";
 import { inventoryApi } from "@/lib/api/inventory";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -42,8 +43,6 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
   { value: "VIREMENT", label: "VIREMENT" },
 ];
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 read-only:bg-gray-50 read-only:text-gray-500";
 
 /**
  * Enrobe l'enregistrement react-hook-form d'un champ pour n'y laisser passer

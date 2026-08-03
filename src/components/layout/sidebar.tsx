@@ -31,7 +31,8 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useUIStore } from "@/stores/ui.store";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useAppSettings } from "@/hooks/useAppSettings";
+import { useBranding } from "@/hooks/useBranding";
+import { AppLogo } from "@/components/ui/AppLogo";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { testOrdersApi } from "@/lib/api/testOrders";
 import { inventoryApi } from "@/lib/api/inventory";
@@ -91,12 +92,12 @@ function NavItem({ href, icon, label, collapsed, badge = 0 }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={`flex items-center px-4 py-2.5 rounded-md mx-2 transition-colors text-[.9375rem] ${
+      className={`flex items-center px-4 py-2.5 rounded-lg mx-2 transition-colors text-[.9rem] ${
         collapsed ? "justify-center" : "gap-3"
       } ${
         isActive
-          ? "bg-[#727cf5] text-white"
-          : "text-[#8391a2] hover:bg-white/5 hover:text-[#bccee4]"
+          ? "bg-blue-600 text-white shadow-[0_2px_8px_-2px_rgba(46,75,216,0.55)]"
+          : "text-sidebar-link hover:bg-white/[0.06] hover:text-sidebar-link-hover"
       }`}
       title={collapsed ? label : undefined}
     >
@@ -138,7 +139,7 @@ function CollapseItem({
         onMouseLeave={() => setOpen(false)}
       >
         <div
-          className="flex items-center justify-center px-4 py-2.5 mx-2 text-[#8391a2] cursor-pointer hover:bg-[#727cf5] hover:text-white rounded-md"
+          className="flex items-center justify-center px-4 py-2.5 mx-2 text-sidebar-link cursor-pointer hover:bg-white/[0.06] hover:text-sidebar-link-hover rounded-lg transition-colors"
           title={label}
         >
           <span className="flex-shrink-0 w-5 h-5">{icon}</span>
@@ -146,8 +147,8 @@ function CollapseItem({
         {open && (
           // `pl-1` sert de pont de survol entre l'icône et le panneau.
           <div className="fixed left-16 z-50 pl-1" style={{ top: flyoutTop }}>
-            <div className="min-w-[210px] rounded-md border border-white/10 bg-[#313a46] py-2 shadow-xl">
-              <div className="px-4 pb-2 mb-1 border-b border-white/10 text-xs uppercase tracking-wider text-[#8391a2] font-semibold">
+            <div className="min-w-[210px] rounded-xl border border-white/10 bg-gray-900 py-2 shadow-2xl">
+              <div className="px-4 pb-2 mb-1 border-b border-white/10 text-xs uppercase tracking-wider text-sidebar-link font-semibold">
                 {label}
               </div>
               {children}
@@ -162,7 +163,7 @@ function CollapseItem({
     <div>
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-3 px-4 py-2.5 rounded-md mx-2 w-[calc(100%-16px)] text-left text-[.9375rem] text-[#8391a2] hover:bg-white/5 hover:text-[#bccee4] transition-colors"
+        className="flex items-center gap-3 px-4 py-2.5 rounded-md mx-2 w-[calc(100%-16px)] text-left text-[.9375rem] text-sidebar-link hover:bg-white/5 hover:text-sidebar-link-hover transition-colors"
       >
         <span className="flex-shrink-0 w-5 h-5">{icon}</span>
         <span className="flex-1 truncate">{label}</span>
@@ -189,8 +190,8 @@ function SubItem({ href, label, onClick }: SubItemProps) {
   const isActive = !!href && pathname === href;
   const cls = `flex w-full items-center pl-8 pr-4 py-2 text-left text-[.9375rem] transition-colors ${
     isActive
-      ? "text-white bg-white/5 rounded-r-md"
-      : "text-[#8391a2] hover:text-[#bccee4] hover:bg-white/5 rounded-r-md"
+      ? "text-white bg-white/[0.07] rounded-r-lg"
+      : "text-sidebar-link hover:text-sidebar-link-hover hover:bg-white/[0.05] rounded-r-lg"
   }`;
 
   // Déclencheur (ex. modal global) : bouton au lieu d'un lien.
@@ -221,8 +222,7 @@ function SectionLabel({
   }
   return (
     <div className="px-4 mt-5 mb-2">
-      {/* Hyper : `[data-leftbar-theme=dark] .side-nav-title { color:#8391a2 }` */}
-      <span className="text-xs uppercase text-[#8391a2] font-bold tracking-wider">
+      <span className="text-[.6875rem] uppercase text-gray-500 font-semibold tracking-[0.08em]">
         {label}
       </span>
     </div>
@@ -314,10 +314,10 @@ export function Sidebar() {
   // Sur mobile, jamais réduit : on affiche toujours les libellés (comme Laravel).
   const collapsed = isMobile ? false : sidebarCollapsed;
 
-  // Logo + nom du labo depuis les paramètres (repli sur le défaut si absent).
-  const { data: appSettings } = useAppSettings();
-  const logoSrc = appSettings?.logo?.trim() || appSettings?.logo_white?.trim() || "";
-  const appName = appSettings?.app_name?.trim() || "Labo AnaPath";
+  // Logo + nom du labo depuis les Paramètres, avec repli sur la route publique
+  // `/public/branding` : `/setting-apps` exige la permission `view-settings`, si
+  // bien qu'un technicien ne voyait jusqu'ici que l'initiale de repli.
+  const { appName } = useBranding();
 
   return (
     <>
@@ -349,24 +349,19 @@ export function Sidebar() {
       {/* Logo — depuis les paramètres (setting_apps.logo), repli sur l'initiale. */}
       <div className="h-[70px] flex items-center justify-center flex-shrink-0 border-b border-white/15">
         {collapsed ? (
-          logoSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoSrc} alt={appName} className="h-9 w-9 rounded-lg object-contain" />
-          ) : (
-            <div className="w-8 h-8 bg-[#727cf5] rounded-lg flex items-center justify-center text-white font-bold text-sm">
-              {appName.charAt(0).toUpperCase()}
-            </div>
-          )
+          <AppLogo
+            surface="dark"
+            fallback="initial"
+            className="h-9 w-9 rounded-lg"
+          />
         ) : (
           <div className="flex items-center gap-2 px-4">
-            {logoSrc ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={logoSrc} alt={appName} className="h-9 w-auto max-w-[90px] rounded object-contain flex-shrink-0" />
-            ) : (
-              <div className="w-8 h-8 bg-[#727cf5] rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                {appName.charAt(0).toUpperCase()}
-              </div>
-            )}
+            <AppLogo
+              surface="dark"
+              fallback="initial"
+              className="h-9 w-auto max-w-[90px] rounded flex-shrink-0"
+              fallbackClassName="flex-shrink-0"
+            />
             <span className="font-semibold text-white text-base truncate">
               {appName}
             </span>

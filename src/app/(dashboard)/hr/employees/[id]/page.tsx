@@ -15,13 +15,16 @@ import {
   Mail,
   Download,
 } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 
 import { DataTable } from "@/components/common/DataTable";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { FormField } from "@/components/ui/FormField";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { IconButton } from "@/components/ui/IconButton";
@@ -42,13 +45,12 @@ import { usersApi, type User } from "@/lib/api/users";
 import { fileUrl } from "@/lib/api/client";
 import { useUIStore } from "@/stores/ui.store";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Constantes & helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 const NC = "Non renseigné";
 
@@ -146,6 +148,7 @@ export default function EmployeeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const employeeId = use(paramsPromise).id;
+  const router = useRouter();
   const { can } = usePermissions();
   const queryClient = useQueryClient();
   const { openTimeoffModal } = useUIStore();
@@ -452,9 +455,7 @@ export default function EmployeeDetailPage({
             ))}
           </NativeSelect>
         ) : (
-          <span className="inline-flex items-center rounded px-[.4em] py-[.25em] text-xs font-bold bg-[rgba(10,207,151,0.18)] text-[#0acf97]">
-            {statusLabel(row.original.status)}
-          </span>
+          <Badge variant="success">{statusLabel(row.original.status)}</Badge>
         ),
     },
     {
@@ -585,17 +586,19 @@ export default function EmployeeDetailPage({
   // ---- Render --------------------------------------------------------------
   return (
     <div className="space-y-5">
-      {/* En-tête : titre + Retour */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-[18px] font-semibold text-gray-900">Employé</h1>
-        <Link
-          href="/hr/employees"
-          className="inline-flex items-center gap-2 rounded-[.15rem] bg-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] font-normal text-white transition-[background-color,box-shadow] hover:shadow-[0_2px_6px_0_rgba(114,124,245,0.5)]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Retour
-        </Link>
-      </div>
+      {/* `page-title-box` de `employees/detail.blade.php` : titre « Employé »
+          et bouton primaire « Retour » à droite. */}
+      <PageHeader
+        title="Employé"
+        action={
+          <Button
+            icon={<ArrowLeft className="h-4 w-4" />}
+            onClick={() => router.push("/hr/employees")}
+          >
+            Retour
+          </Button>
+        }
+      />
 
       {/* Carte profil — bg-primary Hyper (#727cf5), calque profile-user-box */}
       <div className="overflow-hidden rounded bg-blue-600 p-6">

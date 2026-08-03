@@ -21,9 +21,8 @@ import {
   type ReportTemplateRequest,
 } from "@/lib/api/reportTemplates";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 export default function ReportTemplatesPage() {
   const { can } = usePermissions();

@@ -54,7 +54,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   // ne jamais peindre une identité persistée non validée.
   if (!validated) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#fafbfe]">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
         <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
       </div>
     );

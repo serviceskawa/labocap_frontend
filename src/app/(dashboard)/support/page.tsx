@@ -17,6 +17,7 @@ import { CrudModal } from "@/components/common/CrudModal";
 import { FormField } from "@/components/ui/FormField";
 import { Badge } from "@/components/ui/Badge";
 import { useAuthStore } from "@/stores/auth.store";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 import {
   supportApi,
   type Ticket,
@@ -29,8 +30,6 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50";
 
 // Statut Laravel : ouvert (success) / repondu (info) / fermé (warning). Le
 // backend Java a 4 statuts — on les libelle en français avec les mêmes couleurs.
@@ -269,7 +268,7 @@ export default function SupportPage() {
         <button
           type="button"
           onClick={() => setDetailTicket(row.original)}
-          className="text-[#7e7a7a] hover:text-blue-600 hover:underline"
+          className="text-gray-600 hover:text-blue-600 hover:underline"
         >
           {row.original.ticketCode ?? "—"}
         </button>
@@ -287,7 +286,7 @@ export default function SupportPage() {
         <button
           type="button"
           onClick={() => setDetailTicket(row.original)}
-          className="text-[#7e7a7a] hover:text-blue-600 hover:underline"
+          className="text-gray-600 hover:text-blue-600 hover:underline"
         >
           {formatTicketDate(row.original.createdAt)}
         </button>

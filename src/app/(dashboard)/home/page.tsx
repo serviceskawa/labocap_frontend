@@ -53,6 +53,11 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import apiClient from "@/lib/api/client";
 import { reportsApi } from "@/lib/api/reports";
 import { Button } from "@/components/ui/Button";
+import {
+  CHART_CATEGORICAL,
+  CHART_GRID,
+  CHART_STATUS,
+} from "@/lib/ui/chartColors";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -402,7 +407,7 @@ function RevenueLineChart({ data }: { data: RevenueData }) {
   return (
     <ResponsiveContainer width="100%" height={340}>
       <LineChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f1f3fa" />
+        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
         <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <YAxis
           tick={{ fontSize: 11 }}
@@ -422,16 +427,16 @@ function RevenueLineChart({ data }: { data: RevenueData }) {
         <Line
           type="monotone"
           dataKey="actuelle"
-          stroke="#727cf5"
-          strokeWidth={4}
+          stroke={CHART_CATEGORICAL[0]}
+          strokeWidth={2}
           dot={false}
           name="Semaine actuelle"
         />
         <Line
           type="monotone"
           dataKey="precedente"
-          stroke="#0acf97"
-          strokeWidth={4}
+          stroke={CHART_CATEGORICAL[1]}
+          strokeWidth={2}
           dot={false}
           name="Semaine précédente"
         />
@@ -561,8 +566,8 @@ export default function HomePage() {
 
   // -- Admin exam status pie (pour la section admin)
   const adminPieData = [
-    { name: "Terminé", value: stats?.finishTest ?? 0, color: "#0acf97" },
-    { name: "En attente", value: stats?.noFinishTest ?? 0, color: "#E52D4F" },
+    { name: "Terminé", value: stats?.finishTest ?? 0, color: CHART_STATUS.good },
+    { name: "En attente", value: stats?.noFinishTest ?? 0, color: CHART_STATUS.critical },
   ];
 
   // -- Finance
@@ -588,22 +593,22 @@ export default function HomePage() {
     {
       name: "Factures de vente payées",
       value: invoiceStatus?.invoicePaid ?? 0,
-      color: "#727cf5",
+      color: CHART_CATEGORICAL[0],
     },
     {
       name: "Factures de vente non payées",
       value: invoiceStatus?.invoiceNoPaid ?? 0,
-      color: "#0acf97",
+      color: CHART_CATEGORICAL[1],
     },
     {
       name: "Factures d'avoir payées",
       value: invoiceStatus?.refundPaid ?? 0,
-      color: "#fa5c7c",
+      color: CHART_CATEGORICAL[2],
     },
     {
       name: "Factures d'avoir non payées",
       value: invoiceStatus?.refundNoPaid ?? 0,
-      color: "#ffbc00",
+      color: CHART_CATEGORICAL[3],
     },
   ];
   const invoiceSegmentsTotal = invoiceSegments.reduce((s, x) => s + x.value, 0);
@@ -676,12 +681,12 @@ export default function HomePage() {
     {
       name: "Terminé",
       value: doctorExamStatus?.termine ?? 0,
-      color: "#0acf97",
+      color: CHART_STATUS.good,
     },
     {
       name: "En attente",
       value: doctorExamStatus?.enAttente ?? 0,
-      color: "#fa5c7c",
+      color: CHART_STATUS.critical,
     },
   ];
 
@@ -966,7 +971,7 @@ export default function HomePage() {
                           Semaine actuelle
                         </p>
                         <p className="mb-3 text-2xl font-normal text-gray-900">
-                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-[#727cf5] align-middle" />
+                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-600 align-middle" />
                           {formatCFA(revenueData?.totalCurrentWeek ?? 0)}
                         </p>
                       </div>
@@ -975,7 +980,7 @@ export default function HomePage() {
                           Semaine précédente
                         </p>
                         <p className="mb-3 text-2xl font-normal text-gray-900">
-                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-[#0acf97] align-middle" />
+                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-green-600 align-middle" />
                           {formatCFA(revenueData?.totalLastWeek ?? 0)}
                         </p>
                       </div>

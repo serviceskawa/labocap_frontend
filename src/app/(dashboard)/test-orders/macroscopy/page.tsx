@@ -31,6 +31,8 @@ import {
 import { hrApi, type Employee } from "@/lib/api/hr";
 import { typeOrdersApi } from "@/lib/api/examens";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 /** Recherche serveur des demandes d'examen pour le filtre. */
 const loadOrderOptions = loadTestOrderOptions();
@@ -39,8 +41,6 @@ const loadOrderOptions = loadTestOrderOptions();
 // Styles communs
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 // ---------------------------------------------------------------------------
 // Composant : badges d'étapes
@@ -176,7 +176,7 @@ function PendingByTypeTable({
           <thead>
             <tr className="border-b-2 border-gray-300 bg-gray-200">
               <th className="w-8 px-3 py-2 text-left">
-                <input type="checkbox" className="rounded border-gray-300" />
+                <Checkbox aria-label="Tout sélectionner" />
               </th>
               <th className="px-3 py-2 text-left font-bold text-gray-800">
                 Date limite
@@ -203,7 +203,7 @@ function PendingByTypeTable({
                   }`}
                 >
                   <td className="px-3 py-2">
-                    <input type="checkbox" className="rounded border-gray-300" />
+                    <Checkbox aria-label="Sélectionner la ligne" />
                   </td>
                   <td className="px-3 py-2">
                     <span

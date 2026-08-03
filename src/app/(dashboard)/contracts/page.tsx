@@ -35,6 +35,7 @@ import {
 } from "@/lib/api/contracts";
 import { clientsApi } from "@/lib/api/clients";
 import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -96,8 +97,6 @@ type ContractFormValues = z.infer<typeof contractSchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 // La `startDate` n'existe pas dans le formulaire Laravel : on la renseigne
 // automatiquement (date du jour à la création, valeur existante à l'édition)

@@ -43,6 +43,7 @@ import {
   formatFileSize,
 } from "@/lib/api/docs";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Vue active du volet droit
@@ -53,8 +54,6 @@ type View =
   | { type: "trash" }
   | { type: "category"; id: string; name: string };
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 export default function DocsExplorerPage() {
   const { can } = usePermissions();

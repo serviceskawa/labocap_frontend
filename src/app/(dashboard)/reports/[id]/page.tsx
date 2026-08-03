@@ -37,6 +37,7 @@ import { testOrdersApi, type ImageDto } from "@/lib/api/testOrders";
 import { openDocFile } from "@/lib/api/docs";
 import type { ApiError } from "@/types/api";
 import { Button } from "@/components/ui/Button";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -64,8 +65,6 @@ type ReportEditFormValues = z.infer<typeof reportEditSchema>;
 // Helpers de style (réplique des « card » Laravel avec le design du projet)
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 const textareaClass =
   "w-full p-3 border border-gray-300 rounded text-sm shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 resize-y";
