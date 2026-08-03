@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft, Eye } from "lucide-react";
 
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   TableLengthControl,
@@ -55,17 +57,19 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
 
   return (
     <div className="space-y-6">
-      {/* Bouton retour */}
-      <div>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Retour
-        </button>
-      </div>
+      {/* `page-title-box` de `patients/profil.blade.php` : titre « Dossier
+          Patient » et bouton primaire de retour à droite. */}
+      <PageHeader
+        title="Dossier Patient"
+        action={
+          <Button
+            icon={<ArrowLeft className="h-4 w-4" />}
+            onClick={() => router.push("/patients")}
+          >
+            Retour à la liste des patients
+          </Button>
+        }
+      />
 
       {isLoading ? (
         /* ========================================================

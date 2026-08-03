@@ -174,14 +174,14 @@ export function DataTable<T>({
         {/* Tableau */}
         <div className="overflow-x-auto">
           <table className="w-full text-[.9rem]">
-            <thead className="border-b border-gray-200 bg-gray-100">
+            <thead className="border-b border-gray-200 bg-white">
               <tr>
                 {table.getHeaderGroups().flatMap((hg) =>
                   hg.headers.map((header) => (
                     <th
                       key={header.id}
                       className={cn(
-                        "px-[.95rem] py-[.95rem] text-left text-[.9rem] font-bold text-gray-800",
+                        "px-4 py-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500",
                         header.column.getCanSort() && "cursor-pointer select-none"
                       )}
                       onClick={header.column.getToggleSortingHandler()}
@@ -205,7 +205,7 @@ export function DataTable<T>({
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 Array.from({ length: currentPageSize }).map((_, i) => (
                   <tr key={i}>
@@ -232,16 +232,12 @@ export function DataTable<T>({
                     <tr
                       key={row.id}
                       className={cn(
-                        "transition-colors hover:bg-gray-50",
-                        // `even:` l'emporterait sur la couleur fournie par la page
-                        // (classe + pseudo-classe) : on ne raye que les lignes sans couleur propre.
-                        // Hyper `.table-striped` : `--bs-table-striped-bg:#f1f3fa`.
-                        !custom && "odd:bg-gray-100",
+                        "transition-colors hover:bg-blue-50/40",
                         custom
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="border-b border-gray-200 px-[.95rem] py-[.95rem] align-middle text-gray-700">
+                        <td key={cell.id} className="px-4 py-3 align-middle text-[.875rem] text-gray-700">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}

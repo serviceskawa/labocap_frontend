@@ -6,6 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft, Download, Eye, FileText, Upload, Calendar } from "lucide-react";
 
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import {
   TableLengthControl,
@@ -64,15 +66,19 @@ export default function DocDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Retour */}
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Retour à la liste
-      </button>
+      {/* `page-title-box` de `documentations/docs/index_detail.blade.php` :
+          titre « Documents » et bouton de retour à droite. */}
+      <PageHeader
+        title="Documents"
+        action={
+          <Button
+            icon={<ArrowLeft className="h-4 w-4" />}
+            onClick={() => router.back()}
+          >
+            Retour à la liste
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm space-y-4 animate-pulse">

@@ -28,6 +28,7 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import { patientsApi, Patient, PatientRequest } from "@/lib/api/patients";
 import type { PageResponse, ApiError } from "@/types/api";
 import type { UseFormWatch, UseFormSetValue } from "react-hook-form";
+import { INPUT_CLASS as fieldInput } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -97,8 +98,6 @@ function calculerAge(birthday?: string): number | null {
   return age >= 0 ? age : null;
 }
 
-const fieldInput =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 function PatientFormFields({
   register,

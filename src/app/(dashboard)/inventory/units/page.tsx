@@ -19,6 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { unitesMesureApi, type UniteMesure } from "@/lib/api/examens";
 import type { ApiError } from "@/types/api";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -188,7 +189,7 @@ export default function UnitesMesurePage() {
       id: "select",
       enableSorting: false,
       cell: () => (
-        <input type="checkbox" aria-label="Sélectionner la ligne" />
+        <Checkbox aria-label="Sélectionner la ligne" />
       ),
     },
     {

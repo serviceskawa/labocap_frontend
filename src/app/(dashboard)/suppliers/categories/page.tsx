@@ -22,6 +22,7 @@ import {
   type SupplierCategory,
 } from "@/lib/api/suppliers";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // Calque `suppliers/category/create.blade.php` : nom requis, description libre.
 const schema = z.object({
@@ -31,8 +32,6 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 const actionBtn =
   "inline-flex h-8 w-9 items-center justify-center rounded-md text-white transition-colors";

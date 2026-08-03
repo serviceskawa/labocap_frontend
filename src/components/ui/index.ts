@@ -1,3 +1,4 @@
+export * from "./AppLogo";
 export * from "./Badge";
 export * from "./StatCard";
 export * from "./AlertBox";

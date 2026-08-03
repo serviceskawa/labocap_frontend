@@ -18,6 +18,7 @@ import {
   type SettingInvoiceRequest,
 } from "@/lib/api/settingInvoices";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Schéma Zod
@@ -31,8 +32,6 @@ const settingInvoiceSchema = z.object({
 
 type SettingInvoiceFormValues = z.infer<typeof settingInvoiceSchema>;
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 // ---------------------------------------------------------------------------
 // Page

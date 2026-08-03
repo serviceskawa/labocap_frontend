@@ -24,6 +24,7 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import { testOrdersApi } from "@/lib/api/testOrders";
 import { macroscopyApi, PathologyMacro, PathologyMacroRequest } from "@/lib/api/macroscopy";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema — aligné sur TestPathologyMacroRequestDto (title obligatoire)
@@ -40,8 +41,6 @@ type MacroFormValues = z.infer<typeof macroSchema>;
 // Styles
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 // ---------------------------------------------------------------------------
 // Page

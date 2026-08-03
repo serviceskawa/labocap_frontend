@@ -23,6 +23,7 @@ import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { hrApi, Payroll, PayrollRequest, Employee } from "@/lib/api/hr";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema — aligné sur EmployeePayrollRequestDto
@@ -44,8 +45,6 @@ type PayrollFormValues = z.infer<typeof payrollSchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 function formatAmount(amount?: number): string {
   if (amount == null) return "—";

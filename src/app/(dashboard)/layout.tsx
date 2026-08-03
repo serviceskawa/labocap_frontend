@@ -18,7 +18,7 @@ export default function DashboardLayout({
       {/* En impression : on masque la coque (sidebar/topbar/footer) et on
           neutralise les contraintes de hauteur/scroll qui tronquent la page,
           pour n'imprimer que le contenu (ex. récapitulatif de caisse). */}
-      <div className="flex h-screen overflow-hidden bg-[#fafbfe] print:block print:h-auto print:overflow-visible">
+      <div className="flex h-screen overflow-hidden bg-gray-50 print:block print:h-auto print:overflow-visible">
         <div className="contents print:hidden">
           <Sidebar />
         </div>

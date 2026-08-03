@@ -27,6 +27,7 @@ import {
   type StockMovement,
 } from "@/lib/api/inventory";
 import { unitesMesureApi, type UniteMesure } from "@/lib/api/examens";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema — calque `articles/create.blade.php` : 5 champs, 4 obligatoires.
@@ -56,8 +57,6 @@ type ArticleFormValues = z.infer<typeof articleSchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 /** Boutons d'action : carrés pleins colorés, comme les `btn` du thème Laravel. */
 const actionBtn =
