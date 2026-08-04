@@ -18,20 +18,37 @@ export const SELECT_MENU_CLASSNAMES: ClassNamesConfig<
  * Styles react-select partagés (design soigné, cohérent avec l'app).
  * Passe `hasError` à true pour la variante bordure rouge.
  */
+/**
+ * Hauteur commune à TOUS les champs de sélection de l'application — react-select
+ * comme `<select>` natif. Les hauteurs divergeaient d'un écran à l'autre parce
+ * que `LimitedSelect` n'appliquait pas ces styles partagés et retombait sur le
+ * défaut de react-select.
+ */
+export const SELECT_CONTROL_MIN_HEIGHT = 40;
+
 export function buildSelectStyles(
   hasError: boolean
 ): StylesConfig<SelectOption, boolean, GroupBase<SelectOption>> {
-  const borderColor = hasError ? "#fca5a5" : "#d1d5db";
-  const focusColor = hasError ? "#ef4444" : "#3b82f6";
+  // Alignés sur INPUT_CLASS / .hyper-form-control : bordure ardoise 300,
+  // focus azur avec halo de 3px. react-select ne lit pas les classes Tailwind,
+  // les valeurs sont donc reprises ici — les garder synchronisées.
+  const borderColor = hasError ? "#f87171" : "#cbd5e1";
+  const hoverColor = hasError ? "#ef4444" : "#94a3b8";
+  const focusColor = hasError ? "#ef4444" : "#3f63ec";
+  const focusHalo = hasError
+    ? "0 0 0 3px rgba(239, 68, 68, 0.15)"
+    : "0 0 0 3px rgba(63, 99, 236, 0.15)";
 
   return {
     control: (base, state) => ({
       ...base,
-      minHeight: "40px",
+      minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
       borderRadius: "0.5rem",
       borderColor: state.isFocused ? focusColor : borderColor,
-      boxShadow: state.isFocused ? `0 0 0 1px ${focusColor}` : "none",
-      backgroundColor: state.isDisabled ? "#f9fafb" : "white",
+      boxShadow: state.isFocused
+        ? focusHalo
+        : "0 1px 2px 0 rgba(15, 23, 42, 0.04)",
+      backgroundColor: state.isDisabled ? "#f1f5f9" : "white",
       paddingLeft: "2px",
       transition: "border-color .15s ease, box-shadow .15s ease",
       "&:hover": {

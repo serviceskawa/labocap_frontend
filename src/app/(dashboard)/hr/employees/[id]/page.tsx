@@ -15,13 +15,16 @@ import {
   Mail,
   Download,
 } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 
 import { DataTable } from "@/components/common/DataTable";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { FormField } from "@/components/ui/FormField";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { IconButton } from "@/components/ui/IconButton";
@@ -35,19 +38,19 @@ import {
   type EmployeeContratRequest,
   type EmployeeDocument,
   type TimeOff,
+  type TimeOffRequest,
   type TimeoffStatus,
 } from "@/lib/api/hr";
 import { usersApi, type User } from "@/lib/api/users";
 import { fileUrl } from "@/lib/api/client";
 import { useUIStore } from "@/stores/ui.store";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Constantes & helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 const NC = "Non renseigné";
 
@@ -145,6 +148,7 @@ export default function EmployeeDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const employeeId = use(paramsPromise).id;
+  const router = useRouter();
   const { can } = usePermissions();
   const queryClient = useQueryClient();
   const { openTimeoffModal } = useUIStore();
@@ -367,6 +371,33 @@ export default function EmployeeDetailPage({
   );
 
   const [deleteConge, setDeleteConge] = useState<TimeOff | null>(null);
+  const [editConge, setEditConge] = useState<TimeOff | null>(null);
+  const [congeForm, setCongeForm] = useState({ startDate: "", endDate: "", reason: "" });
+
+  /** Ouvre la modale de correction pré-remplie avec la demande choisie. */
+  function openEditConge(conge: TimeOff) {
+    setCongeForm({
+      startDate: conge.startDate?.slice(0, 10) ?? "",
+      endDate: conge.endDate?.slice(0, 10) ?? "",
+      reason: conge.reason ?? "",
+    });
+    setEditConge(conge);
+  }
+
+  // Correction des dates et du motif — route Laravel `employee-timeoff-update`,
+  // qui n'avait pas d'équivalent : on pouvait approuver ou refuser une demande
+  // mais pas en corriger le contenu.
+  const updateCongeMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: TimeOffRequest }) =>
+      hrApi.updateTimeOff(employeeId, id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["employee-timeoffs", employeeId] });
+      toast.success("Demande de congé mise à jour");
+      setEditConge(null);
+    },
+    onError: (e: AxiosError<ApiError>) =>
+      toast.error(e.response?.data?.message ?? "Erreur lors de la modification"),
+  });
 
   const updateCongeStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: TimeoffStatus }) =>
@@ -424,9 +455,7 @@ export default function EmployeeDetailPage({
             ))}
           </NativeSelect>
         ) : (
-          <span className="inline-flex items-center rounded px-[.4em] py-[.25em] text-xs font-bold bg-[rgba(10,207,151,0.18)] text-[#0acf97]">
-            {statusLabel(row.original.status)}
-          </span>
+          <Badge variant="success">{statusLabel(row.original.status)}</Badge>
         ),
     },
     {
@@ -434,6 +463,14 @@ export default function EmployeeDetailPage({
       id: "actions",
       cell: ({ row }) =>
         canEdit ? (
+          <div className="flex items-center gap-1">
+          <IconButton
+            variant="edit"
+            title="Modifier"
+            aria-label="Modifier"
+            onClick={() => openEditConge(row.original)}
+            icon={<Pencil className="h-4 w-4" />}
+          />
           <IconButton
             variant="delete"
             title="Supprimer"
@@ -441,6 +478,7 @@ export default function EmployeeDetailPage({
             onClick={() => setDeleteConge(row.original)}
             icon={<Trash2 className="h-4 w-4" />}
           />
+          </div>
         ) : null,
     },
   ];
@@ -548,17 +586,19 @@ export default function EmployeeDetailPage({
   // ---- Render --------------------------------------------------------------
   return (
     <div className="space-y-5">
-      {/* En-tête : titre + Retour */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-[18px] font-semibold text-gray-900">Employé</h1>
-        <Link
-          href="/hr/employees"
-          className="inline-flex items-center gap-2 rounded-[.15rem] bg-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] font-normal text-white transition-[background-color,box-shadow] hover:shadow-[0_2px_6px_0_rgba(114,124,245,0.5)]"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Retour
-        </Link>
-      </div>
+      {/* `page-title-box` de `employees/detail.blade.php` : titre « Employé »
+          et bouton primaire « Retour » à droite. */}
+      <PageHeader
+        title="Employé"
+        action={
+          <Button
+            icon={<ArrowLeft className="h-4 w-4" />}
+            onClick={() => router.push("/hr/employees")}
+          >
+            Retour
+          </Button>
+        }
+      />
 
       {/* Carte profil — bg-primary Hyper (#727cf5), calque profile-user-box */}
       <div className="overflow-hidden rounded bg-blue-600 p-6">
@@ -723,7 +763,10 @@ export default function EmployeeDetailPage({
             <input type="text" {...empForm.register("placeOfBirth")} className={inputClass} />
           </FormField>
           <FormField label="Sexe">
-            <NativeSelect {...empForm.register("gender")}>
+            <NativeSelect
+              value={empForm.watch("gender") ?? ""}
+              onChange={(e) => empForm.setValue("gender", e.target.value)}
+            >
               <option value="">Selectionner le sexe</option>
               <option value="Masculin">Masculin</option>
               <option value="Feminin">Feminin</option>
@@ -742,14 +785,19 @@ export default function EmployeeDetailPage({
             <input type="text" {...empForm.register("cnssNumber")} className={inputClass} />
           </FormField>
           <FormField label="Utilisateur" className="sm:col-span-2">
-            <select {...empForm.register("userId")} className={inputClass}>
+            {/* Liste alimentée par la table des utilisateurs : cherchable. */}
+            <NativeSelect
+              value={empForm.watch("userId") ?? ""}
+              onChange={(e) => empForm.setValue("userId", e.target.value)}
+              placeholder="Associer à un utilisateur"
+            >
               <option value="">Associer à un utilisateur</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.firstname} {u.lastname}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </FormField>
           <FormField label="Photo de l'employé" className="sm:col-span-2">
             <input
@@ -816,7 +864,10 @@ export default function EmployeeDetailPage({
         {contratTab === "contrat" && (
           <div key="contrat" className="wizard-pane grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Type de contrat" className="sm:col-span-2">
-              <NativeSelect {...contratForm.register("type")}>
+              <NativeSelect
+                value={contratForm.watch("type") ?? ""}
+                onChange={(e) => contratForm.setValue("type", e.target.value)}
+              >
                 <option value="">Selectionner un type de contrat</option>
                 {CONTRACT_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -916,6 +967,53 @@ export default function EmployeeDetailPage({
         confirmVariant="danger"
         isLoading={deleteContratMutation.isPending}
       />
+      {/* Correction d'une demande de congé — dates et motif */}
+      <CrudModal
+        isOpen={editConge !== null}
+        onClose={() => setEditConge(null)}
+        title="Modifier la demande de congé"
+        onSubmit={() => {
+          if (!editConge) return;
+          updateCongeMutation.mutate({ id: editConge.id, data: congeForm });
+        }}
+        submitLabel="Enregistrer"
+        isSubmitting={updateCongeMutation.isPending}
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <FormField label="Date de début" required>
+            <input
+              type="date"
+              value={congeForm.startDate}
+              onChange={(e) =>
+                setCongeForm((f) => ({ ...f, startDate: e.target.value }))
+              }
+              className={inputClass}
+            />
+          </FormField>
+          <FormField label="Date de fin" required>
+            <input
+              type="date"
+              value={congeForm.endDate}
+              onChange={(e) =>
+                setCongeForm((f) => ({ ...f, endDate: e.target.value }))
+              }
+              className={inputClass}
+            />
+          </FormField>
+          <FormField label="Motif" className="sm:col-span-2">
+            <input
+              type="text"
+              value={congeForm.reason}
+              onChange={(e) =>
+                setCongeForm((f) => ({ ...f, reason: e.target.value }))
+              }
+              placeholder="Congé annuel, maladie…"
+              className={inputClass}
+            />
+          </FormField>
+        </div>
+      </CrudModal>
+
       <ConfirmModal
         isOpen={deleteConge !== null}
         onClose={() => setDeleteConge(null)}

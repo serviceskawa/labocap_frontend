@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { User, LogOut, Search, ChevronDown } from "lucide-react";
+import { User, LogOut, ChevronDown } from "lucide-react";
 
 /** Icône hamburger identique à Laravel (`mdi mdi-menu`) — barres serrées. */
 function MdiMenuIcon({ className }: { className?: string }) {
@@ -35,7 +35,6 @@ export function Topbar() {
   const clearBranch = useBranchStore((state) => state.clearBranch);
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const initials = user
@@ -43,14 +42,6 @@ export function Topbar() {
     : "?";
   const fullName = user ? `${user.firstname} ${user.lastname}`.trim() : "";
   const roleName = user?.roles?.[0]?.name ?? "";
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim().length >= 2) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-      setSearchQuery("");
-    }
-  };
 
   const handleLogout = async () => {
     try {
@@ -89,25 +80,11 @@ export function Topbar() {
       {/* Left: hamburger */}
       <button
         onClick={handleMenuToggle}
-        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-[#313a46] transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
         aria-label="Afficher/masquer le menu"
       >
         <MdiMenuIcon className="h-6 w-6" />
       </button>
-
-      {/* Center: search bar */}
-      <form onSubmit={handleSearch} className="hidden flex-1 justify-center sm:flex">
-        <div className="relative w-full max-w-md">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher un patient, un examen…"
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2 pl-10 pr-3 text-[.9rem] text-gray-800 transition-all placeholder:text-gray-400 hover:border-gray-300 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-500/10"
-          />
-        </div>
-      </form>
 
       {/* Right: user dropdown */}
       <div className="relative flex-shrink-0" ref={dropdownRef}>
@@ -115,7 +92,7 @@ export function Topbar() {
           onClick={() => setIsOpen((prev) => !prev)}
           className="flex items-center gap-2.5 rounded-xl p-1.5 pr-2 transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-500 text-sm font-semibold text-white shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-[.8125rem] font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20">
             {initials}
           </div>
           <div className="hidden text-left leading-tight sm:block">
@@ -132,10 +109,10 @@ export function Topbar() {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg shadow-gray-300/40">
+          <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-xl bg-white shadow-[var(--elevation-overlay)]">
             {/* En-tête utilisateur */}
-            <div className="flex items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white px-4 py-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-500 text-sm font-semibold text-white shadow-sm">
+            <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20">
                 {initials}
               </div>
               <div className="min-w-0">

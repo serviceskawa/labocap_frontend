@@ -16,7 +16,13 @@ import type { CategoryTest } from "@/lib/api/examens";
 export const labTestSchema = z.object({
   categoryTestId: z.string().min(1, "La catégorie est requise"),
   name: z.string().min(1, "Le nom est requis"),
-  price: z.string().min(1, "Le prix est requis"),
+  // Un examen à 0 F (ou à prix négatif) s'enregistrait sans rien signaler.
+  price: z
+    .string()
+    .min(1, "Le prix est requis")
+    .refine((v) => Number(v) > 0, {
+      message: "Veuillez renseigner un prix supérieur à zéro",
+    }),
   status: z.string().min(1, "Le statut est requis"),
 });
 

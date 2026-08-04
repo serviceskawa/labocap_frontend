@@ -14,25 +14,40 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { DataTableCard } from "@/components/common/DataTableCard";
 import { CrudModal } from "@/components/common/CrudModal";
 import { FormField } from "@/components/ui/FormField";
+import { NativeSelect } from "@/components/ui/NativeSelect";
+import { RemoteSelectField } from "@/components/ui/RemoteSelectField";
+import {
+  loadTestOrderOptions,
+  type TestOrderOption,
+} from "@/lib/api/optionLoaders";
 import {
   signalsApi,
   signalTypeLabel,
   SIGNAL_TYPES,
   type Signal,
 } from "@/lib/api/signals";
-import { testOrdersApi } from "@/lib/api/testOrders";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
-// Calque `examens/signals/create.blade` : code de la demande, type, commentaire.
+// Calque `examens/signals/create.blade` : demande concernée, type, commentaire.
+// La demande se choisit dans une liste : son code est généré par le backend à
+// la validation du bon, le saisir à la main ne pouvait que produire des
+// « Aucune demande d'examen ne porte le code … ».
 const schema = z.object({
-  testOrderCode: z.string().min(1, { message: "Le code de la demande est requis" }),
+  testOrderId: z.string().min(1, { message: "La demande d'examen est requise" }),
+  // Une demande pas encore validée n'a pas de code : le signal ne peut pas s'y
+  // rattacher côté serveur.
+  testOrderCode: z.string().min(1, {
+    message: "Cette demande n'a pas encore de code : validez-la d'abord",
+  }),
   typeSignal: z.string().min(1, { message: "Le type de signal est requis" }),
   commentaire: z.string().min(1, { message: "Le commentaire est requis" }),
 });
 type FormValues = z.infer<typeof schema>;
+
+/** Seules les demandes déjà validées portent un code exploitable par le signal. */
+const loadTestOrders = loadTestOrderOptions();
 
 export default function SignalementsPage() {
   const queryClient = useQueryClient();
@@ -48,32 +63,34 @@ export default function SignalementsPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { testOrderCode: "", typeSignal: "", commentaire: "" },
+    defaultValues: {
+      testOrderId: "",
+      testOrderCode: "",
+      typeSignal: "",
+      commentaire: "",
+    },
   });
 
+  // Libellé de la demande choisie (le select ne connaît que son id).
+  const [selectedOrder, setSelectedOrder] = useState<TestOrderOption | null>(null);
+
   const createMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      // Laravel saisit un CODE ; le backend Java attend l'UUID du bon d'examen.
-      // On résout le code via la recherche des bons d'examen.
-      const code = values.testOrderCode.trim();
-      const res = await testOrdersApi.findAll({ search: code, size: 5 });
-      const match = (res.data.content ?? []).find(
-        (o) => (o.code ?? "").toLowerCase() === code.toLowerCase()
-      );
-      if (!match) {
-        throw new Error(`Aucune demande d'examen trouvée pour le code « ${code} ».`);
-      }
-      return signalsApi.create({
-        testOrderId: match.id,
+    mutationFn: (values: FormValues) =>
+      // Le code part tel quel : c'est le serveur qui le résout en demande
+      // d'examen, comme SignalController::store() en Laravel. La résolution
+      // côté client passait par la recherche et échouait dès que celle-ci ne
+      // ramenait pas le bon exact dans ses premiers résultats.
+      signalsApi.create({
+        testOrderCode: values.testOrderCode.trim(),
         typeSignal: values.typeSignal,
         commentaire: values.commentaire,
-      });
-    },
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["signals"] });
       toast.success("Problème signalé avec succès");
       setCreateOpen(false);
       form.reset();
+      setSelectedOrder(null);
     },
     onError: (err: AxiosError<ApiError> | Error) => {
       const message =
@@ -130,6 +147,7 @@ export default function SignalementsPage() {
           <button
             onClick={() => {
               form.reset();
+              setSelectedOrder(null);
               setCreateOpen(true);
             }}
             className="inline-flex items-center gap-2 rounded-[.15rem] bg-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] font-normal text-white transition-[background-color,box-shadow] hover:shadow-[0_2px_6px_0_rgba(114,124,245,0.5)]"
@@ -171,15 +189,29 @@ export default function SignalementsPage() {
           </p>
 
           <FormField
-            label="Code de la demande"
+            label="Demande d'examen"
             required
-            error={form.formState.errors.testOrderCode?.message}
+            hint="Recherchez par code ou par patient — le code est attribué automatiquement à la validation du bon."
+            error={
+              form.formState.errors.testOrderId?.message ??
+              form.formState.errors.testOrderCode?.message
+            }
           >
-            <input
-              type="text"
-              {...form.register("testOrderCode")}
-              placeholder="XX-XXXX"
-              className={inputClass}
+            <RemoteSelectField
+              id="testOrderId"
+              loadOptions={loadTestOrders}
+              value={form.watch("testOrderId") || null}
+              selectedOption={selectedOrder}
+              onChange={(value, option) => {
+                setSelectedOrder(option);
+                form.setValue("testOrderId", value ?? "", {
+                  shouldValidate: true,
+                });
+                form.setValue("testOrderCode", option?.order.code ?? "", {
+                  shouldValidate: true,
+                });
+              }}
+              placeholder="Rechercher une demande (code, patient)..."
             />
           </FormField>
 
@@ -188,14 +220,21 @@ export default function SignalementsPage() {
             required
             error={form.formState.errors.typeSignal?.message}
           >
-            <select {...form.register("typeSignal")} className={inputClass}>
+            <NativeSelect
+              value={form.watch("typeSignal")}
+              onChange={(e) =>
+                form.setValue("typeSignal", e.target.value, {
+                  shouldValidate: true,
+                })
+              }
+            >
               <option value="">Sélectionner un type de signal</option>
               {SIGNAL_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </FormField>
 
           <FormField

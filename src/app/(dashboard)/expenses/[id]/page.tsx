@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -12,6 +12,12 @@ import type { AxiosError } from "axios";
 
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FormField } from "@/components/ui/FormField";
+import { CreatableSelectField } from "@/components/ui/CreatableSelectField";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
@@ -24,6 +30,7 @@ import { expenseCategoriesApi, type ExpenseCategory } from "@/lib/api/expenses";
 import { downloadDocFile } from "@/lib/api/docs";
 import { suppliersApi } from "@/lib/api/suppliers";
 import { inventoryApi } from "@/lib/api/inventory";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -36,8 +43,24 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
   { value: "VIREMENT", label: "VIREMENT" },
 ];
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 read-only:bg-gray-50 read-only:text-gray-500";
+
+/**
+ * Enrobe l'enregistrement react-hook-form d'un champ pour n'y laisser passer
+ * que des chiffres. Le filtrage porte sur la valeur du DOM *avant* que
+ * react-hook-form ne la lise, sinon un caractère collé resterait dans l'état
+ * du formulaire.
+ */
+function chiffresSeulement(
+  field: UseFormRegisterReturn,
+): UseFormRegisterReturn {
+  return {
+    ...field,
+    onChange: (event: { target: HTMLInputElement; type?: unknown }) => {
+      event.target.value = event.target.value.replace(/\D/g, "");
+      return field.onChange(event);
+    },
+  };
+}
 
 function formatAmount(amount: number): string {
   // FCFA n'a pas de sous-unité : on affiche des entiers, jamais de décimales.
@@ -48,12 +71,15 @@ function formatAmount(amount: number): string {
   );
 }
 
+// Le montant ne figure plus dans le formulaire : il vaut toujours la somme des
+// articles de la dépense (le backend le recalcule à chaque ajout/retrait de
+// ligne). Le saisir à part de l'article n'avait pas de sens et permettait
+// d'enregistrer un montant sans rapport avec les lignes.
 const expenseSchema = z.object({
   expenseCategorieId: z.string().min(1, { message: "La catégorie est requise" }),
   supplierId: z.string().optional(),
   description: z.string().optional(),
   date: z.string().optional(),
-  amount: z.string().min(1, { message: "Le montant est requis" }),
   payment: z.enum(["ESPECES", "CHEQUES", "MOBILEMONEY", "VIREMENT"] as const).optional(),
   invoiceNumber: z.string().optional(),
   paid: z.string(),
@@ -62,9 +88,20 @@ const expenseSchema = z.object({
 type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 const detailSchema = z.object({
-  articleName: z.string().min(1, { message: "Ajouter un article" }),
-  unitPrice: z.string().min(1, { message: "Le prix de l'article est requis" }),
-  quantity: z.string().min(1, { message: "La quantité de l'article est requise" }),
+  articleName: z.string().min(1, { message: "L'article est requis" }),
+  // Le FCFA n'a pas de sous-unité : le prix est un entier d'au moins 1.
+  unitPrice: z
+    .string()
+    .min(1, { message: "Le prix de l'article est requis" })
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, {
+      message: "Le prix doit être un nombre entier d'au moins 1 FCFA",
+    }),
+  quantity: z
+    .string()
+    .min(1, { message: "La quantité de l'article est requise" })
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1, {
+      message: "La quantité doit être un entier supérieur ou égal à 1",
+    }),
 });
 
 type DetailFormValues = z.infer<typeof detailSchema>;
@@ -84,6 +121,8 @@ export default function ExpenseDetailPage({
   const queryClient = useQueryClient();
 
   const [toDelete, setToDelete] = useState<ExpenseDetail | null>(null);
+  // Preuve d'achat choisie mais pas encore envoyée (envoi au « Soumettre »).
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   // ---- Queries -------------------------------------------------------------
 
@@ -120,7 +159,6 @@ export default function ExpenseDetailPage({
           supplierId: expense.supplierId ?? "",
           description: expense.description ?? "",
           date: expense.date ?? new Date().toISOString().slice(0, 10),
-          amount: String(Math.round(Number(expense.amount ?? 0))),
           payment: (expense.payment as PaymentMethod) ?? "ESPECES",
           invoiceNumber: expense.invoiceNumber ?? "",
           paid: String(expense.paid ?? 0),
@@ -133,9 +171,20 @@ export default function ExpenseDetailPage({
     defaultValues: { articleName: "", unitPrice: "", quantity: "" },
   });
 
-  // Total de la ligne, recalculé dès que le prix OU la quantité change.
-  const watchedPrice = detailForm.watch("unitPrice");
-  const watchedQty = detailForm.watch("quantity");
+  // `useWatch` plutôt que `detailForm.watch(...)` : souscription explicite au
+  // champ, et cela évite l'avertissement du React Compiler sur `watch()`, qui
+  // renvoie une fonction non mémoïsable. Alimente le total de la ligne et
+  // l'activation du bouton d'ajout.
+  const watchedPrice = useWatch({ control: detailForm.control, name: "unitPrice" });
+  const watchedQty = useWatch({ control: detailForm.control, name: "quantity" });
+  const watchedArticle = useWatch({ control: detailForm.control, name: "articleName" });
+
+  // Le bouton restait actif sur un formulaire vide : on l'active seulement quand
+  // les trois champs obligatoires sont renseignés.
+  const ligneComplete =
+    !!watchedArticle?.trim() &&
+    Number(watchedPrice) > 0 &&
+    Number(watchedQty) >= 1;
   const lineTotal = Math.round(
     (Number(watchedPrice) || 0) * (Number(watchedQty) || 0),
   );
@@ -158,10 +207,18 @@ export default function ExpenseDetailPage({
       const current = expense?.paid ?? 0;
       const target = Number(values.paid);
 
+      // La pièce jointe part avant la mise à jour : le PUT réécrit la colonne
+      // `receipt`, il doit donc voir le chemin du fichier tout juste stocké et
+      // non celui, périmé, du cache.
+      let receipt = expense?.receipt;
+      if (receiptFile) {
+        receipt = (await expensesApi.uploadReceipt(id, receiptFile)).data.receipt;
+      }
+
       // Les champs verrouillés retombent sur la valeur enregistrée : un select
       // désactivé ne doit jamais effacer silencieusement ce qu'il affiche.
+      // `amount` n'est pas transmis : il est dérivé des articles côté backend.
       await expensesApi.update(id, {
-        amount: Number(values.amount),
         expenseCategorieId: values.expenseCategorieId,
         description: values.description || undefined,
         supplierId: values.supplierId || undefined,
@@ -169,7 +226,7 @@ export default function ExpenseDetailPage({
         date: values.date || undefined,
         payment: values.payment ?? expense?.payment,
         // Repris tel quel : sans lui, le back remettrait la pièce jointe à vide.
-        receipt: expense?.receipt,
+        receipt,
       });
 
       // Le statut n'est pas porté par l'update : on déclenche les mêmes
@@ -214,6 +271,10 @@ export default function ExpenseDetailPage({
       setToDelete(null);
     },
   });
+
+  // Pagination des lignes d'articles. Appelée avant les retours anticipés
+  // ci-dessous : un hook ne peut pas être conditionnel.
+  const detailsPagination = useTablePagination(expense?.details ?? []);
 
   // ---- Garde d'accès -------------------------------------------------------
 
@@ -265,15 +326,25 @@ export default function ExpenseDetailPage({
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Détails de la dépense</h2>
-            <span className="text-xs text-gray-500">*champs obligatoires</span>
+            <span className="text-xs text-gray-600">
+              <span className="text-red-500">*</span>champs obligatoires
+            </span>
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <FormField
-              label="Catégorie de dépense*"
+              label="Catégorie de dépense"
+              required
               error={form.formState.errors.expenseCategorieId?.message}
             >
-              <NativeSelect {...form.register("expenseCategorieId")}>
+              <NativeSelect
+                value={form.watch("expenseCategorieId") ?? ""}
+                onChange={(e) =>
+                  form.setValue("expenseCategorieId", e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+              >
                 <option value="">Sélectionner une catégorie</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -283,8 +354,15 @@ export default function ExpenseDetailPage({
               </NativeSelect>
             </FormField>
 
-            <FormField label="Fournisseur*">
-              <NativeSelect {...form.register("supplierId")}>
+            <FormField label="Fournisseur" required>
+              <NativeSelect
+                value={form.watch("supplierId") ?? ""}
+                onChange={(e) =>
+                  form.setValue("supplierId", e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+              >
                 <option value="">Sélectionner le fournisseur</option>
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -312,19 +390,26 @@ export default function ExpenseDetailPage({
               />
             </FormField>
 
-            <FormField label="Montant*" error={form.formState.errors.amount?.message}>
+            <FormField
+              label="Montant"
+              hint="Calculé automatiquement à partir des articles ajoutés ci-dessous."
+            >
               <input
-                type="number"
-                step="1"
-                min={0}
+                type="text"
                 className={inputClass}
-                readOnly={lockedWhenPaid}
-                {...form.register("amount")}
+                readOnly
+                value={formatAmount(detailsTotal)}
               />
             </FormField>
 
             <FormField label="Type de paiement">
-              <NativeSelect {...form.register("payment")} disabled={lockedWhenPaid}>
+              <NativeSelect
+                value={form.watch("payment") ?? ""}
+                onChange={(e) =>
+                  form.setValue("payment", e.target.value as PaymentMethod)
+                }
+                disabled={lockedWhenPaid}
+              >
                 {PAYMENT_OPTIONS.map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label}
@@ -342,23 +427,46 @@ export default function ExpenseDetailPage({
               />
             </FormField>
 
-            <FormField label="Pièce jointe">
+            {/* Pièce jointe (« Preuve » d'achat) : champ fichier comme
+                `expenses/show.blade.php`. Elle n'était affichée qu'en lecture,
+                sans moyen d'en déposer une. Le fichier est envoyé au moment du
+                « Soumettre », avec le reste du formulaire. */}
+            <FormField
+              label="Pièce jointe"
+              hint={
+                expense.receipt
+                  ? "Choisir un fichier remplace la pièce jointe actuelle."
+                  : undefined
+              }
+            >
+              <input
+                type="file"
+                disabled={lockedWhenDelivered}
+                onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+                className={`${inputClass} file:mr-3 file:rounded-md file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100`}
+              />
               {expense.receipt ? (
                 <button
                   type="button"
                   onClick={() => downloadDocFile(expense.receipt!)}
-                  className="inline-flex w-fit items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
+                  className="mt-1 inline-flex w-fit items-center gap-1 text-sm font-medium text-blue-600 hover:underline"
                 >
                   <Paperclip className="h-4 w-4" />
-                  Télécharger le reçu
+                  Télécharger le reçu actuel
                 </button>
               ) : (
-                <span className="text-sm text-gray-400">Aucune pièce jointe</span>
+                <span className="mt-1 block text-sm text-gray-400">
+                  Aucune pièce jointe
+                </span>
               )}
             </FormField>
 
             <FormField label="Status de la dépense">
-              <NativeSelect {...form.register("paid")} disabled={lockedWhenDelivered}>
+              <NativeSelect
+                value={form.watch("paid") ?? "0"}
+                onChange={(e) => form.setValue("paid", e.target.value)}
+                disabled={lockedWhenDelivered}
+              >
                 <option value="0">Non payé</option>
                 <option value="1">Payé</option>
                 <option value="2">Payé et Livré</option>
@@ -372,27 +480,54 @@ export default function ExpenseDetailPage({
           <h2 className="mb-4 text-lg font-semibold text-gray-900">Liste des articles</h2>
 
           {paid === 0 && can(PERMISSIONS.CREATE_EXPENCE_DETAILS) && (
-            <div className="mb-5 grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <FormField label="Article" error={detailForm.formState.errors.articleName?.message}>
+            /* Encadré distinct et intitulé : noyé dans la page, ce formulaire
+               ne se lisait pas comme une action à faire. */
+            <div className="mb-5 rounded-lg border border-dashed border-blue-300 bg-blue-50/40 p-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                Ajouter un article à cette dépense
+              </h3>
+              <p className="mb-3 mt-1 text-xs text-gray-600">
+                Renseignez chaque article couvert par la dépense. Le total de la
+                dépense est la somme des articles ajoutés ici.
+              </p>
+              <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <FormField label="Article" required error={detailForm.formState.errors.articleName?.message}>
+                {/* Liste issue de la table des articles : select cherchable.
+                    La saisie libre reste possible (un article hors stock peut
+                    figurer sur une dépense), comme avec l'autocomplétion
+                    Laravel. */}
+                <CreatableSelectField
+                  id="expense-article"
+                  options={articles.map((a) => ({ value: a.name, label: a.name }))}
+                  value={detailForm.watch("articleName") || null}
+                  onChange={(v) =>
+                    detailForm.setValue("articleName", v ?? "", {
+                      shouldValidate: true,
+                    })
+                  }
+                  placeholder="Rechercher ou saisir un article…"
+                />
+              </FormField>
+
+              {/* `type="text"` + filtrage : `type="number"` laisse saisir
+                  « 1,5 », « 1e3 » ou un signe moins sans jamais remonter la
+                  valeur au champ. */}
+              <FormField label="Prix" required error={detailForm.formState.errors.unitPrice?.message}>
                 <input
                   type="text"
-                  list="expense-articles"
+                  inputMode="numeric"
                   className={inputClass}
-                  {...detailForm.register("articleName")}
+                  {...chiffresSeulement(detailForm.register("unitPrice"))}
                 />
-                <datalist id="expense-articles">
-                  {articles.map((a) => (
-                    <option key={a.id} value={a.name} />
-                  ))}
-                </datalist>
               </FormField>
 
-              <FormField label="Prix" error={detailForm.formState.errors.unitPrice?.message}>
-                <input type="number" step="1" min={0} className={inputClass} {...detailForm.register("unitPrice")} />
-              </FormField>
-
-              <FormField label="Quantité" error={detailForm.formState.errors.quantity?.message}>
-                <input type="number" step="1" className={inputClass} {...detailForm.register("quantity")} />
+              <FormField label="Quantité" required error={detailForm.formState.errors.quantity?.message}>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className={inputClass}
+                  {...chiffresSeulement(detailForm.register("quantity"))}
+                />
               </FormField>
 
               <FormField label="Total">
@@ -403,15 +538,17 @@ export default function ExpenseDetailPage({
                 <button
                   type="button"
                   onClick={detailForm.handleSubmit((v) => addDetailMutation.mutate(v))}
-                  disabled={addDetailMutation.isPending}
-                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-60"
+                  disabled={!ligneComplete || addDetailMutation.isPending}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Ajouter
+                  Ajouter l&apos;article
                 </button>
+              </div>
               </div>
             </div>
           )}
 
+          <TableLengthControl pagination={detailsPagination} />
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -432,9 +569,11 @@ export default function ExpenseDetailPage({
                     </td>
                   </tr>
                 ) : (
-                  details.map((d, i) => (
+                  detailsPagination.pageRows.map((d, i) => (
                     <tr key={d.id} className="border-b border-gray-100">
-                      <td className="px-3 py-2 text-gray-500">{i + 1}</td>
+                      <td className="px-3 py-2 text-gray-500">
+                        {detailsPagination.offset + i + 1}
+                      </td>
                       <td className="px-3 py-2">{d.articleName ?? "—"}</td>
                       <td className="px-3 py-2">{formatAmount(d.unitPrice ?? 0)}</td>
                       <td className="px-3 py-2">{d.quantity}</td>
@@ -466,6 +605,7 @@ export default function ExpenseDetailPage({
               </tfoot>
             </table>
           </div>
+          <TablePaginationFooter pagination={detailsPagination} />
 
           <button
             type="submit"

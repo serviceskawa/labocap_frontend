@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useAppSettings } from "@/hooks/useAppSettings";
+import { DEFAULT_APP_NAME, useBranding } from "@/hooks/useBranding";
 
 /**
  * Applique les réglages « Général » qui n'étaient enregistrés mais jamais utilisés :
@@ -12,9 +12,15 @@ import { useAppSettings } from "@/hooks/useAppSettings";
  * Rendu invisible ; à placer dans le layout du dashboard (post-authentification).
  */
 export function AppSettingsEffects() {
-  const { data } = useAppSettings();
-  const favicon = data?.favicon?.trim();
-  const appName = data?.app_name?.trim();
+  // Via useBranding : la route publique `/public/branding` prend le relais quand
+  // `/setting-apps` est refusé (permission `view-settings` absente), de sorte que
+  // l'icône et le titre d'onglet soient corrects pour tous les profils.
+  const branding = useBranding();
+  const favicon = branding.favicon;
+  // DEFAULT_APP_NAME est déjà le titre statique du layout racine : inutile de le
+  // réécrire à chaque navigation tant qu'aucun nom n'a été configuré.
+  const appName =
+    branding.appName === DEFAULT_APP_NAME ? undefined : branding.appName;
   // Next réécrit le <title> à chaque navigation ; on ré-applique après chaque
   // changement de route pour que le nom du labo reste dans l'onglet.
   const pathname = usePathname();

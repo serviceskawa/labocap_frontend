@@ -47,7 +47,12 @@ export interface ExpenseCreateRequest {
 }
 
 export interface ExpenseRequest {
-  amount: number;
+  /**
+   * Omis par la page détail : le montant est la somme des lignes d'articles,
+   * recalculée par le backend à chaque ajout/retrait. Ne l'envoyer que pour
+   * forcer une valeur.
+   */
+  amount?: number;
   expenseCategorieId: string;
   description?: string;
   supplierId?: string;
@@ -65,6 +70,14 @@ export const expensesApi = {
   update: (id: string, data: ExpenseRequest) =>
     apiClient.put<Expense>(`/expenses/${id}`, data),
   delete: (id: string) => apiClient.delete(`/expenses/${id}`),
+  // Preuve d'achat (« receipt ») — équivalent du champ fichier de show.blade.php.
+  uploadReceipt: (id: string, file: File) => {
+    const fd = new FormData();
+    fd.append("receipt", file);
+    return apiClient.post<Expense>(`/expenses/${id}/receipt`, fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
   // Passe la dépense à payée (paid = 1) et débite la caisse de dépense.
   pay: (id: string) => apiClient.patch<Expense>(`/expenses/${id}/pay`),
   // Passe la dépense à payée + livrée (paid = 2) : entrée en stock, et débit

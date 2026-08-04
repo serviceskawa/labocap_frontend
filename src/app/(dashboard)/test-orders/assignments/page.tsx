@@ -25,6 +25,7 @@ import { RemoteSelectField } from "@/components/ui/RemoteSelectField";
 import { MAX_VISIBLE_OPTIONS } from "@/components/ui/LimitedSelect";
 import type { SelectOption } from "@/components/ui/FormSelect";
 import type { ApiError, PageResponse } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 /**
  * Filtre « Demande d'examen » : la liste est filtrée **par code**, et la
@@ -50,8 +51,6 @@ const loadOrderCodeOptions = (input: string): Promise<SelectOption[]> =>
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 function isDoctorRole(name?: string): boolean {
   if (!name) return false;

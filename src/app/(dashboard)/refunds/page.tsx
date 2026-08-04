@@ -10,6 +10,11 @@ import type { AxiosError } from "axios";
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DataTable } from "@/components/common/DataTable";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import { Badge } from "@/components/ui/Badge";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -79,6 +84,9 @@ function RefundsContent() {
 
   const [detail, setDetail] = useState<RefundRequest | null>(null);
   const [editing, setEditing] = useState<RefundRequest | null>(null);
+
+  // Historique des mises à jour de la modale détail.
+  const detailLogsPagination = useTablePagination(detail?.logs ?? []);
 
   // Laravel affiche la liste entière, sans filtre ni pagination serveur.
   const { data, isLoading } = useQuery({
@@ -359,6 +367,7 @@ function RefundsContent() {
               <h3 className="pt-4 text-sm font-semibold text-gray-900">
                 Historique des mises à jour
               </h3>
+              <TableLengthControl pagination={detailLogsPagination} />
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
@@ -370,9 +379,11 @@ function RefundsContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {(detail.logs ?? []).map((l, i) => (
+                  {detailLogsPagination.pageRows.map((l, i) => (
                     <tr key={l.id ?? i}>
-                      <td className="py-2 pr-4">{i + 1}</td>
+                      <td className="py-2 pr-4">
+                        {detailLogsPagination.offset + i + 1}
+                      </td>
                       <td className="py-2 pr-4">{detail.code ?? ""}</td>
                       <td className="py-2 pr-4">{l.userFullName ?? ""}</td>
                       <td className="py-2 pr-4">{l.operation}</td>
@@ -383,6 +394,7 @@ function RefundsContent() {
                   ))}
                 </tbody>
               </table>
+              <TablePaginationFooter pagination={detailLogsPagination} />
             </div>
           </div>
         </div>

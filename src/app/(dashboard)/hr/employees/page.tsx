@@ -18,11 +18,13 @@ import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { IconButton } from "@/components/ui/IconButton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { hrApi, Employee, EmployeeRequest } from "@/lib/api/hr";
 import { usersApi, User } from "@/lib/api/users";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod — calque du formulaire Laravel employees/create (Nom, Prénoms, Email,
@@ -39,8 +41,6 @@ const employeeSchema = z.object({
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 function buildPayload(values: EmployeeFormValues): EmployeeRequest {
   return {
@@ -276,15 +276,22 @@ function EmployeeForm({ form, users }: EmployeeFormProps) {
         <input type="tel" {...register("phone")} className={inputClass} />
       </FormField>
 
+      {/* Liste alimentée par la table des utilisateurs : `NativeSelect` la rend
+          cherchable, un `<select>` natif obligeait à faire défiler des centaines
+          de comptes. */}
       <FormField label="Utilisateur" error={errors.userId?.message}>
-        <select {...register("userId")} className={inputClass}>
+        <NativeSelect
+          value={form.watch("userId") ?? ""}
+          onChange={(e) => form.setValue("userId", e.target.value)}
+          placeholder="Associer à un utilisateur"
+        >
           <option value="">Associer à un utilisateur</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.firstname} {u.lastname}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </FormField>
     </div>
   );

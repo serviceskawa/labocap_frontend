@@ -8,6 +8,7 @@ import { z } from "zod";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { authApi } from "@/lib/api/auth";
+import { AppLogo } from "@/components/ui/AppLogo";
 import { Button } from "@/components/ui/Button";
 
 const resetPasswordSchema = z
@@ -81,27 +82,7 @@ function ResetPasswordForm() {
           {/* Header avec logo */}
           <div className="bg-gray-50 px-8 py-6 text-center border-b">
             <Link href="/">
-              {/* Logo statique servi depuis /public : next/image n'apporte rien
-                  ici et ajouterait un optimiseur au runtime. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo.png"
-                alt="Logo"
-                className="h-12 mx-auto"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  const fallback = document.getElementById(
-                    "logo-fallback-reset"
-                  );
-                  if (fallback) fallback.style.display = "block";
-                }}
-              />
-              <span
-                id="logo-fallback-reset"
-                className="text-xl font-bold text-gray-800 hidden"
-              >
-                Labo AnaPath
-              </span>
+              <AppLogo className="h-12 mx-auto" />
             </Link>
           </div>
 

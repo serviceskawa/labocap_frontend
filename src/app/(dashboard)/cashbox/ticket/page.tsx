@@ -12,6 +12,11 @@ import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/common/DataTable";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { IconButton } from "@/components/ui/IconButton";
 import { RHFSelect } from "@/components/ui/RHFSelect";
@@ -28,13 +33,13 @@ import { expenseCategoriesApi } from "@/lib/api/expenses";
 import { suppliersApi } from "@/lib/api/suppliers";
 import type { PageResponse, ApiError } from "@/types/api";
 import { Button } from "@/components/ui/Button";
+import { applyFieldErrors } from "@/lib/api/errorMessages";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 function formatAmount(v?: number) {
   if (v == null) return "—";
@@ -86,10 +91,19 @@ export default function CashboxTicketsPage() {
   const [detailTicket, setDetailTicket] =
     useState<CashboxVoucherResponseDto | null>(null);
 
+  // Articles du bon affiché dans la modale détail.
+  const detailsPagination = useTablePagination(detailTicket?.details ?? []);
+
   const canProcess = can(PERMISSIONS.VIEW_PROCESS_CASHBOX_TICKETS);
   const canCreate = can(PERMISSIONS.CREATE_CASHBOX_TICKETS);
 
-  const form = useForm<FormData>({ resolver: zodResolver(schema) });
+  // `defaultValues` explicites : sans eux les champs valaient `undefined`, et
+  // zod signalait un type manquant (message générique) au lieu du message
+  // « La catégorie est requise » / « Le fournisseur est requis ».
+  const form = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: { expenseCategoryId: "", supplierId: "" },
+  });
 
   // ---- Queries -------------------------------------------------------------
 
@@ -130,8 +144,11 @@ export default function CashboxTicketsPage() {
       toast.success("Bon de caisse créé — ajoutez-y les articles");
       form.reset({ expenseCategoryId: "", supplierId: "" });
     },
-    onError: (e: AxiosError<ApiError>) =>
-      toast.error(e.response?.data?.message ?? "Erreur lors de la création"),
+    onError: (e: AxiosError<ApiError>) => {
+      if (!applyFieldErrors(e, form.setError as (n: string, e: { type: string; message: string }) => void)) {
+        toast.error(e.response?.data?.message ?? "Erreur lors de la création");
+      }
+    },
   });
 
   const statusMutation = useMutation({
@@ -380,32 +397,38 @@ export default function CashboxTicketsPage() {
                     Aucun article sur ce bon.
                   </p>
                 ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
-                        <th className="pb-2 pr-4">#</th>
-                        <th className="pb-2 pr-4">Article</th>
-                        <th className="pb-2 pr-4 text-right">Prix</th>
-                        <th className="pb-2 pr-4 text-right">Quantité</th>
-                        <th className="pb-2 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {detailTicket.details.map((d, i) => (
-                        <tr key={d.id}>
-                          <td className="py-2 pr-4 text-gray-500">{i + 1}</td>
-                          <td className="py-2 pr-4 font-medium">{d.itemName}</td>
-                          <td className="py-2 pr-4 text-right text-gray-600">
-                            {formatAmount(d.unitPrice)}
-                          </td>
-                          <td className="py-2 pr-4 text-right">{d.quantity}</td>
-                          <td className="py-2 text-right font-medium">
-                            {formatAmount(d.lineAmount)}
-                          </td>
+                  <>
+                    <TableLengthControl pagination={detailsPagination} />
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
+                          <th className="pb-2 pr-4">#</th>
+                          <th className="pb-2 pr-4">Article</th>
+                          <th className="pb-2 pr-4 text-right">Prix</th>
+                          <th className="pb-2 pr-4 text-right">Quantité</th>
+                          <th className="pb-2 text-right">Total</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {detailsPagination.pageRows.map((d, i) => (
+                          <tr key={d.id}>
+                            <td className="py-2 pr-4 text-gray-500">
+                              {detailsPagination.offset + i + 1}
+                            </td>
+                            <td className="py-2 pr-4 font-medium">{d.itemName}</td>
+                            <td className="py-2 pr-4 text-right text-gray-600">
+                              {formatAmount(d.unitPrice)}
+                            </td>
+                            <td className="py-2 pr-4 text-right">{d.quantity}</td>
+                            <td className="py-2 text-right font-medium">
+                              {formatAmount(d.lineAmount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <TablePaginationFooter pagination={detailsPagination} />
+                  </>
                 )}
               </div>
             </div>

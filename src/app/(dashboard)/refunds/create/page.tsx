@@ -19,6 +19,8 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import { refundsApi, refundReasonsApi, type RefundReason } from "@/lib/api/refunds";
 import { invoicesApi, type Invoice } from "@/lib/api/invoices";
 import { Button } from "@/components/ui/Button";
+import { applyFieldErrors } from "@/lib/api/errorMessages";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Calque `errors_reports/refund/create.blade.php` — page dédiée, pas un modal.
@@ -33,8 +35,6 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
@@ -118,10 +118,12 @@ export default function RefundCreatePage() {
       router.push("/refunds");
     },
     onError: (err: AxiosError) => {
-      toast.error(
-        (err.response?.data as { message?: string })?.message ??
-          "Un problème est suvenu lors de l'enrégistrement",
-      );
+      if (!applyFieldErrors(err as never, form.setError as (n: string, e: { type: string; message: string }) => void)) {
+        toast.error(
+          (err.response?.data as { message?: string })?.message ??
+            "Un problème est survenu lors de l'enregistrement",
+        );
+      }
     },
   });
 

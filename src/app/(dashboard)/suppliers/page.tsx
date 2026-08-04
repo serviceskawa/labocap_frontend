@@ -20,6 +20,7 @@ import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 import {
   suppliersApi,
   supplierCategoriesApi,
@@ -33,9 +34,29 @@ import {
 // Catégorie fournisseur sont obligatoires ; Email, Addresse et Note libres.
 // ---------------------------------------------------------------------------
 
+/**
+ * Numéro de téléphone accepté.
+ *
+ * Chiffres, espaces, points et tirets, avec un « + » facultatif en tête ; 8 à 15
+ * chiffres une fois les séparateurs retirés. Cela refuse la saisie alphabétique
+ * (le défaut signalé) tout en gardant modifiables les fiches existantes, qui
+ * utilisent des formes légitimes : 97000000, +22997324883, 0022996236464.
+ */
+function telephoneValide(v?: string): boolean {
+  if (!v || v.trim() === "") return true; // champ facultatif
+  if (!/^\+?[0-9 .-]+$/.test(v.trim())) return false;
+  const chiffres = v.replace(/\D/g, "");
+  return chiffres.length >= 8 && chiffres.length <= 15;
+}
+const TEL_MESSAGE =
+  "Numéro invalide : 8 à 15 chiffres, indicatif « + » facultatif (ex. 97000000)";
+
 const supplierSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
-  phone: z.string().min(1, "Le téléphone est requis"),
+  phone: z
+    .string()
+    .min(1, "Le téléphone est requis")
+    .refine(telephoneValide, { message: TEL_MESSAGE }),
   email: z.string().email("Email invalide").optional().or(z.literal("")),
   address: z.string().optional(),
   categoryId: z.string().min(1, "La catégorie fournisseur est requise"),
@@ -48,8 +69,6 @@ type SupplierFormValues = z.infer<typeof supplierSchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 const actionBtn =
   "inline-flex h-8 w-9 items-center justify-center rounded-md text-white transition-colors";
@@ -359,7 +378,12 @@ function SupplierForm({ form, categories, isEdit = false }: SupplierFormProps) {
         required
         error={errors.categoryId?.message}
       >
-        <NativeSelect {...register("categoryId")}>
+        <NativeSelect
+          value={form.watch("categoryId") ?? ""}
+          onChange={(e) =>
+            form.setValue("categoryId", e.target.value, { shouldValidate: true })
+          }
+        >
           <option value="">Sélectionner une catégorie</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>

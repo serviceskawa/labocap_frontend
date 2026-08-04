@@ -12,11 +12,13 @@ import {
   PaginationState,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import { ChevronUp, ChevronDown, ChevronsUpDown, RefreshCw, Minus, Plus, X } from "lucide-react";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
-import { NativeSelect } from "@/components/ui/NativeSelect";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+} from "@/components/common/TablePagination";
 
 export interface DataTableProps<T> {
   columns: ColumnDef<T>[];
@@ -35,11 +37,6 @@ export interface DataTableProps<T> {
   rowClassName?: (row: T) => string;
   /** Titre affiché dans la barre d'outils du tableau (optionnel). */
   title?: string;
-  /**
-   * Callback du bouton « Actualiser ». Si absent, on invalide les requêtes
-   * react-query actives (rechargement générique des données).
-   */
-  onRefresh?: () => void;
   /**
    * Masque le champ de recherche intégré à la barre d'outils. À utiliser quand
    * la page fournit sa propre recherche (ex. `SearchInput` dans le slot filtres),
@@ -67,32 +64,15 @@ export function DataTable<T>({
   isLoading = false,
   rowClassName,
   title,
-  onRefresh,
   hideToolbarSearch = false,
   hideToolbar = false,
 }: DataTableProps<T>) {
   const isServerSide = pageCount !== undefined;
-  const queryClient = useQueryClient();
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [localSearch, setLocalSearch] = useState("");
 
-  // Barre d'outils du tableau : réduire (masquer le corps) / fermer (masquer la carte).
-  const [collapsed, setCollapsed] = useState(false);
-  const [closed, setClosed] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    if (onRefresh) {
-      onRefresh();
-    } else {
-      queryClient.invalidateQueries();
-    }
-    // Petit retour visuel de rotation, sans bloquer.
-    window.setTimeout(() => setRefreshing(false), 600);
-  };
 
   const [localPagination, setLocalPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -148,73 +128,36 @@ export function DataTable<T>({
     }
   };
 
-  const getPageNumbers = (): (number | "...")[] => {
-    const pages: (number | "...")[] = [];
-    if (totalPages <= 7) {
-      for (let i = 0; i < totalPages; i++) pages.push(i);
-    } else {
-      pages.push(0);
-      if (currentPageIndex > 2) pages.push("...");
-      const start = Math.max(1, currentPageIndex - 1);
-      const end = Math.min(totalPages - 2, currentPageIndex + 1);
-      for (let i = start; i <= end; i++) pages.push(i);
-      if (currentPageIndex < totalPages - 3) pages.push("...");
-      pages.push(totalPages - 1);
-    }
-    return pages;
+  // Contrôles partagés avec les tableaux écrits à la main (voir
+  // `TablePagination`) : une seule apparence de pagination dans l'application.
+  const paginationState = {
+    pageIndex: currentPageIndex,
+    pageSize: currentPageSize,
+    pageCount: totalPages,
+    setPageIndex: (index: number) => table.setPageIndex(index),
+    setPageSize: (size: number) => {
+      if (isServerSide) onPageSizeChange?.(size);
+      else table.setPageSize(size);
+    },
   };
 
-  // Bouton « Fermer » : la carte disparaît (revient au rechargement de la page).
-  if (closed) return null;
-
-  // `.card-widgets` Hyper : petits liens-icônes discrets en haut à droite.
-  const widgetBtn = "text-gray-400 transition-colors hover:text-gray-600";
   const showSearch = !hideToolbarSearch && (onSearchChange !== undefined || !isServerSide);
 
   return (
     <div className="w-full">
-      {/* card-widgets (Actualiser · Réduire · Fermer) + card-title, comme Laravel */}
-      {!hideToolbar && (
+      {/* Titre de la carte. Le trio d'icônes Actualiser · Réduire · Fermer,
+          hérité du gabarit Hyper, a été retiré : sans utilité ici, et le bouton
+          « Fermer » faisait disparaître un tableau sans moyen de le rétablir
+          autrement qu'en rechargeant la page. */}
+      {!hideToolbar && title && (
         <div className="relative">
-          <div className="absolute right-0 top-0 flex items-center gap-2">
-            <button type="button" onClick={handleRefresh} className={widgetBtn} title="Actualiser" aria-label="Actualiser">
-              <RefreshCw className={cn("h-[.95rem] w-[.95rem]", refreshing && "animate-spin")} />
-            </button>
-            <button type="button" onClick={() => setCollapsed((c) => !c)} className={widgetBtn} title={collapsed ? "Agrandir" : "Réduire"} aria-label={collapsed ? "Agrandir" : "Réduire"}>
-              {collapsed ? <Plus className="h-[.95rem] w-[.95rem]" /> : <Minus className="h-[.95rem] w-[.95rem]" />}
-            </button>
-            <button type="button" onClick={() => setClosed(true)} className={widgetBtn} title="Fermer" aria-label="Fermer">
-              <X className="h-[.95rem] w-[.95rem]" />
-            </button>
-          </div>
-          {title && <h5 className="mb-0 text-[.9375rem] font-semibold text-gray-800">{title}</h5>}
+          <h5 className="mb-0 text-[.9375rem] font-semibold tracking-[-0.006em] text-gray-800">{title}</h5>
         </div>
       )}
 
-      {!collapsed && (
       <div className={cn(!hideToolbar && "pt-3")}>
         {/* Contrôles : « Afficher [x] enregistrements par page » (gauche) + « Rechercher: » (droite) */}
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex items-center gap-2 text-[.9rem] text-gray-700">
-            <span>Afficher</span>
-            <NativeSelect
-              className="w-auto"
-              value={currentPageSize}
-              onChange={(e) => {
-                const size = Number(e.target.value);
-                if (isServerSide) onPageSizeChange?.(size);
-                else table.setPageSize(size);
-              }}
-            >
-              {[10, 25, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </NativeSelect>
-            <span>enregistrements par page</span>
-          </label>
-
+        <TableLengthControl pagination={paginationState}>
           {showSearch && (
             <label className="flex items-center gap-2 text-[.9rem] text-gray-700">
               <span>Rechercher:</span>
@@ -222,37 +165,43 @@ export function DataTable<T>({
                 type="text"
                 value={onSearchChange ? (searchValue ?? "") : localSearch}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="rounded border border-gray-300 px-3 py-[.28rem] text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-[.35rem] text-[.9rem] text-gray-800 shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-[3px] focus:ring-blue-500/15"
               />
             </label>
           )}
-        </div>
+        </TableLengthControl>
 
-        {/* Tableau */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-[.9rem]">
-            <thead className="border-b border-gray-200 bg-gray-100">
+        {/* Tableau — grille contenue par un liseré et des coins arrondis, et
+            non un bloc de texte flottant. Sans cadre ni séparateurs de colonnes,
+            l'œil n'avait aucun repère pour suivre une ligne large jusqu'à la
+            colonne Actions, à l'autre bout de l'écran. */}
+        <div className="overflow-x-auto overflow-y-hidden rounded-lg ring-1 ring-gray-200">
+          <table className="w-full border-collapse text-[.9rem]">
+            <thead className="border-b border-gray-300 bg-gray-50">
               <tr>
                 {table.getHeaderGroups().flatMap((hg) =>
                   hg.headers.map((header) => (
                     <th
                       key={header.id}
                       className={cn(
-                        "px-[.95rem] py-[.95rem] text-left text-[.9rem] font-bold text-gray-800",
-                        header.column.getCanSort() && "cursor-pointer select-none"
+                        "px-4 py-2.5 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-600",
+                        // Filet vertical entre colonnes, sauf après la dernière.
+                        "border-r border-gray-200 last:border-r-0",
+                        header.column.getCanSort() &&
+                          "cursor-pointer select-none transition-colors hover:bg-gray-100 hover:text-gray-800"
                       )}
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       <div className="flex items-center gap-1">
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {header.column.getCanSort() && (
-                          <span className="text-gray-600">
+                          <span className="text-gray-400">
                             {header.column.getIsSorted() === "asc" ? (
-                              <ChevronUp className="h-4 w-4 text-blue-600" strokeWidth={3} />
+                              <ChevronUp className="h-3.5 w-3.5 text-blue-600" strokeWidth={3} />
                             ) : header.column.getIsSorted() === "desc" ? (
-                              <ChevronDown className="h-4 w-4 text-blue-600" strokeWidth={3} />
+                              <ChevronDown className="h-3.5 w-3.5 text-blue-600" strokeWidth={3} />
                             ) : (
-                              <ChevronsUpDown className="h-4 w-4 text-gray-600" strokeWidth={2.5} />
+                              <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" strokeWidth={2.5} />
                             )}
                           </span>
                         )}
@@ -267,7 +216,7 @@ export function DataTable<T>({
                 Array.from({ length: currentPageSize }).map((_, i) => (
                   <tr key={i}>
                     {columns.map((_, j) => (
-                      <td key={j} className="px-4 py-3">
+                      <td key={j} className="border-r border-gray-100 px-4 py-2.5 last:border-r-0">
                         <div className="h-4 animate-pulse rounded bg-gray-200" />
                       </td>
                     ))}
@@ -277,7 +226,7 @@ export function DataTable<T>({
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="px-4 py-8 text-center text-sm text-gray-500"
+                    className="px-4 py-12 text-center text-sm text-gray-500"
                   >
                     Aucune donnée disponible
                   </td>
@@ -289,16 +238,12 @@ export function DataTable<T>({
                     <tr
                       key={row.id}
                       className={cn(
-                        "transition-colors hover:bg-gray-50",
-                        // `even:` l'emporterait sur la couleur fournie par la page
-                        // (classe + pseudo-classe) : on ne raye que les lignes sans couleur propre.
-                        // Hyper `.table-striped` : `--bs-table-striped-bg:#f1f3fa`.
-                        !custom && "odd:bg-gray-100",
+                        "transition-colors duration-100 hover:bg-blue-50",
                         custom
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="border-b border-gray-200 px-[.95rem] py-[.95rem] align-middle text-gray-700">
+                        <td key={cell.id} className="border-r border-gray-100 px-4 py-2.5 align-middle text-[.875rem] text-gray-700 last:border-r-0">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
@@ -311,57 +256,8 @@ export function DataTable<T>({
         </div>
 
         {/* Bas : « Afficher page X sur N » (gauche) + pagination « Précédent/Suivant » (droite) */}
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="mb-0 text-[.9rem] text-gray-600">
-            Afficher page {currentPageIndex + 1} sur {Math.max(totalPages, 1)}
-          </p>
-
-          {/* pagination-rounded Hyper : liens ronds sans bordure, actif en primaire */}
-          <div className="flex items-center gap-[3px]">
-            <button
-              type="button"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="flex h-8 items-center justify-center rounded-full px-3 text-[.9rem] text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Précédent
-            </button>
-
-            {totalPages > 0 &&
-              getPageNumbers().map((page, idx) =>
-                page === "..." ? (
-                  <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={page}
-                    type="button"
-                    onClick={() => table.setPageIndex(page as number)}
-                    className={cn(
-                      "flex h-8 min-w-[2rem] items-center justify-center rounded-full px-2 text-[.9rem] transition-colors",
-                      currentPageIndex === page
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-600 hover:bg-gray-100"
-                    )}
-                  >
-                    {(page as number) + 1}
-                  </button>
-                )
-              )}
-
-            <button
-              type="button"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="flex h-8 items-center justify-center rounded-full px-3 text-[.9rem] text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Suivant
-            </button>
-          </div>
-        </div>
+        <TablePaginationFooter pagination={paginationState} />
       </div>
-      )}
     </div>
   );
 }

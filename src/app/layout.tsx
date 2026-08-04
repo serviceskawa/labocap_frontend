@@ -51,7 +51,9 @@ export default async function RootLayout({
           (test-orders/assignments/[id]/print) seraient bloqués par
           style-src-elem. React 19 la remonte automatiquement dans <head>. */}
       {nonce ? <meta property="csp-nonce" content={nonce} /> : null}
-      <body className="h-full bg-[#fafbfe] antialiased font-sans">
+      {/* `bg-gray-50` vient de main : le fond passe par le token de la palette
+          plutôt que par la valeur hexadécimale qu'il portait auparavant. */}
+      <body className="h-full bg-gray-50 antialiased font-sans">
         <Providers nonce={nonce}>{children}</Providers>
       </body>
     </html>

@@ -171,8 +171,13 @@ function ActionButtons({
         <Eye className="h-3.5 w-3.5" />
       </Link>
 
-      {/* Modifier — BLEU */}
-      {can(PERMISSIONS.EDIT_TEST_ORDERS) && (
+      {/* Modifier — BLEU. Masqué dès que le bon est validé/livré : le backend
+          refuse la mise à jour (« Impossible de modifier un bon d'examen déjà
+          validé »), le bouton ne menait donc qu'à une erreur. Même condition
+          que l'action Supprimer, soumise à la même règle. */}
+      {order.status !== "VALIDATED" &&
+        order.status !== "DELIVERED" &&
+        can(PERMISSIONS.EDIT_TEST_ORDERS) && (
         <Link
           href={`/test-orders/${order.id}/edit`}
           className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"

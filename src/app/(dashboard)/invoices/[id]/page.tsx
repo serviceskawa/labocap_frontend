@@ -10,6 +10,7 @@ import { Wallet } from "lucide-react";
 
 import { DataTable } from "@/components/common/DataTable";
 import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -249,17 +250,17 @@ export default function InvoiceDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* ---- Titre de page, suivi du bouton « Voir tout » ---- */}
-      <div className="flex items-center gap-3">
-        <h4 className="text-xl font-semibold text-gray-700">{title}</h4>
-        <Button
-          onClick={pdfAction.run}
-          loading={pdfAction.pending}
-          className="hover:bg-blue-700"
-        >
-          Voir tout
-        </Button>
-      </div>
+      {/* `page-title-box` de `invoices/show.blade.php` : le titre dépend du
+          statut (« Reçu de paiement » / « Facture d'avoir ») et porte le code de
+          la demande. Le bouton « Voir tout » (PDF) prend le `page-title-right`. */}
+      <PageHeader
+        title={title}
+        action={
+          <Button onClick={pdfAction.run} loading={pdfAction.pending}>
+            Voir tout
+          </Button>
+        }
+      />
 
       {/* ---- Document ---- */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">

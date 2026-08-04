@@ -20,6 +20,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { doctorsApi, Doctor, DoctorRequest } from "@/lib/api/doctors";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -29,7 +30,12 @@ const doctorSchema = z.object({
   name: z.string().min(1, "Le nom complet est requis"),
   telephone: z.string().optional(),
   email: z.string().email("Email invalide").optional().or(z.literal("")),
-  commission: z.string().optional(),
+  commission: z
+    .string()
+    .optional()
+    .refine((v) => v === undefined || v === "" || Number(v) >= 0, {
+      message: "La commission ne peut pas être négative",
+    }),
 });
 
 type DoctorFormValues = z.infer<typeof doctorSchema>;
@@ -38,8 +44,6 @@ type DoctorFormValues = z.infer<typeof doctorSchema>;
 // Input style helper
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 // ---------------------------------------------------------------------------
 // Page
@@ -275,8 +279,15 @@ export default function DoctorsPage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="relative w-full max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            {/* `autoComplete="off"` + nom neutre : après l'ajout d'un médecin,
+                le navigateur ré-injectait l'email saisi dans ce champ (il le
+                prend pour un champ de formulaire mémorisable). La liste étant
+                déjà triée du plus récent au plus ancien, ce pré-remplissage ne
+                servait qu'à masquer le médecin qu'on venait de créer. */}
             <input
               type="text"
+              name="doctors-filter"
+              autoComplete="off"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher (nom, téléphone, email, rôle)..."

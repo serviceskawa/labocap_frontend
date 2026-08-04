@@ -6,7 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft, Eye } from "lucide-react";
 
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { formatCFA, formatDate } from "@/lib/utils";
 import { patientsApi, PatientProfile } from "@/lib/api/patients";
 
@@ -39,6 +46,10 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
 
   const patient = profile?.patient;
 
+  // Pagination des deux tableaux de la fiche patient.
+  const ordersPagination = useTablePagination(profile?.recentOrders ?? []);
+  const invoicesPagination = useTablePagination(profile?.recentInvoices ?? []);
+
   // Initiales pour l'avatar
   const initials = patient
     ? `${patient.lastname.charAt(0)}${patient.firstname.charAt(0)}`.toUpperCase()
@@ -46,17 +57,19 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
 
   return (
     <div className="space-y-6">
-      {/* Bouton retour */}
-      <div>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Retour
-        </button>
-      </div>
+      {/* `page-title-box` de `patients/profil.blade.php` : titre « Dossier
+          Patient » et bouton primaire de retour à droite. */}
+      <PageHeader
+        title="Dossier Patient"
+        action={
+          <Button
+            icon={<ArrowLeft className="h-4 w-4" />}
+            onClick={() => router.push("/patients")}
+          >
+            Retour à la liste des patients
+          </Button>
+        }
+      />
 
       {isLoading ? (
         /* ========================================================
@@ -223,6 +236,9 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
                   Demandes d&apos;examen
                 </h2>
               </div>
+              <div className="px-5 pt-4">
+                <TableLengthControl pagination={ordersPagination} />
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-50">
@@ -255,13 +271,13 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
                         </td>
                       </tr>
                     ) : (
-                      profile.recentOrders.map((order, idx) => (
+                      ordersPagination.pageRows.map((order, idx) => (
                         <tr
                           key={order.id}
                           className="hover:bg-gray-50 transition-colors"
                         >
                           <td className="px-4 py-3 text-xs text-gray-400">
-                            {idx + 1}
+                            {ordersPagination.offset + idx + 1}
                           </td>
                           <td className="px-4 py-3 text-gray-600">
                             {formatDate(order.prelevementDate)}
@@ -290,6 +306,9 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
                   </tbody>
                 </table>
               </div>
+              <div className="px-5 pb-4">
+                <TablePaginationFooter pagination={ordersPagination} />
+              </div>
             </div>
 
             {/* Tableau Factures */}
@@ -298,6 +317,9 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
                 <h2 className="text-sm font-semibold text-gray-700">
                   Factures
                 </h2>
+              </div>
+              <div className="px-5 pt-4">
+                <TableLengthControl pagination={invoicesPagination} />
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -334,13 +356,13 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
                         </td>
                       </tr>
                     ) : (
-                      profile.recentInvoices.map((invoice, idx) => (
+                      invoicesPagination.pageRows.map((invoice, idx) => (
                         <tr
                           key={invoice.id}
                           className="hover:bg-gray-50 transition-colors"
                         >
                           <td className="px-4 py-3 text-xs text-gray-400">
-                            {idx + 1}
+                            {invoicesPagination.offset + idx + 1}
                           </td>
                           <td className="px-4 py-3 text-gray-600">
                             {formatDate(invoice.createdAt)}
@@ -371,6 +393,9 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
                     )}
                   </tbody>
                 </table>
+              </div>
+              <div className="px-5 pb-4">
+                <TablePaginationFooter pagination={invoicesPagination} />
               </div>
             </div>
           </div>

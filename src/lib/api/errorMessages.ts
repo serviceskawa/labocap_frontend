@@ -41,10 +41,50 @@ export function translateApiError(message?: string | null): string | undefined {
 /**
  * Extrait et traduit le message d'une erreur Axios, avec repli sur un message
  * générique fourni par l'appelant.
+ *
+ * Accepte aussi une `Error` simple : certaines mutations rejettent côté client
+ * avant tout appel réseau (garde-fous de saisie). Sans ce cas, `err.response`
+ * est absent et le message précis est remplacé par le repli générique.
  */
 export function getApiErrorMessage(
-  err: AxiosError<ApiError>,
+  err: AxiosError<ApiError> | Error,
   fallback = "Une erreur est survenue"
 ): string {
-  return translateApiError(err.response?.data?.message) ?? fallback;
+  const axiosErr = err as AxiosError<ApiError>;
+  const apiMessage = translateApiError(axiosErr.response?.data?.message);
+  if (apiMessage) return apiMessage;
+  // Erreur non-Axios : son `message` est écrit par nous, donc déjà lisible.
+  // Sur une vraie erreur Axios on garde le repli, car `err.message` vaudrait
+  // « Request failed with status code 500 ».
+  if (!axiosErr.isAxiosError) return err.message || fallback;
+  return fallback;
+}
+
+/**
+ * Reporte les erreurs de validation du backend sur les champs du formulaire.
+ *
+ * Le backend renvoie déjà le détail champ par champ :
+ * `{ "message": "Erreurs de validation", "data": { "phone": "Numéro invalide…" } }`
+ * mais le front n'affichait que `message` dans un toast générique, d'où les
+ * « Erreur de validation » sans indication de la cause remontés en recette.
+ *
+ * @param err     erreur Axios reçue
+ * @param setError setter de react-hook-form (`form.setError`)
+ * @returns `true` si au moins un champ a reçu son message — l'appelant peut
+ *          alors se dispenser du toast.
+ */
+export function applyFieldErrors(
+  err: AxiosError<ApiError>,
+  setError: (name: string, error: { type: string; message: string }) => void,
+): boolean {
+  const details = err.response?.data?.data;
+  if (!details || typeof details !== "object") return false;
+  let applied = false;
+  for (const [field, message] of Object.entries(details as Record<string, unknown>)) {
+    if (typeof message === "string" && message.trim() !== "") {
+      setError(field, { type: "server", message });
+      applied = true;
+    }
+  }
+  return applied;
 }

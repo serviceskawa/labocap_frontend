@@ -3,12 +3,14 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Trash2, Plus, ArrowLeft, Search } from "lucide-react";
+import { Pencil, Trash2, Plus, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
+import type { ColumnDef } from "@tanstack/react-table";
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { IconButton } from "@/components/ui/IconButton";
+import { DataTable } from "@/components/common/DataTable";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { CrudModal } from "@/components/common/CrudModal";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -19,9 +21,8 @@ import {
   type ReportTemplateRequest,
 } from "@/lib/api/reportTemplates";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 export default function ReportTemplatesPage() {
   const { can } = usePermissions();
@@ -37,26 +38,32 @@ export default function ReportTemplatesPage() {
     content: "",
     footer: "",
   });
-  const [search, setSearch] = useState("");
-
   // === Query
   const templatesQuery = useQuery({
     queryKey: ["report-templates"],
     queryFn: () =>
       reportTemplatesApi.findAll({ size: 100 }).then((r) => r.data.content),
   });
-  const allTemplates = useMemo(
+  // La recherche est celle du `DataTable` (barre « Rechercher: » intégrée),
+  // comme sur toutes les autres listes.
+  const templates = useMemo(
     () => templatesQuery.data ?? [],
     [templatesQuery.data]
   );
 
-  const templates = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return allTemplates;
-    return allTemplates.filter((t) =>
-      (t.title ?? t.name ?? "").toLowerCase().includes(q),
-    );
-  }, [allTemplates, search]);
+  // Erreur de saisie du titre, affichée sous le champ plutôt que dans un toast
+  // générique « Erreurs de validation ».
+  const [titleError, setTitleError] = useState<string | null>(null);
+
+  /** Valide le titre avant envoi. Renvoie false et affiche le message si vide. */
+  function titreValide(): boolean {
+    if (!form.title.trim()) {
+      setTitleError("Veuillez renseigner le titre du template");
+      return false;
+    }
+    setTitleError(null);
+    return true;
+  }
 
   // === Mutations
   const createMutation = useMutation({
@@ -107,6 +114,42 @@ export default function ReportTemplatesPage() {
     });
   };
 
+  const columns: ColumnDef<ReportTemplate>[] = [
+    {
+      header: "#",
+      id: "rownum",
+      enableSorting: false,
+      cell: ({ row }) => <span className="text-gray-500">{row.index + 1}</span>,
+    },
+    {
+      header: "Nom",
+      id: "title",
+      accessorFn: (t) => t.title ?? t.name ?? "—",
+    },
+    {
+      header: "Actions",
+      id: "actions",
+      enableSorting: false,
+      cell: ({ row }) =>
+        canManage ? (
+          <div className="flex items-center gap-2">
+            <IconButton
+              variant="edit"
+              title="Modifier"
+              onClick={() => openEdit(row.original)}
+              icon={<Pencil className="h-4 w-4" />}
+            />
+            <IconButton
+              variant="delete"
+              title="Supprimer"
+              onClick={() => setDeleteTarget(row.original)}
+              icon={<Trash2 className="h-4 w-4" />}
+            />
+          </div>
+        ) : null,
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -142,89 +185,15 @@ export default function ReportTemplatesPage() {
         }
       />
 
+      {/* `DataTable` plutôt qu'un tableau écrit à la main : recherche, tri et
+          pagination identiques aux autres listes de l'application. */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-gray-800">
-            Liste des templates
-          </h2>
-
-          <div className="relative w-full max-w-xs">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un template..."
-              className="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-lg border border-gray-200">
-          <table className="w-full text-sm [&_th]:border-r [&_th]:border-gray-300 [&_th:last-child]:border-r-0 [&_td]:border-r [&_td]:border-gray-200 [&_td:last-child]:border-r-0">
-            <thead className="border-b-2 border-gray-300 bg-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800 w-12">
-                  #
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800">
-                  Nom
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800 w-48">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {templatesQuery.isLoading ? (
-                <tr>
-                  <td
-                    colSpan={3}
-                    className="px-4 py-8 text-center text-sm text-gray-500"
-                  >
-                    Chargement...
-                  </td>
-                </tr>
-              ) : templates.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={3}
-                    className="px-4 py-8 text-center text-sm text-gray-500"
-                  >
-                    Aucun template
-                  </td>
-                </tr>
-              ) : (
-                templates.map((t, idx) => (
-                  <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-700">{idx + 1}</td>
-                    <td className="px-4 py-3 font-medium text-gray-900">
-                      {t.title ?? t.name ?? "—"}
-                    </td>
-                    <td className="px-4 py-3">
-                      {canManage && (
-                        <div className="flex items-center gap-2">
-                          <IconButton
-                            variant="edit"
-                            title="Modifier"
-                            onClick={() => openEdit(t)}
-                            icon={<Pencil className="h-4 w-4" />}
-                          />
-                          <IconButton
-                            variant="delete"
-                            title="Supprimer"
-                            onClick={() => setDeleteTarget(t)}
-                            icon={<Trash2 className="h-4 w-4" />}
-                          />
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable<ReportTemplate>
+          title="Liste des templates"
+          columns={columns}
+          data={templates}
+          isLoading={templatesQuery.isLoading}
+        />
       </div>
 
       {/* Modale création */}
@@ -233,11 +202,11 @@ export default function ReportTemplatesPage() {
         onClose={() => setCreateOpen(false)}
         title="Ajouter un nouveau template"
         size="xl"
-        onSubmit={() => createMutation.mutate(form)}
+        onSubmit={() => titreValide() && createMutation.mutate(form)}
         submitLabel="Ajouter"
         isSubmitting={createMutation.isPending}
       >
-        <TemplateForm form={form} setForm={setForm} />
+        <TemplateForm form={form} setForm={setForm} titleError={titleError} />
       </CrudModal>
 
       {/* Modale édition */}
@@ -247,13 +216,14 @@ export default function ReportTemplatesPage() {
         title="Modifier le template"
         size="xl"
         onSubmit={() =>
+          titreValide() &&
           editTarget &&
           updateMutation.mutate({ id: editTarget.id, data: form })
         }
         submitLabel="Mettre à jour"
         isSubmitting={updateMutation.isPending}
       >
-        <TemplateForm form={form} setForm={setForm} />
+        <TemplateForm form={form} setForm={setForm} titleError={titleError} />
       </CrudModal>
 
       {/* Confirmation suppression */}
@@ -282,11 +252,13 @@ export default function ReportTemplatesPage() {
 // ---------------------------------------------------------------------------
 
 function TemplateForm({
+  titleError,
   form,
   setForm,
 }: {
   form: ReportTemplateRequest;
   setForm: (f: ReportTemplateRequest) => void;
+  titleError?: string | null;
 }) {
   return (
     <div className="space-y-4">
@@ -299,9 +271,11 @@ function TemplateForm({
           value={form.title}
           onChange={(e) => setForm({ ...form, title: e.target.value })}
           className={inputClass}
-          required
           placeholder="Ex : Structure CR, Tête fémorale, Amygdale..."
         />
+        {titleError && (
+          <p className="mt-1 text-sm text-red-600">{titleError}</p>
+        )}
       </div>
 
       <div>

@@ -1,8 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafbfe;
-  --foreground: #6c757d;
+  --background: #f5f7fa;
+  --foreground: #475569;
+
+  /* ── Forme & profondeur ───────────────────────────────────────────────
+     Hyper posait des angles quasi vifs (.15rem) et une ombre unique très
+     diffuse (35px), deux marqueurs de Bootstrap 4/5 qui datent l'interface.
+     On adopte des rayons progressifs et une élévation en deux couches — une
+     ombre de contact courte et nette, une ombre d'ambiance plus large — qui
+     donnent la matière des interfaces applicatives contemporaines.          */
+  --radius-control: 0.5rem;   /* boutons, champs, badges */
+  --radius-surface: 0.75rem;  /* cartes, modales, menus */
+
+  --elevation-flat:
+    0 1px 2px 0 rgba(15, 23, 42, 0.04),
+    0 0 0 1px rgba(15, 23, 42, 0.04);
+  --elevation-raised:
+    0 1px 2px 0 rgba(15, 23, 42, 0.05),
+    0 4px 12px -2px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(15, 23, 42, 0.04);
+  --elevation-overlay:
+    0 4px 6px -2px rgba(15, 23, 42, 0.06),
+    0 16px 32px -8px rgba(15, 23, 42, 0.16),
+    0 0 0 1px rgba(15, 23, 42, 0.06);
 }
 
 @theme inline {
@@ -13,117 +34,155 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────── */
-/* Thème Hyper (CoderThemes / Bootstrap 5) — palette identique à l'app       */
-/* Laravel de référence. On remappe les échelles Tailwind utilisées dans le  */
-/* projet vers les tokens Hyper, de sorte que tout le front hérite des       */
-/* couleurs Laravel sans réécrire les classes page par page.                 */
+/* Palette « Ardoise & Azur »                                                */
 /*                                                                           */
-/*   primary #727cf5 · success #0acf97 · info #39afd1                        */
-/*   warning #ffbc00 · danger  #fa5c7c · dark #313a46                        */
+/* Remplace la palette Hyper d'origine (périwinkle #727cf5, menthe #0acf97,  */
+/* rose #fa5c7c) : des teintes très saturées, héritées d'un thème Bootstrap  */
+/* de 2019, qui lisaient « template acheté » plutôt que logiciel médical.    */
+/*                                                                           */
+/* Principe de construction — les accents partagent une même luminosité et   */
+/* une même chroma, seule la teinte change. C'est ce qui les fait cohabiter  */
+/* sans qu'aucun ne crie plus fort que les autres dans un tableau dense :    */
+/*                                                                           */
+/*   azur 226° · émeraude 162° · ciel 200° · ambre 38° · rose 348°           */
+/*                                                                           */
+/* Les neutres sont des ardoises froides (bleutées), accordées à l'azur —    */
+/* un gris neutre à côté d'un primaire bleu paraît sale par contraste.       */
+/*                                                                           */
+/* Le remap des échelles Tailwind est conservé : les 84 pages écrivent       */
+/* `bg-blue-600` / `text-gray-600` et héritent de la nouvelle palette sans   */
+/* être modifiées.                                                           */
 /* ──────────────────────────────────────────────────────────────────────── */
 @theme {
-  /* Primary — indigo Hyper (#727cf5). blue-* et indigo-* pointent dessus. */
-  --color-blue-50: #f2f3fe;
-  --color-blue-100: #e4e6fd;
-  --color-blue-200: #cbcefb;
-  --color-blue-300: #a9adf9;
-  --color-blue-400: #8b91f7;
-  --color-blue-500: #727cf5;
-  --color-blue-600: #727cf5;
-  --color-blue-700: #5a64e0;
-  --color-blue-800: #4a53c4;
-  --color-blue-900: #3d45a3;
-  --color-indigo-50: #f2f3fe;
-  --color-indigo-100: #e4e6fd;
-  --color-indigo-500: #727cf5;
-  --color-indigo-600: #727cf5;
-  --color-indigo-700: #5a64e0;
-  --color-violet-50: #f2f3fe;
-  --color-violet-600: #6b5eae;
-  --color-purple-50: #f3f1fa;
-  --color-purple-100: #e6e2f4;
-  --color-purple-600: #6b5eae;
-  --color-purple-700: #5b5095;
+  /* Primaire — Azur (226°). Les échelles blue, indigo, violet et purple y
+     pointent, pour que les pages qui les utilisaient restent dans le système. */
+  --color-blue-50: #eef3ff;
+  --color-blue-100: #dbe5ff;
+  --color-blue-200: #bccfff;
+  --color-blue-300: #93aeff;
+  --color-blue-400: #6285fa;
+  --color-blue-500: #3f63ec;
+  --color-blue-600: #2e4bd8;
+  --color-blue-700: #2439b0;
+  --color-blue-800: #1f318c;
+  --color-blue-900: #1b2b70;
+  --color-indigo-50: #eef3ff;
+  --color-indigo-100: #dbe5ff;
+  --color-indigo-500: #3f63ec;
+  --color-indigo-600: #2e4bd8;
+  --color-indigo-700: #2439b0;
+  --color-violet-50: #f1f0ff;
+  --color-violet-600: #5b4fd6;
+  --color-purple-50: #f1f0ff;
+  --color-purple-100: #e4e1ff;
+  --color-purple-600: #5b4fd6;
+  --color-purple-700: #4a3fb5;
 
-  /* Danger — rouge Hyper (#fa5c7c) */
-  --color-red-50: #fef3f5;
-  --color-red-100: #fee3e9;
-  --color-red-200: #fdcad5;
-  --color-red-300: #fca1b4;
-  --color-red-400: #fb7d97;
-  --color-red-500: #fa5c7c;
-  --color-red-600: #fa5c7c;
-  --color-red-700: #e63e60;
-  --color-red-800: #c22f4d;
-  --color-red-900: #a02742;
+  /* Danger — Rose profond (348°) */
+  --color-red-50: #fff1f3;
+  --color-red-100: #ffe0e5;
+  --color-red-200: #ffc5ce;
+  --color-red-300: #ff9baa;
+  --color-red-400: #f9647d;
+  --color-red-500: #ef3e5c;
+  --color-red-600: #dc2848;
+  --color-red-700: #b91c3a;
+  --color-red-800: #971a33;
+  --color-red-900: #7e1a2f;
+  --color-rose-500: #ef3e5c;
+  --color-rose-600: #dc2848;
 
-  /* Success — vert Hyper (#0acf97) */
-  --color-green-50: #eefdf8;
-  --color-green-100: #d4fbef;
-  --color-green-200: #a9f5de;
-  --color-green-300: #6aeac7;
-  --color-green-500: #0acf97;
-  --color-green-600: #0acf97;
-  --color-green-700: #08a87b;
-  --color-green-800: #0a8564;
-  --color-green-900: #0a6d53;
-  --color-emerald-50: #eefdf8;
-  --color-emerald-500: #0acf97;
-  --color-emerald-600: #0acf97;
-  --color-emerald-700: #08a87b;
+  /* Succès — Émeraude (162°) */
+  --color-green-50: #ecfdf5;
+  --color-green-100: #d1fae5;
+  --color-green-200: #a7f3d0;
+  --color-green-300: #6ee7b7;
+  --color-green-500: #10b981;
+  --color-green-600: #059669;
+  --color-green-700: #047857;
+  --color-green-800: #065f46;
+  --color-green-900: #064e3b;
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-teal-500: #10b981;
+  --color-teal-600: #059669;
 
-  /* Info — cyan Hyper (#39afd1) */
-  --color-cyan-500: #39afd1;
-  --color-cyan-600: #39afd1;
-  --color-cyan-700: #2f93b0;
-  --color-sky-500: #39afd1;
-  --color-sky-600: #39afd1;
+  /* Info — Ciel (200°) */
+  --color-cyan-50: #ecfaff;
+  --color-cyan-100: #d5f2ff;
+  --color-cyan-500: #0ea5e9;
+  --color-cyan-600: #0284c7;
+  --color-cyan-700: #0369a1;
+  --color-sky-50: #ecfaff;
+  --color-sky-100: #d5f2ff;
+  --color-sky-500: #0ea5e9;
+  --color-sky-600: #0284c7;
+  --color-sky-700: #0369a1;
 
-  /* Warning — jaune Hyper (#ffbc00) */
-  --color-yellow-50: #fff9e6;
-  --color-yellow-100: #fff2c7;
-  --color-yellow-200: #ffe694;
-  --color-yellow-300: #ffd75c;
-  --color-yellow-400: #ffca2c;
-  --color-yellow-500: #ffbc00;
-  --color-yellow-600: #e6a900;
-  --color-yellow-700: #b88700;
-  --color-yellow-800: #8a6600;
-  --color-amber-50: #fff9e6;
-  --color-amber-100: #fff2c7;
-  --color-amber-400: #ffca2c;
-  --color-amber-500: #ffbc00;
-  --color-amber-600: #e6a900;
-  --color-amber-700: #b88700;
-  --color-orange-100: #ffe5d0;
-  --color-orange-700: #c25e00;
+  /* Alerte — Ambre (38°) */
+  --color-yellow-50: #fffbeb;
+  --color-yellow-100: #fef3c7;
+  --color-yellow-200: #fde68a;
+  --color-yellow-300: #fcd34d;
+  --color-yellow-400: #fbbf24;
+  --color-yellow-500: #f59e0b;
+  --color-yellow-600: #d97706;
+  --color-yellow-700: #b45309;
+  --color-yellow-800: #92400e;
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-orange-100: #ffedd5;
+  --color-orange-700: #c2410c;
 
-  /* Gris — neutres Hyper (body #6c757d, muted #98a6ad, dark #313a46) */
-  --color-gray-50: #fafbfe;
-  --color-gray-100: #f1f3fa;
-  --color-gray-200: #eef2f7;
-  --color-gray-300: #dee2e6;
-  --color-gray-400: #98a6ad;
-  --color-gray-500: #98a6ad;
-  --color-gray-600: #6c757d;
-  --color-gray-700: #6c757d;
-  --color-gray-800: #343a40;
-  --color-gray-900: #313a46;
+  /* Menu latéral — ardoises claires sur le fond profond du menu. */
+  --color-sidebar-link: #94a3b8;
+  --color-sidebar-link-hover: #e2e8f0;
+
+  /* Neutres — Ardoise froide, accordée à l'azur. */
+  --color-gray-50: #f8fafc;
+  --color-gray-100: #f1f5f9;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-gray-600: #475569;
+  --color-gray-700: #334155;
+  --color-gray-800: #1e293b;
+  --color-gray-900: #0f172a;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
 }
 
-/* ── Sidebar Hyper, thème « dark » ──────────────────────────────────────
-   L'app Laravel force `leftSideBarTheme: "dark"` dans le `data-layout-config`
-   du <body>, soit `[data-leftbar-theme=dark] .leftside-menu { background:#313a46 }`
-   — et non le dégradé violet par défaut du thème.                          */
+/* ── Menu latéral ───────────────────────────────────────────────────────
+   Ardoise profonde (#0f172a) plutôt que le gris-bleu Hyper (#313a46) : plus
+   dense, elle fait ressortir l'azur de l'élément actif. Un liseré interne très
+   discret sépare le menu du contenu sans recourir à une ombre portée, que le
+   fond sombre rendait de toute façon invisible.                            */
 .hyper-sidebar {
-  background: #313a46;
-  box-shadow: 0 0 35px 0 rgba(154, 161, 171, 0.15);
+  background: #0f172a;
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
 }
 
-/* ── Topbar Hyper : `.navbar-custom` ───────────────────────────────────── */
+/* ── Barre du haut ──────────────────────────────────────────────────────
+   Hyper posait une ombre diffuse de 35px sous la barre. Une bordure nette de
+   1px lit mieux : elle sépare franchement sans salir le blanc du contenu.  */
 .hyper-topbar {
   background-color: #fff;
-  box-shadow: 0 0 35px 0 rgba(154, 161, 171, 0.15);
+  border-bottom: 1px solid var(--color-gray-200);
 }
 
 /* ── Wizard (contrat employé) : mouvement identique à Bootstrap/Hyper ────
@@ -164,21 +223,24 @@ textarea::placeholder {
 /* ── react-select global styles (classNamePrefix="react-select") ────────── */
 .react-select__control {
   background-color: #ffffff !important;
-  border-color: #d1d5db !important;
-  border-radius: 0.5rem !important;
-  min-height: 38px !important;
+  border-color: var(--color-gray-300) !important;
+  border-radius: var(--radius-control) !important;
+  /* Doit rester égal à SELECT_CONTROL_MIN_HEIGHT (components/ui/selectStyles.ts)
+     et à la hauteur des inputs et des <select> natifs. Ce !important écrasait
+     les styles react-select : c'est lui, et non le JS, qui fixait la hauteur. */
+  min-height: 40px !important;
   font-size: 0.875rem !important;
   box-shadow: none !important;
 }
 .react-select__control:hover {
-  border-color: #9ca3af !important;
+  border-color: var(--color-gray-400) !important;
 }
 .react-select__control--is-focused {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 1px #3b82f6 !important;
+  border-color: var(--color-blue-500) !important;
+  box-shadow: 0 0 0 3px rgba(63, 99, 236, 0.14) !important;
 }
 .react-select__control--is-disabled {
-  background-color: #f9fafb !important;
+  background-color: var(--color-gray-100) !important;
 }
 
 .react-select__input-container,
@@ -199,9 +261,9 @@ textarea::placeholder {
 
 .react-select__menu {
   background-color: #ffffff !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06) !important;
+  border: none !important;
+  border-radius: var(--radius-surface) !important;
+  box-shadow: var(--elevation-overlay) !important;
   z-index: 50 !important;
 }
 
@@ -228,33 +290,33 @@ textarea::placeholder {
 /* Curseur (survol / navigation clavier) : BLEU CLAIR, dans tous les champs. */
 .react-select__option:hover,
 .react-select__option--is-focused {
-  background-color: #eff6ff !important;
-  color: #374151 !important;
+  background-color: var(--color-blue-50) !important;
+  color: var(--color-gray-800) !important;
 }
 .react-select__option--is-selected {
-  background-color: #2563eb !important;
+  background-color: var(--color-blue-600) !important;
   color: #ffffff !important;
 }
 .react-select__option--is-selected:hover {
-  background-color: #1d4ed8 !important;
+  background-color: var(--color-blue-700) !important;
   color: #ffffff !important;
 }
 
 .react-select__multi-value {
-  background-color: #dbeafe !important;
+  background-color: var(--color-blue-100) !important;
   border-radius: 0.375rem !important;
 }
 .react-select__multi-value__label {
-  color: #1d4ed8 !important;
+  color: var(--color-blue-700) !important;
   font-size: 0.75rem !important;
   font-weight: 500 !important;
 }
 .react-select__multi-value__remove {
-  color: #1d4ed8 !important;
+  color: var(--color-blue-700) !important;
 }
 .react-select__multi-value__remove:hover {
-  background-color: #bfdbfe !important;
-  color: #1e40af !important;
+  background-color: var(--color-blue-200) !important;
+  color: var(--color-blue-800) !important;
 }
 
 .react-select__indicator-separator {
@@ -430,8 +492,8 @@ textarea::placeholder {
   }
   .native-select option:hover,
   .native-select option:focus {
-    background: #eff6ff;
-    color: #374151;
+    background: var(--color-blue-50);
+    color: var(--color-gray-800);
   }
   /* Option sélectionnée : surbrillance légère + texte bleu LISIBLE.
      Ne jamais mettre `color: #ffffff` ici : avec appearance:base-select, Chromium
@@ -439,7 +501,7 @@ textarea::placeholder {
      la valeur sélectionnée devient invisible. Un bleu foncé reste lisible aussi bien
      sur le fond blanc du champ fermé que sur la surbrillance claire de la liste. */
   .native-select option:checked {
-    background: #2563eb;
+    background: var(--color-blue-600);
     color: #ffffff;
   }
   /* Le champ FERMÉ clone l'option cochée : on force un texte foncé lisible sur le
@@ -536,12 +598,14 @@ textarea::placeholder {
    du thème Hyper (cartes, labels, champs, boutons).
    --------------------------------------------------------------------------- */
 
-/* .card — Hyper : border:none + ombre douce + coins .25rem */
+/* .card — surface principale. Rayon 12px et élévation en deux couches (ombre
+   de contact + ombre d'ambiance + liseré) : la carte se détache du fond sans
+   le halo flou de 35px du thème d'origine. */
 .hyper-card {
   background-color: #fff;
   border: none;
-  border-radius: 0.25rem;
-  box-shadow: 0 0 35px 0 rgba(154, 161, 171, 0.15);
+  border-radius: var(--radius-surface);
+  box-shadow: var(--elevation-flat);
 }
 .hyper-card-body {
   padding: 1.5rem 1.5rem;
@@ -562,68 +626,78 @@ textarea::placeholder {
   margin-bottom: 1.5rem;
 }
 
-/* .form-control — champ de saisie exact du thème Hyper */
+/* Champ de saisie. Le focus d'origine se contentait de griser la bordure —
+   presque invisible, et rien pour le clavier. On pose la bordure primaire plus
+   un halo de 3px à faible opacité : lisible, sans le trait système brutal. */
 .hyper-form-control {
   display: block;
   width: 100%;
-  padding: 0.45rem 0.9rem;
+  padding: 0.55rem 0.85rem;
   font-size: 0.9rem;
   font-weight: 400;
   line-height: 1.5;
-  color: #6c757d;
+  color: var(--color-gray-800);
   background-color: #fff;
   background-clip: padding-box;
-  border: 1px solid #dee2e6;
-  border-radius: 0.25rem;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-control);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.hyper-form-control:hover:not(:disabled):not([readonly]) {
+  border-color: var(--color-gray-400);
 }
 .hyper-form-control:focus {
-  color: #6c757d;
+  color: var(--color-gray-800);
   background-color: #fff;
-  border-color: #c8cbcf;
+  border-color: var(--color-blue-500);
   outline: 0;
-  box-shadow: none;
+  box-shadow: 0 0 0 3px rgba(63, 99, 236, 0.14);
 }
 .hyper-form-control::placeholder {
-  color: #adb5bd;
+  color: var(--color-gray-400);
   opacity: 1;
 }
 .hyper-form-control[readonly] {
-  background-color: #eef2f7;
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-500);
   opacity: 1;
 }
 
-/* .btn + .btn-success — bouton vert Hyper */
+/* Bouton. Graisse 500 (et non 400) : à 0.9rem, un libellé en poids normal sur
+   fond coloré paraît délavé. Le survol assombrit d'un cran et lève légèrement
+   l'élément — l'ombre teintée à 50 % d'opacité du thème d'origine bavait sur
+   les surfaces claires. */
 .hyper-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-weight: 400;
+  justify-content: center;
+  gap: 0.4rem;
+  font-weight: 500;
   line-height: 1.5;
   text-align: center;
   vertical-align: middle;
   cursor: pointer;
-  padding: 0.45rem 0.9rem;
+  padding: 0.5rem 0.9rem;
   font-size: 0.9rem;
-  border-radius: 0.15rem;
+  border-radius: var(--radius-control);
   border: 1px solid transparent;
-  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out,
-    border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease, transform 0.15s ease;
 }
 .hyper-btn-success {
   color: #fff;
-  background-color: #0acf97;
-  border-color: #0acf97;
+  background-color: var(--color-green-600);
+  border-color: var(--color-green-600);
 }
-.hyper-btn-success:hover {
+.hyper-btn-success:hover:not(:disabled) {
   color: #fff;
-  background-color: #09b988;
-  border-color: #08ae80;
-  box-shadow: 0 2px 6px 0 rgba(10, 207, 151, 0.5);
+  background-color: var(--color-green-700);
+  border-color: var(--color-green-700);
+  box-shadow: 0 4px 10px -2px rgba(5, 150, 105, 0.35);
 }
 .hyper-btn:disabled {
-  opacity: 0.65;
-  cursor: default;
+  opacity: 0.55;
+  cursor: not-allowed;
   box-shadow: none;
 }
 
@@ -645,12 +719,12 @@ textarea::placeholder {
   opacity: 0.9;
 }
 .hyper-tooltip__inner {
-  max-width: 200px;
-  padding: 0.4rem 0.8rem;
-  color: #f1f3fa;
+  max-width: 220px;
+  padding: 0.4rem 0.7rem;
+  color: var(--color-gray-100);
   text-align: center;
-  background-color: #343a40;
-  border-radius: 0.2rem;
+  background-color: var(--color-gray-900);
+  border-radius: 0.375rem;
 }
 .hyper-tooltip__arrow {
   position: absolute;
@@ -715,15 +789,18 @@ textarea::placeholder {
   }
 }
 
-/* En-tête de carte : <h5 class="mb-4 text-uppercase"> — .9375rem / 500 */
+/* En-tête de carte. Le `text-transform: uppercase` d'origine, hérité de
+   Bootstrap, hache la lecture des libellés français longs et de leurs accents
+   (« RÉCAPITULATIF DES DÉPENSES »). On garde la casse d'origine et on tient la
+   hiérarchie par la graisse et la couleur, plus lisibles à cette taille. */
 .hyper-card-heading {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  margin: 0 0 1.5rem 0;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem 0;
   font-size: 0.9375rem;
-  font-weight: 500;
-  line-height: 1.1;
-  text-transform: uppercase;
-  color: #6c757d;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.006em;
+  color: var(--color-gray-800);
 }

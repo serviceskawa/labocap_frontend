@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -22,6 +22,7 @@ import type { AxiosError } from "axios";
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FormToggle } from "@/components/ui/FormToggle";
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { testOrdersApi, type TestOrderRequest } from "@/lib/api/testOrders";
 import { openDocFile } from "@/lib/api/docs";
 import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
@@ -90,6 +91,7 @@ interface EditPageProps {
 export default function TestOrderEditPage({ params }: EditPageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -97,6 +99,7 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
     control,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<EditOrderFormData>({
     resolver: zodResolver(editOrderSchema),
@@ -247,6 +250,15 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
           toast.error("Demande mise à jour, mais échec de l'envoi de la pièce jointe");
         }
       }
+      // La page détails lit la demande depuis le cache react-query : sans
+      // invalidation elle affichait l'ancienne version (pièce jointe absente)
+      // jusqu'à un rechargement manuel. On attend le refetch avant de naviguer
+      // pour que la page s'ouvre déjà à jour.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["test-order", id] }),
+        queryClient.invalidateQueries({ queryKey: ["test-order-images", id] }),
+        queryClient.invalidateQueries({ queryKey: ["test-orders"] }),
+      ]);
       toast.success("Demande mise à jour avec succès");
       router.push(`/test-orders/${id}/details`);
     },
@@ -618,14 +630,15 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
               <label className="text-sm font-medium text-gray-700">
                 Option d&apos;envoi des résultats
               </label>
-              <select
-                {...register("option")}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              <NativeSelect
+                value={watch("option") ?? ""}
+                onChange={(e) => setValue("option", e.target.value)}
+                placeholder="Sélectionner une option d'envoi"
               >
                 <option value="">Sélectionner une option d&apos;envoi</option>
                 <option value="0">Appel</option>
                 <option value="1">SMS</option>
-              </select>
+              </NativeSelect>
             </div>
 
           </div>

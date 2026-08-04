@@ -23,6 +23,11 @@ import type { AxiosError } from "axios";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
@@ -38,6 +43,7 @@ import {
   formatFileSize,
 } from "@/lib/api/docs";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Vue active du volet droit
@@ -48,8 +54,6 @@ type View =
   | { type: "trash" }
   | { type: "category"; id: string; name: string };
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 export default function DocsExplorerPage() {
   const { can } = usePermissions();
@@ -96,6 +100,13 @@ export default function DocsExplorerPage() {
     queryFn: () => docsApi.getVersions(historyDoc!.id).then((r) => r.data),
     enabled: !!historyDoc,
   });
+
+  // Versions les plus récentes en tête, puis paginées comme les autres tableaux.
+  const sortedVersions = useMemo(
+    () => [...(versions ?? [])].sort((a, b) => b.version - a.version),
+    [versions],
+  );
+  const versionsPagination = useTablePagination(sortedVersions);
 
   function invalidateDocs() {
     queryClient.invalidateQueries({ queryKey: ["docs-explorer"] });
@@ -519,24 +530,24 @@ export default function DocsExplorerPage() {
               <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
             ))}
           </div>
-        ) : !versions || versions.length === 0 ? (
+        ) : sortedVersions.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-500">Aucune version trouvée.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left">
-                  <th className="pb-2 pr-4 font-medium text-gray-700">Version</th>
-                  <th className="pb-2 pr-4 font-medium text-gray-700">Titre</th>
-                  <th className="pb-2 pr-4 font-medium text-gray-700">Taille</th>
-                  <th className="pb-2 pr-4 font-medium text-gray-700">Date</th>
-                  <th className="pb-2 font-medium text-gray-700">Fichier</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...versions]
-                  .sort((a, b) => b.version - a.version)
-                  .map((v) => (
+          <div>
+            <TableLengthControl pagination={versionsPagination} />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left">
+                    <th className="pb-2 pr-4 font-medium text-gray-700">Version</th>
+                    <th className="pb-2 pr-4 font-medium text-gray-700">Titre</th>
+                    <th className="pb-2 pr-4 font-medium text-gray-700">Taille</th>
+                    <th className="pb-2 pr-4 font-medium text-gray-700">Date</th>
+                    <th className="pb-2 font-medium text-gray-700">Fichier</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {versionsPagination.pageRows.map((v) => (
                     <tr key={v.id} className="border-b border-gray-100 last:border-0">
                       <td className="py-2 pr-4">v{v.version}</td>
                       <td className="py-2 pr-4 text-gray-800">{v.title ?? "—"}</td>
@@ -554,8 +565,10 @@ export default function DocsExplorerPage() {
                       </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
+            <TablePaginationFooter pagination={versionsPagination} />
           </div>
         )}
       </CrudModal>

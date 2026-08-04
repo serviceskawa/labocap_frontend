@@ -275,7 +275,16 @@ export default function SearchPage() {
   // -----------------------------------------------------------------------
   // Export CSV
   // -----------------------------------------------------------------------
-  const exportToCsv = async () => {
+  /**
+   * Export du résultat de recherche au format Excel.
+   *
+   * Laravel renvoie un vrai classeur `.xlsx` (Maatwebsite Excel,
+   * `SearchController::export`). L'ancienne version fabriquait un CSV renommé
+   * sous un bouton « Exporter Excel » : ni le format ni l'extension ne
+   * correspondaient. ExcelJS est chargé dynamiquement pour ne peser sur le
+   * bundle que si l'utilisateur exporte réellement.
+   */
+  const exportToExcel = async () => {
     const total = data?.totalElements ?? 0;
     if (total === 0) {
       toast.error("Aucune donnée à exporter");
@@ -294,60 +303,67 @@ export default function SearchPage() {
       setIsExporting(false);
       return;
     }
-    setIsExporting(false);
 
     if (rows.length === 0) {
+      setIsExporting(false);
       toast.error("Aucune donnée à exporter");
       return;
     }
-    const headers = [
-      "Code Rapport",
-      "Code Examen",
-      "Type d'examen",
-      "Contrat",
-      "Patient",
-      "Médecin",
-      "Hôpital",
-      "Réf. hôpital",
-      "Date de création",
-      "Urgent",
-    ];
-    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-    const csv = [
-      headers.map(escape).join(","),
-      ...rows.map((r) =>
-        [
-          r.codeReport ?? "",
-          r.codeExamen ?? "",
-          r.typeExamen ?? "",
-          r.contractName ?? "",
-          `${r.patientFirstname ?? ""} ${r.patientLastname ?? ""}`.trim(),
-          r.doctorName ?? "",
-          r.hospitalName ?? "",
-          r.referenceHospital ?? "",
-          r.dateCreation ?? "",
-          r.isUrgent ? "Oui" : "Non",
-        ]
-          .map((c) => escape(String(c)))
-          .join(","),
-      ),
-    ].join("\n");
 
-    // BOM UTF-8 pour qu'Excel ouvre correctement les accents
-    const blob = new Blob(["﻿" + csv], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `recherche-rapports-${new Date()
-      .toISOString()
-      .slice(0, 10)}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    toast.success(`${rows.length} ligne(s) exportée(s)`);
+    try {
+      const ExcelJS = (await import("exceljs")).default;
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet("Rapports");
+
+      sheet.columns = [
+        { header: "Code Rapport", key: "codeReport", width: 16 },
+        { header: "Code Examen", key: "codeExamen", width: 16 },
+        { header: "Type d'examen", key: "typeExamen", width: 20 },
+        { header: "Contrat", key: "contrat", width: 26 },
+        { header: "Patient", key: "patient", width: 26 },
+        { header: "Médecin", key: "medecin", width: 22 },
+        { header: "Hôpital", key: "hopital", width: 22 },
+        { header: "Réf. hôpital", key: "refHopital", width: 16 },
+        { header: "Date de création", key: "dateCreation", width: 18 },
+        { header: "Urgent", key: "urgent", width: 10 },
+      ];
+      sheet.getRow(1).font = { bold: true };
+
+      for (const r of rows) {
+        sheet.addRow({
+          codeReport: r.codeReport ?? "",
+          codeExamen: r.codeExamen ?? "",
+          typeExamen: r.typeExamen ?? "",
+          contrat: r.contractName ?? "",
+          patient: `${r.patientFirstname ?? ""} ${r.patientLastname ?? ""}`.trim(),
+          medecin: r.doctorName ?? "",
+          hopital: r.hospitalName ?? "",
+          refHopital: r.referenceHospital ?? "",
+          dateCreation: r.dateCreation ?? "",
+          urgent: r.isUrgent ? "Oui" : "Non",
+        });
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `recherche-rapports-${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success(`${rows.length} ligne(s) exportée(s)`);
+    } catch {
+      toast.error("Erreur lors de la génération du fichier Excel");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // -----------------------------------------------------------------------
@@ -604,7 +620,7 @@ export default function SearchPage() {
 
           <button
             type="button"
-            onClick={exportToCsv}
+            onClick={exportToExcel}
             disabled={isExporting}
             className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
           >

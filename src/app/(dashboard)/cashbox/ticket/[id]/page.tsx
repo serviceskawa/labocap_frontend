@@ -14,20 +14,34 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { RHFSelect } from "@/components/ui/RHFSelect";
 import { FormField } from "@/components/ui/FormField";
 import { PermissionGate } from "@/components/common/PermissionGate";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { cashboxApi } from "@/lib/api/cashbox";
+import { cashboxApi, type CashboxVoucherDetail } from "@/lib/api/cashbox";
+import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { API_ORIGIN } from "@/lib/api/client";
 import { expenseCategoriesApi } from "@/lib/api/expenses";
 import { suppliersApi } from "@/lib/api/suppliers";
 import type { ApiError } from "@/types/api";
 import { Button } from "@/components/ui/Button";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 function formatAmount(v?: number) {
   if (v == null) return "—";
   return new Intl.NumberFormat("fr-FR").format(v) + " FCFA";
+}
+
+/**
+ * Ne retient que les chiffres d'une saisie : les montants sont en FCFA, une
+ * devise sans sous-unité, et les quantités sont des entiers. Cela écarte aussi
+ * le signe moins, la virgule et la notation exponentielle.
+ */
+function entierPositif(value: string): string {
+  return value.replace(/\D/g, "");
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +106,12 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
   // Pièce jointe du bon (optionnelle) — remplace l'existante si fournie.
   const [ticketFile, setTicketFile] = useState<File | null>(null);
 
+  // Ligne d'article en attente de confirmation de suppression : comme partout
+  // ailleurs dans l'application, un clic sur la corbeille ne supprime pas
+  // directement.
+  const [detailToDelete, setDetailToDelete] =
+    useState<CashboxVoucherDetail | null>(null);
+
   // Réinitialise le formulaire quand le bon est chargé.
   useEffect(() => {
     if (voucher) {
@@ -151,9 +171,13 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashbox-ticket", id] });
       queryClient.invalidateQueries({ queryKey: ["cashbox-tickets"] });
+      setDetailToDelete(null);
+      toast.success("Article supprimé");
     },
-    onError: (e: AxiosError<ApiError>) =>
-      toast.error(e.response?.data?.message ?? "Erreur lors de la suppression"),
+    onError: (e: AxiosError<ApiError>) => {
+      toast.error(e.response?.data?.message ?? "Erreur lors de la suppression");
+      setDetailToDelete(null);
+    },
   });
 
   function handleAddDetail() {
@@ -161,8 +185,14 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
       toast.error("Le nom de l'article est requis");
       return;
     }
-    if (!(Number(unitPrice) > 0)) {
-      toast.error("Le prix doit être supérieur à 0");
+    // Montants en FCFA : entiers strictement positifs. La saisie est déjà
+    // filtrée, ce contrôle couvre le champ laissé vide ou à zéro.
+    if (!Number.isInteger(Number(unitPrice)) || Number(unitPrice) < 1) {
+      toast.error("Le prix doit être un nombre entier d'au moins 1 FCFA");
+      return;
+    }
+    if (!Number.isInteger(Number(quantity)) || Number(quantity) < 1) {
+      toast.error("La quantité doit être un nombre entier d'au moins 1");
       return;
     }
     addDetailMutation.mutate();
@@ -171,6 +201,7 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
   // ---- Render --------------------------------------------------------------
 
   const details = voucher?.details ?? [];
+  const detailsPagination = useTablePagination(details);
 
   return (
     <PermissionGate
@@ -219,7 +250,9 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
                 <h2 className="text-base font-semibold text-gray-800">
                   Informations du bon
                 </h2>
-                <span className="text-xs text-gray-400">* champs obligatoires</span>
+                <span className="text-xs text-gray-600">
+                  <span className="text-red-500">*</span> champs obligatoires
+                </span>
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -310,24 +343,31 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="mb-1 block text-xs text-gray-500">Prix</label>
+                    <label className="mb-1 block text-xs text-gray-500">
+                      Prix <span className="text-red-500">*</span>
+                    </label>
+                    {/* Le FCFA n'a pas de sous-unité : entiers strictement
+                        positifs uniquement. `type="text"` + filtrage plutôt que
+                        `type="number"`, qui laisse saisir « 1,5 », « 1e3 » ou un
+                        signe moins sans que la valeur remonte jamais au champ. */}
                     <input
-                      type="number"
-                      min={0}
-                      step="0.01"
+                      type="text"
+                      inputMode="numeric"
                       value={unitPrice}
-                      onChange={(e) => setUnitPrice(e.target.value)}
+                      onChange={(e) => setUnitPrice(entierPositif(e.target.value))}
                       placeholder="0"
                       className={inputClass}
                     />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="mb-1 block text-xs text-gray-500">Quantité</label>
+                    <label className="mb-1 block text-xs text-gray-500">
+                      Quantité <span className="text-red-500">*</span>
+                    </label>
                     <input
-                      type="number"
-                      min={1}
+                      type="text"
+                      inputMode="numeric"
                       value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
+                      onChange={(e) => setQuantity(entierPositif(e.target.value))}
                       className={inputClass}
                     />
                   </div>
@@ -353,6 +393,7 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
               )}
 
               {/* Tableau des articles */}
+              <TableLengthControl pagination={detailsPagination} />
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
@@ -375,9 +416,11 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
                       </td>
                     </tr>
                   ) : (
-                    details.map((d, i) => (
+                    detailsPagination.pageRows.map((d, i) => (
                       <tr key={d.id}>
-                        <td className="py-2 pr-4 text-gray-500">{i + 1}</td>
+                        <td className="py-2 pr-4 text-gray-500">
+                          {detailsPagination.offset + i + 1}
+                        </td>
                         <td className="py-2 pr-4 font-medium">{d.itemName}</td>
                         <td className="py-2 pr-4 text-right text-gray-600">
                           {formatAmount(d.unitPrice)}
@@ -390,7 +433,7 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
                           <td className="py-2 text-right">
                             <button
                               type="button"
-                              onClick={() => removeDetailMutation.mutate(d.id)}
+                              onClick={() => setDetailToDelete(d)}
                               className="inline-flex h-8 w-8 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
                               title="Supprimer la ligne"
                             >
@@ -414,9 +457,23 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
                   </tr>
                 </tfoot>
               </table>
+              <TablePaginationFooter pagination={detailsPagination} />
             </div>
           </>
         )}
+
+        <ConfirmModal
+          isOpen={detailToDelete !== null}
+          onClose={() => setDetailToDelete(null)}
+          onConfirm={() => {
+            if (detailToDelete) removeDetailMutation.mutate(detailToDelete.id);
+          }}
+          title="Confirmation"
+          message={`Voulez-vous supprimer l'article « ${detailToDelete?.itemName ?? ""} » de ce bon de caisse ?`}
+          confirmLabel="Oui, supprimer!"
+          confirmVariant="danger"
+          isLoading={removeDetailMutation.isPending}
+        />
       </div>
     </PermissionGate>
   );

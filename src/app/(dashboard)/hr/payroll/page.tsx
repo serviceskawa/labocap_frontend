@@ -6,7 +6,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, Pencil, Trash2 } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 import type { UseFormReturn } from "react-hook-form";
@@ -17,11 +17,13 @@ import { RHFSelect } from "@/components/ui/RHFSelect";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { DataTable } from "@/components/common/DataTable";
 import { CrudModal } from "@/components/common/CrudModal";
+import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { hrApi, Payroll, PayrollRequest, Employee } from "@/lib/api/hr";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema — aligné sur EmployeePayrollRequestDto
@@ -43,8 +45,6 @@ type PayrollFormValues = z.infer<typeof payrollSchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 function formatAmount(amount?: number): string {
   if (amount == null) return "—";
@@ -84,6 +84,8 @@ export default function PayrollPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [filterMonth, setFilterMonth] = useState<string>("");
   const [filterYear, setFilterYear] = useState<string>("");
+  const [editing, setEditing] = useState<Payroll | null>(null);
+  const [deleting, setDeleting] = useState<Payroll | null>(null);
 
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 5 }, (_, i) => currentYear - i);
@@ -145,6 +147,40 @@ export default function PayrollPage() {
     },
   });
 
+  // Correction d'une fiche existante — route Laravel `employee.payroll.update`,
+  // qui n'avait pas d'équivalent : une fiche erronée était définitive.
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: PayrollRequest }) =>
+      hrApi.updatePayroll(selectedEmployeeId, id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payrolls", selectedEmployeeId] });
+      toast.success("Fiche de paie mise à jour");
+      setEditing(null);
+    },
+    onError: (err: AxiosError) => {
+      toast.error(
+        (err.response?.data as { message?: string })?.message ??
+          "Une erreur est survenue",
+      );
+    },
+  });
+
+  // Suppression — route Laravel `employee.payroll.delete`.
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => hrApi.deletePayroll(selectedEmployeeId, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["payrolls", selectedEmployeeId] });
+      toast.success("Fiche de paie supprimée");
+      setDeleting(null);
+    },
+    onError: (err: AxiosError) => {
+      toast.error(
+        (err.response?.data as { message?: string })?.message ??
+          "Une erreur est survenue",
+      );
+    },
+  });
+
   // ---- Forms ---------------------------------------------------------------
 
   const createForm = useForm<PayrollFormValues>({
@@ -158,6 +194,48 @@ export default function PayrollPage() {
       paidAt: "",
     },
   });
+
+  const editForm = useForm<PayrollFormValues>({
+    resolver: zodResolver(payrollSchema),
+    defaultValues: {
+      employeeId: "",
+      month: "",
+      year: "",
+      grossSalary: "",
+      deductions: "",
+      paidAt: "",
+    },
+  });
+
+  /** Ouvre la modale d'édition pré-remplie avec la fiche choisie. */
+  function openEdit(payroll: Payroll) {
+    editForm.reset({
+      employeeId: selectedEmployeeId,
+      month: String(payroll.month),
+      year: String(payroll.year),
+      grossSalary: String(payroll.grossSalary ?? ""),
+      deductions: payroll.deductions != null ? String(payroll.deductions) : "",
+      paidAt: payroll.paidAt ? payroll.paidAt.slice(0, 10) : "",
+    });
+    setEditing(payroll);
+  }
+
+  function onEditSubmit(values: PayrollFormValues) {
+    if (!editing) return;
+    updateMutation.mutate({
+      id: editing.id,
+      payload: {
+        month: Number(values.month),
+        year: Number(values.year),
+        grossSalary: Number(values.grossSalary),
+        deductions:
+          values.deductions === "" || values.deductions === undefined
+            ? undefined
+            : Number(values.deductions),
+        paidAt: values.paidAt || undefined,
+      },
+    });
+  }
 
   // ---- Handlers ------------------------------------------------------------
 
@@ -256,6 +334,24 @@ export default function PayrollPage() {
             )}
             {pdfLoadingId === row.original.id ? "..." : "PDF"}
           </button>
+          <button
+            type="button"
+            onClick={() => openEdit(row.original)}
+            title="Modifier"
+            aria-label="Modifier"
+            className="ml-1 inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-amber-50 text-amber-700 transition-colors hover:bg-amber-100"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDeleting(row.original)}
+            title="Supprimer"
+            aria-label="Supprimer"
+            className="ml-1 inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-red-50 text-red-700 transition-colors hover:bg-red-100"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         </PermissionGate>
       ),
     },
@@ -353,6 +449,39 @@ export default function PayrollPage() {
           yearOptions={yearOptions}
         />
       </CrudModal>
+
+      {/* ---- Modal correction d'une fiche de paie ---- */}
+      <CrudModal
+        isOpen={!!editing}
+        onClose={() => setEditing(null)}
+        title="Modifier la fiche de paie"
+        size="lg"
+        onSubmit={editForm.handleSubmit(onEditSubmit)}
+        submitLabel="Enregistrer"
+        isSubmitting={updateMutation.isPending}
+      >
+        <PayrollForm
+          form={editForm}
+          employeeOptions={employeeOptions}
+          yearOptions={yearOptions}
+          employeeLocked
+        />
+      </CrudModal>
+
+      {/* ---- Confirmation de suppression ---- */}
+      <ConfirmModal
+        isOpen={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
+        title="Supprimer cette fiche de paie"
+        message={
+          deleting
+            ? `La fiche ${monthLabel(deleting.month)} ${deleting.year} sera définitivement supprimée.`
+            : ""
+        }
+        confirmLabel="Supprimer"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }
@@ -370,9 +499,16 @@ interface PayrollFormProps {
   form: UseFormReturn<PayrollFormValues>;
   employeeOptions: EmployeeOption[];
   yearOptions: number[];
+  /** En correction, la fiche reste attachée à son employé : le champ est figé. */
+  employeeLocked?: boolean;
 }
 
-function PayrollForm({ form, employeeOptions, yearOptions }: PayrollFormProps) {
+function PayrollForm({
+  form,
+  employeeOptions,
+  yearOptions,
+  employeeLocked = false,
+}: PayrollFormProps) {
   const {
     register,
     control,
@@ -397,7 +533,8 @@ function PayrollForm({ form, employeeOptions, yearOptions }: PayrollFormProps) {
               value={employeeOptions.find((o) => o.value === field.value) ?? null}
               onChange={(opt) => field.onChange(opt?.value ?? "")}
               placeholder="Sélectionner un employé..."
-              isClearable
+              isClearable={!employeeLocked}
+              isDisabled={employeeLocked}
               classNamePrefix="react-select"
             />
           )}

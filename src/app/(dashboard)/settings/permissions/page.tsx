@@ -16,6 +16,7 @@ import { FormField } from "@/components/ui/FormField";
 import { usersApi, Permission } from "@/lib/api/users";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Helpers opération / ressource depuis le slug
@@ -41,8 +42,6 @@ function slugifyResource(input: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 interface FormState {
   name: string;

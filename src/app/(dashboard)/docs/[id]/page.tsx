@@ -6,7 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { ArrowLeft, Download, Eye, FileText, Upload, Calendar } from "lucide-react";
 
+import { Button } from "@/components/ui/Button";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { PermissionGate } from "@/components/common/PermissionGate";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { formatDate } from "@/lib/utils";
 import {
@@ -55,18 +62,23 @@ export default function DocDetailPage({
 
   const sortedVersions = [...(versions ?? [])].sort((a, b) => b.version - a.version);
   const maxVersion = sortedVersions[0]?.version ?? 0;
+  const versionsPagination = useTablePagination(sortedVersions);
 
   return (
     <div className="space-y-6">
-      {/* Retour */}
-      <button
-        type="button"
-        onClick={() => router.back()}
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Retour à la liste
-      </button>
+      {/* `page-title-box` de `documentations/docs/index_detail.blade.php` :
+          titre « Documents » et bouton de retour à droite. */}
+      <PageHeader
+        title="Documents"
+        action={
+          <Button
+            icon={<ArrowLeft className="h-4 w-4" />}
+            onClick={() => router.back()}
+          >
+            Retour à la liste
+          </Button>
+        }
+      />
 
       {isLoading ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm space-y-4 animate-pulse">
@@ -166,7 +178,9 @@ export default function DocDetailPage({
               ) : sortedVersions.length === 0 ? (
                 <p className="text-sm text-gray-500">Aucune version enregistrée.</p>
               ) : (
-                <div className="overflow-x-auto">
+                <div>
+                  <TableLengthControl pagination={versionsPagination} />
+                  <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200 text-left">
@@ -178,7 +192,7 @@ export default function DocDetailPage({
                       </tr>
                     </thead>
                     <tbody>
-                      {sortedVersions.map((v) => (
+                      {versionsPagination.pageRows.map((v) => (
                         <tr key={v.id} className="border-b border-gray-100 last:border-0">
                           <td className="py-3 pr-4">
                             {v.version === maxVersion ? (
@@ -210,6 +224,8 @@ export default function DocDetailPage({
                       ))}
                     </tbody>
                   </table>
+                  </div>
+                  <TablePaginationFooter pagination={versionsPagination} />
                 </div>
               )}
             </div>

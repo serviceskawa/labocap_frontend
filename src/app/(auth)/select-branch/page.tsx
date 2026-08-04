@@ -11,6 +11,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { authApi } from "@/lib/api/auth";
+import { AppLogo } from "@/components/ui/AppLogo";
 import { Button } from "@/components/ui/Button";
 import { branchesApi, UserBranch } from "@/lib/api/branches";
 import { useAuthStore } from "@/stores/auth.store";
@@ -97,15 +98,7 @@ export default function SelectBranchPage() {
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {/* Header avec logo */}
           <div className="bg-gray-50 px-8 py-6 text-center border-b">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.png"
-              alt="Logo"
-              className="h-12 mx-auto"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
+            <AppLogo className="h-12 mx-auto" />
           </div>
 
           <div className="px-8 py-8">

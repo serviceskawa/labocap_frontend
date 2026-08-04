@@ -44,7 +44,7 @@ export function Checkbox({
           id={inputId}
           type="checkbox"
           disabled={disabled}
-          className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-gray-300 bg-white transition-colors checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:ring-offset-1 disabled:cursor-not-allowed"
+          className="peer h-4 w-4 cursor-pointer appearance-none rounded-[0.3rem] border border-gray-300 bg-white shadow-sm transition-colors hover:border-gray-400 checked:border-blue-600 checked:bg-blue-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:bg-gray-100"
           {...props}
         />
         <Check
@@ -52,7 +52,7 @@ export function Checkbox({
           strokeWidth={3}
         />
       </span>
-      {label && <span className="text-sm text-gray-700">{label}</span>}
+      {label && <span className="text-[.875rem] text-gray-700">{label}</span>}
     </label>
   );
 }

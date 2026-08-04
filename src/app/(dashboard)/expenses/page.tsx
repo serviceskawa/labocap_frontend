@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { DataTable } from "@/components/common/DataTable";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FormField } from "@/components/ui/FormField";
+import { CreatableSelectField } from "@/components/ui/CreatableSelectField";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
@@ -28,6 +29,8 @@ import { downloadDocFile } from "@/lib/api/docs";
 import { suppliersApi } from "@/lib/api/suppliers";
 import { expenseCategoriesApi, type ExpenseCategory } from "@/lib/api/expenses";
 import { Button } from "@/components/ui/Button";
+import { applyFieldErrors } from "@/lib/api/errorMessages";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -53,15 +56,22 @@ function formatAmount(amount: number): string {
   );
 }
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 // Formulaire de création en ligne : « Catégorie de dépense », « Fournisseur »,
 // « Objet ». Le montant est saisi ensuite sur la page détail.
+// Les trois champs sont marqués obligatoires (astérisque) : seule la catégorie
+// était réellement validée, si bien qu'une dépense pouvait être créée sans
+// fournisseur ni objet, et les deux autres champs ne signalaient rien.
 const createSchema = z.object({
   expenseCategorieId: z.string().min(1, { message: "La catégorie est requise" }),
-  supplierName: z.string().optional(),
-  description: z.string().optional(),
+  supplierName: z
+    .string()
+    .trim()
+    .min(1, { message: "Le fournisseur est requis" }),
+  description: z
+    .string()
+    .trim()
+    .min(1, { message: "L'objet de la dépense est requis" }),
 });
 
 type CreateFormValues = z.infer<typeof createSchema>;
@@ -134,7 +144,13 @@ export default function ExpensesPage() {
       createForm.reset();
       router.push(`/expenses/${res.data.id}`);
     },
-    onError: (err: AxiosError) => toast.error(apiMessage(err)),
+    onError: (err: AxiosError) => {
+      // Les erreurs de validation du backend sont posées sous les champs
+      // concernés ; le toast ne sert plus que de repli.
+      if (!applyFieldErrors(err as never, createForm.setError as (n: string, e: { type: string; message: string }) => void)) {
+        toast.error(apiMessage(err));
+      }
+    },
   });
 
   const payMutation = useMutation({
@@ -334,10 +350,18 @@ export default function ExpensesPage() {
         >
           <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <FormField
-              label="Catégorie de dépense*"
+              label="Catégorie de dépense"
+              required
               error={createForm.formState.errors.expenseCategorieId?.message}
             >
-              <NativeSelect {...createForm.register("expenseCategorieId")}>
+              <NativeSelect
+                value={createForm.watch("expenseCategorieId")}
+                onChange={(e) =>
+                  createForm.setValue("expenseCategorieId", e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+              >
                 <option value="">Sélectionner une catégorie</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -347,21 +371,34 @@ export default function ExpensesPage() {
               </NativeSelect>
             </FormField>
 
-            <FormField label="Fournisseur*">
-              <input
-                type="text"
-                list="expense-suppliers"
-                className={inputClass}
-                {...createForm.register("supplierName")}
+            <FormField
+              label="Fournisseur"
+              required
+              error={createForm.formState.errors.supplierName?.message}
+            >
+              {/* Liste issue de la table des fournisseurs : select cherchable.
+                  Le `<datalist>` précédent n'offrait pas de vraie liste
+                  déroulante et sa présentation ne suivait pas les autres
+                  champs. La saisie libre reste possible — un nom inconnu crée
+                  le fournisseur, comme dans Laravel. */}
+              <CreatableSelectField
+                id="expense-supplier"
+                options={suppliers.map((s) => ({ value: s.name, label: s.name }))}
+                value={createForm.watch("supplierName") || null}
+                onChange={(v) =>
+                  createForm.setValue("supplierName", v ?? "", {
+                    shouldValidate: true,
+                  })
+                }
+                placeholder="Rechercher ou saisir un fournisseur…"
               />
-              <datalist id="expense-suppliers">
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.name} />
-                ))}
-              </datalist>
             </FormField>
 
-            <FormField label="Objet*">
+            <FormField
+              label="Objet"
+              required
+              error={createForm.formState.errors.description?.message}
+            >
               <input type="text" className={inputClass} {...createForm.register("description")} />
             </FormField>
 
@@ -381,23 +418,32 @@ export default function ExpensesPage() {
       {/* Filtres serveur (catégorie / statut) */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <NativeSelect
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            <option value="">Toutes les catégories</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </NativeSelect>
-          <NativeSelect value={paidFilter} onChange={(e) => setPaidFilter(e.target.value)}>
-            <option value="">Tous les statuts</option>
-            <option value="0">Non payée</option>
-            <option value="1">Payée non livrée</option>
-            <option value="2">Payée et livrée</option>
-          </NativeSelect>
+          <FormField label="Catégorie de dépense">
+            <NativeSelect
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              placeholder="Toutes les catégories"
+            >
+              <option value="">Toutes les catégories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </NativeSelect>
+          </FormField>
+          <FormField label="Statut">
+            <NativeSelect
+              value={paidFilter}
+              onChange={(e) => setPaidFilter(e.target.value)}
+              placeholder="Tous les statuts"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="0">Non payée</option>
+              <option value="1">Payée non livrée</option>
+              <option value="2">Payée et livrée</option>
+            </NativeSelect>
+          </FormField>
         </div>
       </div>
 

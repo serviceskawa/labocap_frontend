@@ -12,6 +12,7 @@ import { hrApi } from "@/lib/api/hr";
 import { macroscopyApi } from "@/lib/api/macroscopy";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectField } from "@/components/ui/SelectField";
+import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
 
 // ---------------------------------------------------------------------------
 // Page — Ajouter une macroscopie (réplique exact du formulaire Laravel)
@@ -188,7 +189,7 @@ export default function AddMacroscopyPage() {
                         ...base,
                         borderColor: "#d1d5db",
                         borderRadius: "0.375rem",
-                        minHeight: "38px",
+                        minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
                         boxShadow: "none",
                         "&:hover": { borderColor: "#d1d5db" },
                       }),

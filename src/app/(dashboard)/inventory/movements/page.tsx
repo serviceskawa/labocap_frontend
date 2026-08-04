@@ -21,6 +21,7 @@ import {
 import type { PageResponse, ApiError } from "@/types/api";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema — formulaire « Opérations sur le stock » (movements/index.blade.php).
@@ -30,13 +31,18 @@ import { Button } from "@/components/ui/Button";
 
 const movementSchema = z.object({
   articleId: z.string().min(1, "L'article est obligatoire"),
-  quantity: z.string().min(1, "La quantité est requise"),
+  // Plage bornée : au-delà, la colonne en base déborde et l'erreur remontée
+  // au testeur était indéterminée.
+  quantity: z
+    .string()
+    .min(1, "La quantité est requise")
+    .refine((v) => Number.isInteger(Number(v)) && Number(v) >= 1 && Number(v) <= 1_000_000, {
+      message: "La quantité doit être un entier compris entre 1 et 1 000 000",
+    }),
 });
 
 type MovementFormData = z.infer<typeof movementSchema>;
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 /**
  * Libellé d'action tel qu'affiché par Laravel (`augmenter` → Entrer,
@@ -178,7 +184,14 @@ export default function MovementsPage() {
               <label className="mb-1 block text-sm font-medium text-gray-700">
                 Article <span className="text-red-600">*</span>
               </label>
-              <NativeSelect {...form.register("articleId")}>
+              <NativeSelect
+                value={form.watch("articleId") ?? ""}
+                onChange={(e) =>
+                  form.setValue("articleId", e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+              >
                 {articles.length === 0 ? (
                   <option value="">Aucun article existant</option>
                 ) : (

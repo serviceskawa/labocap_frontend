@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
@@ -18,6 +18,11 @@ import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/common/DataTable";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { CrudModal } from "@/components/common/CrudModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
@@ -100,6 +105,14 @@ export default function DocsPage() {
     queryFn: () => docsApi.getVersions(historyDoc!.id).then((r) => r.data),
     enabled: !!historyDoc,
   });
+
+  // Versions les plus récentes en tête, puis paginées comme les autres tableaux.
+  const sortedVersions = useMemo(
+    () => [...(versions ?? [])].sort((a, b) => b.version - a.version),
+    [versions],
+  );
+  const maxVersion = sortedVersions[0]?.version ?? 0;
+  const versionsPagination = useTablePagination(sortedVersions);
 
   // --- Mutation: suppression
   const deleteMutation = useMutation({
@@ -505,49 +518,53 @@ export default function DocsPage() {
               <div key={i} className="h-10 animate-pulse rounded bg-gray-100" />
             ))}
           </div>
-        ) : !versions || versions.length === 0 ? (
+        ) : sortedVersions.length === 0 ? (
           <p className="py-6 text-center text-sm text-gray-500">Aucune version trouvée.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left">
-                  <th className="pb-2 pr-4 font-medium text-gray-700">Version</th>
-                  <th className="pb-2 pr-4 font-medium text-gray-700">Titre</th>
-                  <th className="pb-2 pr-4 font-medium text-gray-700">Taille</th>
-                  <th className="pb-2 pr-4 font-medium text-gray-700">Date</th>
-                  <th className="pb-2 font-medium text-gray-700">Fichier</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...versions].sort((a, b) => b.version - a.version).map((v) => (
-                  <tr key={v.id} className="border-b border-gray-100 last:border-0">
-                    <td className="py-2 pr-4">
-                      {v.version === Math.max(...versions.map((x) => x.version)) ? (
-                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                          v{v.version} — actuelle
-                        </span>
-                      ) : (
-                        <span className="text-gray-600">v{v.version}</span>
-                      )}
-                    </td>
-                    <td className="py-2 pr-4 text-gray-800">{v.title ?? "—"}</td>
-                    <td className="py-2 pr-4 text-gray-600">{formatFileSize(v.fileSize)}</td>
-                    <td className="py-2 pr-4 text-gray-600">{formatDate(v.createdAt)}</td>
-                    <td className="py-2">
-                      <button
-                        type="button"
-                        onClick={() => downloadDocFile(v.attachment)}
-                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        Télécharger
-                      </button>
-                    </td>
+          <div>
+            <TableLengthControl pagination={versionsPagination} />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 text-left">
+                    <th className="pb-2 pr-4 font-medium text-gray-700">Version</th>
+                    <th className="pb-2 pr-4 font-medium text-gray-700">Titre</th>
+                    <th className="pb-2 pr-4 font-medium text-gray-700">Taille</th>
+                    <th className="pb-2 pr-4 font-medium text-gray-700">Date</th>
+                    <th className="pb-2 font-medium text-gray-700">Fichier</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {versionsPagination.pageRows.map((v) => (
+                    <tr key={v.id} className="border-b border-gray-100 last:border-0">
+                      <td className="py-2 pr-4">
+                        {v.version === maxVersion ? (
+                          <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                            v{v.version} — actuelle
+                          </span>
+                        ) : (
+                          <span className="text-gray-600">v{v.version}</span>
+                        )}
+                      </td>
+                      <td className="py-2 pr-4 text-gray-800">{v.title ?? "—"}</td>
+                      <td className="py-2 pr-4 text-gray-600">{formatFileSize(v.fileSize)}</td>
+                      <td className="py-2 pr-4 text-gray-600">{formatDate(v.createdAt)}</td>
+                      <td className="py-2">
+                        <button
+                          type="button"
+                          onClick={() => downloadDocFile(v.attachment)}
+                          className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Télécharger
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <TablePaginationFooter pagination={versionsPagination} />
           </div>
         )}
       </CrudModal>

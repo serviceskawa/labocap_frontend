@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   FileText,
   Trash2,
@@ -29,6 +30,11 @@ import {
 } from "recharts";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { IconButton } from "@/components/ui/IconButton";
 
@@ -45,7 +51,13 @@ import {
 } from "@/lib/api/dashboard";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import apiClient from "@/lib/api/client";
+import { reportsApi } from "@/lib/api/reports";
 import { Button } from "@/components/ui/Button";
+import {
+  CHART_CATEGORICAL,
+  CHART_GRID,
+  CHART_STATUS,
+} from "@/lib/ui/chartColors";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -100,6 +112,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -109,6 +122,26 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
     } finally {
       setIsDeleting(false);
       setConfirmOpen(false);
+    }
+  };
+
+  /**
+   * Ouvre le PDF du compte rendu — équivalent de la route Laravel `report.pdf`.
+   *
+   * L'ancien lien pointait sur `/reports/{id}/print`, une route qui n'existe pas
+   * dans `src/app` : le bouton renvoyait une 404.
+   */
+  const handlePrintReport = async () => {
+    setIsPrinting(true);
+    try {
+      const res = await reportsApi.downloadPdf(report.id);
+      const url = URL.createObjectURL(res.data as Blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      toast.error("Erreur lors de la génération du PDF");
+    } finally {
+      setIsPrinting(false);
     }
   };
 
@@ -153,14 +186,14 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
             <FileText className="h-3.5 w-3.5" />
             CR terminé
           </Link>
-          <Link
-            href={`/reports/${report.id}/print`}
-            target="_blank"
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+          <Button
+            onClick={handlePrintReport}
+            disabled={isPrinting}
+            className="gap-1 rounded bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 hover:bg-yellow-200 hover:shadow-none"
           >
             <Printer className="h-3.5 w-3.5" />
-            Imprimer
-          </Link>
+            {isPrinting ? "Génération…" : "Imprimer"}
+          </Button>
         </>
       )}
 
@@ -211,7 +244,12 @@ function ProgressTable({
   color = "bg-blue-500",
 }: ProgressTableProps) {
   const max = data.length > 0 ? Math.max(...data.map((d) => d.value)) : 1;
+  // La barre reste proportionnelle au maximum de TOUTE la série, pas seulement
+  // de la page affichée : sinon l'échelle changerait d'une page à l'autre.
+  const pagination = useTablePagination(data);
   return (
+    <>
+    <TableLengthControl pagination={pagination} />
     <table className="w-full text-sm">
       <thead className="bg-gray-50">
         <tr>
@@ -225,7 +263,7 @@ function ProgressTable({
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
-        {data.map((item, i) => {
+        {pagination.pageRows.map((item, i) => {
           const ratio = Math.round((item.value / (max || 1)) * 100);
           return (
             <tr key={i} className="hover:bg-gray-50">
@@ -246,6 +284,8 @@ function ProgressTable({
         })}
       </tbody>
     </table>
+    <TablePaginationFooter pagination={pagination} />
+    </>
   );
 }
 
@@ -367,7 +407,7 @@ function RevenueLineChart({ data }: { data: RevenueData }) {
   return (
     <ResponsiveContainer width="100%" height={340}>
       <LineChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f1f3fa" />
+        <CartesianGrid strokeDasharray="3 3" stroke={CHART_GRID} />
         <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
         <YAxis
           tick={{ fontSize: 11 }}
@@ -387,16 +427,16 @@ function RevenueLineChart({ data }: { data: RevenueData }) {
         <Line
           type="monotone"
           dataKey="actuelle"
-          stroke="#727cf5"
-          strokeWidth={4}
+          stroke={CHART_CATEGORICAL[0]}
+          strokeWidth={2}
           dot={false}
           name="Semaine actuelle"
         />
         <Line
           type="monotone"
           dataKey="precedente"
-          stroke="#0acf97"
-          strokeWidth={4}
+          stroke={CHART_CATEGORICAL[1]}
+          strokeWidth={2}
           dot={false}
           name="Semaine précédente"
         />
@@ -526,8 +566,8 @@ export default function HomePage() {
 
   // -- Admin exam status pie (pour la section admin)
   const adminPieData = [
-    { name: "Terminé", value: stats?.finishTest ?? 0, color: "#0acf97" },
-    { name: "En attente", value: stats?.noFinishTest ?? 0, color: "#E52D4F" },
+    { name: "Terminé", value: stats?.finishTest ?? 0, color: CHART_STATUS.good },
+    { name: "En attente", value: stats?.noFinishTest ?? 0, color: CHART_STATUS.critical },
   ];
 
   // -- Finance
@@ -553,22 +593,22 @@ export default function HomePage() {
     {
       name: "Factures de vente payées",
       value: invoiceStatus?.invoicePaid ?? 0,
-      color: "#727cf5",
+      color: CHART_CATEGORICAL[0],
     },
     {
       name: "Factures de vente non payées",
       value: invoiceStatus?.invoiceNoPaid ?? 0,
-      color: "#0acf97",
+      color: CHART_CATEGORICAL[1],
     },
     {
       name: "Factures d'avoir payées",
       value: invoiceStatus?.refundPaid ?? 0,
-      color: "#fa5c7c",
+      color: CHART_CATEGORICAL[2],
     },
     {
       name: "Factures d'avoir non payées",
       value: invoiceStatus?.refundNoPaid ?? 0,
-      color: "#ffbc00",
+      color: CHART_CATEGORICAL[3],
     },
   ];
   const invoiceSegmentsTotal = invoiceSegments.reduce((s, x) => s + x.value, 0);
@@ -641,14 +681,21 @@ export default function HomePage() {
     {
       name: "Terminé",
       value: doctorExamStatus?.termine ?? 0,
-      color: "#0acf97",
+      color: CHART_STATUS.good,
     },
     {
       name: "En attente",
       value: doctorExamStatus?.enAttente ?? 0,
-      color: "#fa5c7c",
+      color: CHART_STATUS.critical,
     },
   ];
+
+  // Pagination des tableaux du tableau de bord dont la liste n'est pas bornée.
+  const doctorStatsPagination = useTablePagination(doctorStats, 10);
+  const connectedUsersPagination = useTablePagination(connectedUsers, 10);
+  const reportsDeliveredPagination = useTablePagination(reportsDelivered, 10);
+  const doctorOrdersPagination = useTablePagination(doctorOrders, 10);
+  const doctorOrdersTodayPagination = useTablePagination(doctorOrdersToday, 10);
 
   const doctorOrdersTermine = doctorOrders.filter(
     (o) => o.reportStatus === 1
@@ -924,7 +971,7 @@ export default function HomePage() {
                           Semaine actuelle
                         </p>
                         <p className="mb-3 text-2xl font-normal text-gray-900">
-                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-[#727cf5] align-middle" />
+                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-600 align-middle" />
                           {formatCFA(revenueData?.totalCurrentWeek ?? 0)}
                         </p>
                       </div>
@@ -933,7 +980,7 @@ export default function HomePage() {
                           Semaine précédente
                         </p>
                         <p className="mb-3 text-2xl font-normal text-gray-900">
-                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-[#0acf97] align-middle" />
+                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-green-600 align-middle" />
                           {formatCFA(revenueData?.totalLastWeek ?? 0)}
                         </p>
                       </div>
@@ -1010,6 +1057,7 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Statistique par docteurs" />
+                <TableLengthControl pagination={doctorStatsPagination} />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -1030,7 +1078,7 @@ export default function HomePage() {
                         ? Array.from({ length: 4 }).map((_, i) => (
                             <SkeletonRow key={i} cols={3} />
                           ))
-                        : doctorStats.map((ds: DoctorStat, i) => (
+                        : doctorStatsPagination.pageRows.map((ds: DoctorStat, i) => (
                             <tr
                               key={i}
                               className="hover:bg-gray-50 transition-colors"
@@ -1049,6 +1097,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePaginationFooter pagination={doctorStatsPagination} />
               </Card>
             </div>
 
@@ -1056,6 +1105,7 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Utilisateurs connectés" />
+                <TableLengthControl pagination={connectedUsersPagination} />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -1076,7 +1126,7 @@ export default function HomePage() {
                         ? Array.from({ length: 3 }).map((_, i) => (
                             <SkeletonRow key={i} cols={3} />
                           ))
-                        : connectedUsers.map((u, idx) => (
+                        : connectedUsersPagination.pageRows.map((u, idx) => (
                             <tr
                               key={u.id}
                               className="hover:bg-gray-50 transition-colors"
@@ -1100,6 +1150,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePaginationFooter pagination={connectedUsersPagination} />
               </Card>
             </div>
           </div>
@@ -1114,6 +1165,7 @@ export default function HomePage() {
           {/* LIGNE 6 : Comptes rendu dsponible aujourd'hui (full width) */}
           <Card>
             <CardHeader title="Comptes rendu dsponible aujourd'hui" />
+            <TableLengthControl pagination={reportsDeliveredPagination} />
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -1147,7 +1199,7 @@ export default function HomePage() {
                       </td>
                     </tr>
                   ) : (
-                    reportsDelivered.map((report: ReportToday) => (
+                    reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
                       <tr
                         key={report.id}
                         className="hover:bg-gray-50 transition-colors"
@@ -1177,6 +1229,7 @@ export default function HomePage() {
                 </tbody>
               </table>
             </div>
+            <TablePaginationFooter pagination={reportsDeliveredPagination} />
           </Card>
         </>
       )}
@@ -1249,6 +1302,7 @@ export default function HomePage() {
                     {doctorOrdersTotal}
                   </p>
                 </div>
+                <TableLengthControl pagination={doctorOrdersPagination} />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -1272,7 +1326,7 @@ export default function HomePage() {
                         ? Array.from({ length: 4 }).map((_, i) => (
                             <SkeletonRow key={i} cols={4} />
                           ))
-                        : doctorOrders.map((order: DoctorOrder) => (
+                        : doctorOrdersPagination.pageRows.map((order: DoctorOrder) => (
                             <tr
                               key={order.id}
                               className="hover:bg-gray-50 transition-colors"
@@ -1308,6 +1362,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePaginationFooter pagination={doctorOrdersPagination} />
               </Card>
             </div>
           </div>
@@ -1318,6 +1373,7 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Activités récentes" />
+                <TableLengthControl pagination={doctorOrdersTodayPagination} />
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
@@ -1351,7 +1407,7 @@ export default function HomePage() {
                             </td>
                           </tr>
                         ) : (
-                          doctorOrdersToday.map((order: DoctorOrder) => (
+                          doctorOrdersTodayPagination.pageRows.map((order: DoctorOrder) => (
                             <tr
                               key={order.id}
                               className="hover:bg-gray-50 transition-colors"
@@ -1389,6 +1445,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
+                <TablePaginationFooter pagination={doctorOrdersTodayPagination} />
               </Card>
             </div>
 

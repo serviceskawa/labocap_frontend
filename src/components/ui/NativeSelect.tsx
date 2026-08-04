@@ -10,10 +10,12 @@ import {
   type SelectHTMLAttributes,
   type Ref,
 } from "react";
+import type { ClassNamesConfig, GroupBase, StylesConfig } from "react-select";
 import { LimitedSelect as ReactSelect } from "@/components/ui/LimitedSelect";
 import { LimitedCreatableSelect as CreatableSelect } from "./LimitedSelect";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { buildSelectStyles, SELECT_MENU_CLASSNAMES } from "./selectStyles";
 
 interface NativeSelectProps
   extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "onChange"> {
@@ -73,18 +75,23 @@ function extractOptions(children: ReactNode, acc: Opt[]): void {
 }
 
 /**
- * Au-delà de ce nombre de données réelles (hors option « vide/Tous »), la liste
- * devient un select react-select cherchable, borné à 6 options affichées.
- * En dessous, on garde le `<select>` natif à l'identique.
+ * Nombre de données réelles (hors option « vide/Tous ») à partir duquel la
+ * liste bascule en react-select.
+ *
+ * Fixé à 0 : **tous** les selects de l'application ont désormais la même
+ * apparence et le même comportement. Auparavant le seuil était à 5, si bien
+ * qu'une même page mélangeait un `<select>` natif (statuts, 3 options) et un
+ * react-select (catégories, 20 options) — l'écart signalé sur `/expenses`.
+ * Un select réduit à son seul placeholder reste natif : rien à chercher.
  */
-const ENHANCE_THRESHOLD = 5;
+const ENHANCE_THRESHOLD = 0;
 
 /**
- * `<select>` moderne. Pour les listes courtes (≤ 5 données) : `<select>` natif.
- * Pour les listes longues (> 5 données) : react-select **cherchable**, borné à
- * 6 options affichées (la recherche porte sur toute la liste), et
- * optionnellement **créable** (`creatable` + `onCreateOption`). L'API (`value` +
- * `onChange` façon événement natif) reste identique dans les deux cas.
+ * `<select>` de l'application : react-select **cherchable**, borné à 6 options
+ * affichées (la recherche porte sur toute la liste), et optionnellement
+ * **créable** (`creatable` + `onCreateOption`). L'API (`value` + `onChange`
+ * façon événement natif) reste celle d'un `<select>` natif, auquel on retombe
+ * quand il n'y a aucune donnée à proposer.
  */
 export function NativeSelect({
   className,
@@ -127,7 +134,21 @@ export function NativeSelect({
       placeholder: placeholder ?? "Sélectionner...",
       classNamePrefix: "react-select",
       menuPortalTarget: portalTarget,
-      styles: { menuPortal: (base: Record<string, unknown>) => ({ ...base, zIndex: 9999 }) },
+      // Styles partagés (mêmes que `FormSelect` et `RemoteSelectField`) : sans
+      // eux ce select retombait sur l'apparence par défaut de react-select et
+      // détonnait à côté des autres champs de sélection. Ils sont écrits pour
+      // `SelectOption` ; `Opt` en est une extension (`isDisabled` en plus), et
+      // les styles ne touchent pas aux données de l'option.
+      styles: buildSelectStyles(!!error) as unknown as StylesConfig<
+        Opt,
+        false,
+        GroupBase<Opt>
+      >,
+      classNames: SELECT_MENU_CLASSNAMES as unknown as ClassNamesConfig<
+        Opt,
+        false,
+        GroupBase<Opt>
+      >,
       onChange: (opt: Opt | null) =>
         onChange?.({
           target: { value: opt?.value ?? "", name },
@@ -138,13 +159,13 @@ export function NativeSelect({
     return (
       <div className={cn("group relative", className)}>
         {creatable ? (
-          <CreatableSelect
+          <CreatableSelect<Opt, false>
             {...commonProps}
             onCreateOption={onCreateOption}
             formatCreateLabel={(input: string) => `Ajouter « ${input} »`}
           />
         ) : (
-          <ReactSelect {...commonProps} />
+          <ReactSelect<Opt, false> {...commonProps} />
         )}
       </div>
     );
@@ -161,7 +182,7 @@ export function NativeSelect({
         id={id}
         onChange={onChange as SelectHTMLAttributes<HTMLSelectElement>["onChange"]}
         className={cn(
-          "native-select w-full cursor-pointer rounded-lg border bg-white px-3 py-2 pr-10 text-sm text-gray-700 shadow-sm outline-none transition-all duration-150 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400",
+          "native-select w-full cursor-pointer rounded-lg border bg-white px-3 py-2 min-h-[40px] pr-10 text-sm text-gray-700 shadow-sm outline-none transition-all duration-150 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400",
           error
             ? "border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
             : "border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10",

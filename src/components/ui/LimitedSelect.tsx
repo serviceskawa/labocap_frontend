@@ -9,6 +9,29 @@ import ReactSelect, {
 import ReactCreatableSelect, {
   type CreatableProps,
 } from "react-select/creatable";
+import type { StylesConfig } from "react-select";
+import { SELECT_CONTROL_MIN_HEIGHT } from "./selectStyles";
+
+/**
+ * Applique la hauteur commune au contrôle, en préservant les styles éventuels
+ * fournis par l'appelant.
+ */
+function withSharedHeight<
+  Option,
+  IsMulti extends boolean,
+  Group extends GroupBase<Option>,
+>(
+  styles?: StylesConfig<Option, IsMulti, Group>,
+): StylesConfig<Option, IsMulti, Group> {
+  return {
+    ...styles,
+    control: (base, state) => ({
+      ...(styles?.control ? styles.control(base, state) : base),
+      minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
+      borderRadius: "0.5rem",
+    }),
+  };
+}
 
 /**
  * Nombre maximum d'options affichées dans le menu déroulant.
@@ -119,6 +142,7 @@ function useLimitedSelectProps<
 
   return {
     ...props,
+    styles: withSharedHeight(props.styles),
     options: visibleOptions,
     inputValue,
     onInputChange: (

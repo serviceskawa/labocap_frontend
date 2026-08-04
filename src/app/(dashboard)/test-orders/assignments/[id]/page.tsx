@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Trash2, ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Trash2, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { RemoteSelectField } from "@/components/ui/RemoteSelectField";
 import {
@@ -15,10 +15,14 @@ import {
 import type { AxiosError } from "axios";
 
 import { PageHeader } from "@/components/ui/PageHeader";
-import { NativeSelect } from "@/components/ui/NativeSelect";
 import { RHFSelect } from "@/components/ui/RHFSelect";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { IconButton } from "@/components/ui/IconButton";
+import {
+  TableLengthControl,
+  TablePaginationFooter,
+  useTablePagination,
+} from "@/components/common/TablePagination";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import {
@@ -28,13 +32,12 @@ import {
 } from "@/lib/api/assignments";
 import { usersApi, type User } from "@/lib/api/users";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 function isDoctorRole(name?: string): boolean {
   if (!name) return false;
@@ -113,18 +116,9 @@ export default function AssignmentDetailsPage() {
   );
 
   // ---- Pagination locale du tableau des détails ----------------------------
+  // Contrôles mutualisés avec `DataTable` : une seule apparence de pagination.
 
-  const [rawPageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-
-  const totalPages = Math.max(1, Math.ceil(details.length / pageSize));
-  // Une suppression peut vider la page courante : on la ramène dans les bornes
-  const pageIndex = Math.min(rawPageIndex, totalPages - 1);
-
-  const pagedDetails = useMemo(
-    () => details.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize),
-    [details, pageIndex, pageSize]
-  );
+  const detailsPagination = useTablePagination(details);
 
   // Docteurs
   const { data: usersData } = useQuery({
@@ -418,7 +412,9 @@ export default function AssignmentDetailsPage() {
               </div>
             )}
 
-            {/* Tableau des détails */}
+            {/* Tableau des détails — contrôles de pagination partagés
+                (voir `TablePagination`), identiques à ceux du `DataTable`. */}
+            <TableLengthControl pagination={detailsPagination} />
             <div className="overflow-hidden rounded-lg border border-gray-200">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -448,13 +444,13 @@ export default function AssignmentDetailsPage() {
                       </td>
                     </tr>
                   ) : (
-                    pagedDetails.map((d, idx) => (
+                    detailsPagination.pageRows.map((d, idx) => (
                       <tr
                         key={d.id}
                         className="border-b border-gray-100 hover:bg-gray-50"
                       >
                         <td className="px-4 py-3 text-gray-700">
-                          {pageIndex * pageSize + idx + 1}
+                          {detailsPagination.offset + idx + 1}
                         </td>
                         <td className="px-4 py-3">
                           <span className="font-mono text-sm font-medium text-gray-800">
@@ -482,71 +478,7 @@ export default function AssignmentDetailsPage() {
               </table>
             </div>
 
-            {/* Pagination — boutons type="button" pour ne pas soumettre le form */}
-            {details.length > 0 && (
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <span>Lignes par page :</span>
-                  <NativeSelect
-                    value={pageSize}
-                    onChange={(e) => {
-                      setPageSize(Number(e.target.value));
-                      setPageIndex(0);
-                    }}
-                  >
-                    {[10, 20, 25, 50].map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setPageIndex(Math.max(0, pageIndex - 1))}
-                    disabled={pageIndex === 0}
-                    className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Page précédente"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
-                    <button
-                      key={page}
-                      type="button"
-                      onClick={() => setPageIndex(page)}
-                      className={`flex h-8 min-w-[2rem] items-center justify-center rounded border px-2 text-sm transition-colors ${
-                        pageIndex === page
-                          ? "border-blue-600 bg-blue-600 text-white"
-                          : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                      }`}
-                    >
-                      {page + 1}
-                    </button>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPageIndex(Math.min(totalPages - 1, pageIndex + 1))
-                    }
-                    disabled={pageIndex >= totalPages - 1}
-                    className="flex h-8 w-8 items-center justify-center rounded border border-gray-300 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Page suivante"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-
-                <p className="text-sm text-gray-600">
-                  Page {pageIndex + 1} sur {totalPages} — {details.length}{" "}
-                  demande{details.length > 1 ? "s" : ""}
-                </p>
-              </div>
-            )}
+            <TablePaginationFooter pagination={detailsPagination} />
 
             {/* Bouton Soumettre full-width vert (comme Laravel : btn w-100 btn-success) */}
             {canManage && (

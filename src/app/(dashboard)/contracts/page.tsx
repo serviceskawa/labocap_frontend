@@ -34,6 +34,8 @@ import {
   ContractStatus,
 } from "@/lib/api/contracts";
 import { clientsApi } from "@/lib/api/clients";
+import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -72,7 +74,15 @@ const contractSchema = z
     type: z.string().min(1, { message: "Le type est requis" }),
     description: z.string().min(1, { message: "La description est requise" }),
     clientId: z.string().optional(),
-    nbrTests: z.string().min(1, { message: "Le nombre d'examens est requis" }),
+    // -1 = illimité (convention Laravel, 135 des 146 contrats l'utilisent).
+    // On refuse 0 et les autres négatifs, qui n'ont aucun sens métier.
+    nbrTests: z
+      .string()
+      .min(1, { message: "Le nombre d'examens est requis" })
+      .refine((v) => {
+        const n = Number(v);
+        return Number.isInteger(n) && (n === -1 || n >= 1);
+      }, { message: "Saisissez un nombre entier supérieur ou égal à 1, ou -1 pour illimité" }),
     status: z.enum(["ACTIF", "INACTIF", "CLOTURE"] as const).optional(),
     invoiceUnique: z.boolean().optional(),
   })
@@ -87,8 +97,6 @@ type ContractFormValues = z.infer<typeof contractSchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 // La `startDate` n'existe pas dans le formulaire Laravel : on la renseigne
 // automatiquement (date du jour à la création, valeur existante à l'édition)
@@ -651,7 +659,7 @@ function ContractForm({
                 styles={{
                   control: (base, state) => ({
                     ...base,
-                    minHeight: "38px",
+                    minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
                     borderRadius: "0.375rem",
                     borderColor: errors.clientId
                       ? "#fca5a5"

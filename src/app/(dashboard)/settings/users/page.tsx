@@ -22,6 +22,8 @@ import { IconButton } from "@/components/ui/IconButton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { usersApi, User, UserRequest } from "@/lib/api/users";
+import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod — calque exact du formulaire Laravel users/create & users/edit :
@@ -34,19 +36,48 @@ const userSchema = z.object({
   lastname: z.string().min(1, "Les prénoms sont requis"),
   email: z.string().min(1, "L'email est requis").email("Email invalide"),
   roleIds: z.array(z.string()).optional(),
+  /**
+   * Mot de passe. Le champ manquait alors que le backend l'exige à la création
+   * (UserServiceImpl : « Le mot de passe est obligatoire pour la création d'un
+   * utilisateur. »), d'où l'échec systématique signalé en recette.
+   * À la modification il reste vide : le changement passe par l'écran dédié.
+   */
+  password: z.string().optional(),
+});
+
+/**
+ * Schéma de création : mot de passe obligatoire, au moins 8 caractères et sans
+ * espace. On passe par `superRefine` plutôt que `extend` pour que le type
+ * inféré reste celui de `userSchema` — les deux formulaires partagent le même
+ * composant, un type divergent le casserait.
+ */
+const MOT_DE_PASSE_MIN = 8;
+const userCreateSchema = userSchema.superRefine((val, ctx) => {
+  const mdp = val.password ?? "";
+  if (mdp.length < MOT_DE_PASSE_MIN) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["password"],
+      message: `Le mot de passe doit contenir au moins ${MOT_DE_PASSE_MIN} caractères`,
+    });
+  } else if (/\s/.test(mdp)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["password"],
+      message: "Le mot de passe ne doit pas contenir d'espace",
+    });
+  }
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500";
 
 const reactSelectStyles = {
   control: (base: Record<string, unknown>) => ({
     ...base,
     borderColor: "#d1d5db",
     borderRadius: "0.375rem",
-    minHeight: "38px",
+    minHeight: `${SELECT_CONTROL_MIN_HEIGHT}px`,
     boxShadow: "none",
     "&:hover": { borderColor: "#d1d5db" },
   }),
@@ -141,7 +172,7 @@ export default function UsersPage() {
   });
 
   const createForm = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(userCreateSchema),
     defaultValues: { firstname: "", lastname: "", email: "", roleIds: [] },
   });
 
@@ -175,6 +206,8 @@ export default function UsersPage() {
       firstname: values.firstname,
       lastname: values.lastname,
       email: values.email,
+      // Le mot de passe n'était pas transmis : le backend rejetait la création.
+      password: values.password,
       signature: createSignatureRef.current,
       roleIds: values.roleIds,
     });
@@ -290,6 +323,7 @@ export default function UsersPage() {
         isSubmitting={createMutation.isPending}
       >
         <UserForm
+          withPassword
           form={createForm}
           roleOptions={roleOptions}
           onSignature={(d) => (createSignatureRef.current = d)}
@@ -344,11 +378,13 @@ interface Option {
 
 interface UserFormProps {
   form: UseFormReturn<UserFormValues>;
+  /** Affiche le champ mot de passe (création uniquement). */
+  withPassword?: boolean;
   roleOptions: Option[];
   onSignature: (dataUrl: string | undefined) => void;
 }
 
-function UserForm({ form, roleOptions, onSignature }: UserFormProps) {
+function UserForm({ form, roleOptions, onSignature, withPassword = false }: UserFormProps) {
   const {
     register,
     control,
@@ -378,6 +414,18 @@ function UserForm({ form, roleOptions, onSignature }: UserFormProps) {
       <FormField label="Email" required error={errors.email?.message}>
         <input type="email" {...register("email")} placeholder="exemple@domaine.com" className={inputClass} />
       </FormField>
+
+      {withPassword && (
+        <FormField label="Mot de passe" required error={errors.password?.message}>
+          <input
+            type="password"
+            autoComplete="new-password"
+            {...register("password")}
+            placeholder="Au moins 8 caractères, sans espace"
+            className={inputClass}
+          />
+        </FormField>
+      )}
 
       <FormField label="Signature">
         <input
