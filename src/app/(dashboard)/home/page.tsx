@@ -36,6 +36,7 @@ import {
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   TableLengthControl,
   TablePaginationFooter,
@@ -856,199 +857,202 @@ export default function HomePage() {
       )}
 
       {/* ==================================================================
-          DEUX COLONNES — répartition des tableaux
+          LIGNE PLEINE LARGEUR — le travail du jour
 
-          Sous le bloc de métriques, le reste de l'écran se partage en deux :
-          à gauche le travail du jour, à droite la lecture financière. Chaque
-          colonne garde sa propre permission — un profil finance sans accès au
-          tableau de bord voit sa colonne seule, en pleine largeur.
+          Un tableau ne se met pas en demi-colonne : ses colonnes (date, code,
+          patient, actions) s'y compriment et sa hauteur ne s'accorde à rien.
+          Ce qui ne tient pas dans une moitié d'écran prend sa propre ligne,
+          avant le bloc à deux colonnes.
       ================================================================== */}
-      {(isAdmin || isSecretary || isFinance) && (
-        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
-          {(isAdmin || isSecretary) && (
-            <div className="space-y-6">
-            {/* ════════════════════════════════════════════════════════════════
-                ZONE 2 — LE TRAVAIL DU JOUR
-                Remontée depuis la section « secrétariat », où elle était la seule
-                vraie liste de travail de l'écran — et invisible aux profils
-                administrateur, qui n'avaient donc aucune action à portée de clic.
-                Les données étaient pourtant déjà chargées pour eux
-                (`enabled: isSecretary || isAdmin`) : seul l'affichage était filtré.
-            ════════════════════════════════════════════════════════════════ */}
-            <Card>
-              <CardHeader title="Comptes rendu disponible aujourd'hui" />
-              <TableLengthControl pagination={reportsDeliveredPagination} className="px-6" />
-              <div className="overflow-x-auto px-3">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                        Date
-                      </th>
-                      <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                        Code
-                      </th>
-                      <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                        Patiens
-                      </th>
-                      <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                        Action
-                      </th>
+      {(isAdmin || isSecretary) && (
+        <>
+        {/* ════════════════════════════════════════════════════════════════
+            ZONE 2 — LE TRAVAIL DU JOUR
+            Remontée depuis la section « secrétariat », où elle était la seule
+            vraie liste de travail de l'écran — et invisible aux profils
+            administrateur, qui n'avaient donc aucune action à portée de clic.
+            Les données étaient pourtant déjà chargées pour eux
+            (`enabled: isSecretary || isAdmin`) : seul l'affichage était filtré.
+        ════════════════════════════════════════════════════════════════ */}
+        <Card>
+          <CardHeader title="Comptes rendu disponible aujourd'hui" />
+          <TableLengthControl pagination={reportsDeliveredPagination} className="px-6" />
+          <div className="overflow-x-auto px-3">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                    Date
+                  </th>
+                  <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                    Code
+                  </th>
+                  <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                    Patients
+                  </th>
+                  <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {reportsTodayLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <SkeletonRow key={i} cols={4} />
+                  ))
+                ) : reportsDelivered.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-0">
+                      <EmptyState
+                        compact
+                        icon={FileText}
+                        title="Aucun compte rendu aujourd'hui"
+                        description="Les comptes rendus disponibles du jour s'afficheront ici."
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
+                    <tr
+                      key={report.id}
+                      className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
+                    >
+                      <td className="py-2 px-3 text-gray-600">
+                        {formatDate(report.createdAt)}
+                      </td>
+                      <td className="py-2 px-3 text-gray-700">
+                        {report.code}
+                      </td>
+                      <td className="py-2 px-3 text-gray-700">
+                        {report.patientLastname} {report.patientFirstname}
+                      </td>
+                      <td className="py-2 px-3">
+                        <ActionButtons
+                          report={report}
+                          onDeleted={() =>
+                            queryClient.invalidateQueries({
+                              queryKey: ["dashboard", "reports-today"],
+                            })
+                          }
+                        />
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {reportsTodayLoading ? (
-                      Array.from({ length: 4 }).map((_, i) => (
-                        <SkeletonRow key={i} cols={4} />
-                      ))
-                    ) : reportsDelivered.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={4}
-                          className="py-4 px-3 text-center text-gray-400 text-sm"
-                        >
-                          Aucun compte rendu disponible aujourd&apos;hui
-                        </td>
-                      </tr>
-                    ) : (
-                      reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
-                        <tr
-                          key={report.id}
-                          className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
-                        >
-                          <td className="py-2 px-3 text-gray-600">
-                            {formatDate(report.createdAt)}
-                          </td>
-                          <td className="py-2 px-3 text-gray-700">
-                            {report.code}
-                          </td>
-                          <td className="py-2 px-3 text-gray-700">
-                            {report.patientLastname} {report.patientFirstname}
-                          </td>
-                          <td className="py-2 px-3">
-                            <ActionButtons
-                              report={report}
-                              onDeleted={() =>
-                                queryClient.invalidateQueries({
-                                  queryKey: ["dashboard", "reports-today"],
-                                })
-                              }
-                            />
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <TablePaginationFooter pagination={reportsDeliveredPagination} className="px-6 pb-5" />
-            </Card>
-  
-            </div>
-          )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <TablePaginationFooter pagination={reportsDeliveredPagination} className="px-6 pb-5" />
+        </Card>
+        </>
+      )}
 
-          {isFinance && (
-            <div className="space-y-6">
-            {/* LIGNE 4 : CHIFFRE D'AFFAIRES + FACTURES */}
-            <div className="flex flex-col gap-6">
-              {/* Gauche col-8 : CHIFFRE D'AFFAIRES */}
-              <div className="lg:flex-[2]">
-                <Card>
-                  <CardHeader title="CHIFFRE D'AFFAIRES" />
-                  <div className="p-5">
-                    {/* Bandeau des deux totaux hebdomadaires — calque du bloc
-                        `chart-content-bg` de Laravel : libellé au-dessus, montant en
-                        gros précédé d'une puce de la couleur de la série. */}
-                    <div className="rounded bg-gray-50 py-3">
-                      <div className="grid grid-cols-1 text-center sm:grid-cols-2">
-                        <div>
-                          <p className="mb-0 mt-3 text-sm text-gray-500">
-                            Semaine actuelle
-                          </p>
-                          <p className="mb-3 text-2xl font-normal text-gray-900">
-                            <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-600 align-middle" />
-                            {formatCFA(revenueData?.totalCurrentWeek ?? 0)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="mb-0 mt-3 text-sm text-gray-500">
-                            Semaine précédente
-                          </p>
-                          <p className="mb-3 text-2xl font-normal text-gray-900">
-                            <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-green-600 align-middle" />
-                            {formatCFA(revenueData?.totalLastWeek ?? 0)}
-                          </p>
-                        </div>
-                      </div>
+      {/* ==================================================================
+          DEUX COLONNES — éléments de gabarit comparable
+
+          N'y figure que ce qui s'équilibre : les deux lectures financières.
+          Y placer le tableau du jour laissait une colonne s'arrêter à
+          mi-hauteur pendant que l'autre continuait.
+      ================================================================== */}
+      {isFinance && (
+        <>
+        {/* LIGNE 4 : CHIFFRE D'AFFAIRES + FACTURES */}
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+          {/* Gauche col-8 : CHIFFRE D'AFFAIRES */}
+          <div>
+            <Card>
+              <CardHeader title="CHIFFRE D'AFFAIRES" />
+              <div className="p-5">
+                {/* Bandeau des deux totaux hebdomadaires — calque du bloc
+                    `chart-content-bg` de Laravel : libellé au-dessus, montant en
+                    gros précédé d'une puce de la couleur de la série. */}
+                <div className="rounded bg-gray-50 py-3">
+                  <div className="grid grid-cols-1 text-center sm:grid-cols-2">
+                    <div>
+                      <p className="mb-0 mt-3 text-sm text-gray-500">
+                        Semaine actuelle
+                      </p>
+                      <p className="mb-3 text-2xl font-normal text-gray-900">
+                        <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-600 align-middle" />
+                        {formatCFA(revenueData?.totalCurrentWeek ?? 0)}
+                      </p>
                     </div>
-                    {/* Total du jour + accès aux relevés (bouton Laravel
-                        « View Statements », classe btn-outline-primary). */}
-                    <div className="mt-4 mb-4">
-                      <h5 className="mb-2 text-base font-semibold text-gray-800">
-                        Aujourd&apos;hui: {formatCFA(revenueData?.totalToday ?? 0)}
-                      </h5>
-                      <Link
-                        href="/invoices/business"
-                        className="inline-flex items-center gap-2 rounded-[.15rem] border border-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] text-blue-600 transition-colors hover:bg-blue-600 hover:text-white"
-                      >
-                        View Statements
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
+                    <div>
+                      <p className="mb-0 mt-3 text-sm text-gray-500">
+                        Semaine précédente
+                      </p>
+                      <p className="mb-3 text-2xl font-normal text-gray-900">
+                        <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-green-600 align-middle" />
+                        {formatCFA(revenueData?.totalLastWeek ?? 0)}
+                      </p>
                     </div>
-                    {/* Graphique ligne */}
-                    {revenueData ? (
-                      <RevenueLineChart data={revenueData} />
-                    ) : (
-                      <div className="h-[220px] animate-pulse rounded bg-gray-100" />
-                    )}
                   </div>
-                </Card>
+                </div>
+                {/* Total du jour + accès aux relevés (bouton Laravel
+                    « View Statements », classe btn-outline-primary). */}
+                <div className="mt-4 mb-4">
+                  <h5 className="mb-2 text-base font-semibold text-gray-800">
+                    Aujourd&apos;hui: {formatCFA(revenueData?.totalToday ?? 0)}
+                  </h5>
+                  <Link
+                    href="/invoices/business"
+                    className="inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] font-medium text-blue-600 transition-colors duration-[var(--duration-fast)] ease-emphasized hover:bg-blue-600 hover:text-white"
+                  >
+                    Voir les relevés
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+                {/* Graphique ligne */}
+                {revenueData ? (
+                  <RevenueLineChart data={revenueData} />
+                ) : (
+                  <div className="h-[220px] animate-pulse rounded bg-gray-100" />
+                )}
               </div>
+            </Card>
+          </div>
   
-              {/* Droite col-4 : FACTURES */}
-              <div className="lg:flex-[1]">
-                <Card>
-                  <CardHeader title="FACTURES" />
-                  <div className="p-5">
-                    {invoiceStatus ? (
-                      <>
-                        <DonutChart segments={invoiceSegments} />
-                        {/* Légende — mêmes couleurs et même ordre que les segments
-                            du donut, la part exacte compensant l'arc plancher. */}
-                        <div className="space-y-2 mt-3">
-                          {invoiceSegments.map((segment) => (
-                            <div
-                              key={segment.name}
-                              className="flex items-center gap-2 text-xs text-gray-600"
-                            >
-                              <span
-                                className="h-3 w-3 rounded-sm inline-block shrink-0"
-                                style={{ backgroundColor: segment.color }}
-                              />
-                              <span className="flex-1 leading-tight">
-                                {segment.name}
-                              </span>
-                              <span className="text-gray-400 whitespace-nowrap">
-                                {invoiceShare(segment.value)}
-                              </span>
-                              <span className="font-semibold text-gray-800 w-12 text-right">
-                                {segment.value}
-                              </span>
-                            </div>
-                          ))}
+          {/* Droite col-4 : FACTURES */}
+          <div>
+            <Card>
+              <CardHeader title="FACTURES" />
+              <div className="p-5">
+                {invoiceStatus ? (
+                  <>
+                    <DonutChart segments={invoiceSegments} />
+                    {/* Légende — mêmes couleurs et même ordre que les segments
+                        du donut, la part exacte compensant l'arc plancher. */}
+                    <div className="space-y-2 mt-3">
+                      {invoiceSegments.map((segment) => (
+                        <div
+                          key={segment.name}
+                          className="flex items-center gap-2 text-xs text-gray-600"
+                        >
+                          <span
+                            className="h-3 w-3 rounded-sm inline-block shrink-0"
+                            style={{ backgroundColor: segment.color }}
+                          />
+                          <span className="flex-1 leading-tight">
+                            {segment.name}
+                          </span>
+                          <span className="text-gray-400 whitespace-nowrap">
+                            {invoiceShare(segment.value)}
+                          </span>
+                          <span className="font-semibold text-gray-800 w-12 text-right">
+                            {segment.value}
+                          </span>
                         </div>
-                      </>
-                    ) : (
-                      <div className="h-[200px] animate-pulse rounded bg-gray-100" />
-                    )}
-                  </div>
-                </Card>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-[200px] animate-pulse rounded bg-gray-100" />
+                )}
               </div>
-            </div>
-  
-            </div>
-          )}
+            </Card>
+          </div>
         </div>
+        </>
       )}
 
       {/* ==================================================================
