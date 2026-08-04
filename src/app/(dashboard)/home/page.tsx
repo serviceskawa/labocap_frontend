@@ -15,6 +15,10 @@ import {
   CalendarIcon,
   ArrowRight,
   ArrowUp,
+  Users,
+  Building2,
+  FlaskConical,
+  Wallet,
 } from "lucide-react";
 import {
   PieChart,
@@ -30,6 +34,8 @@ import {
 } from "recharts";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
+import { Skeleton } from "@/components/ui/Skeleton";
 import {
   TableLengthControl,
   TablePaginationFooter,
@@ -63,6 +69,14 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Carte du tableau de bord — `.hyper-card` du système.
+ *
+ * Portait auparavant `rounded-lg` + bordure grise + `shadow-sm`, une définition
+ * locale qui avait divergé de celle du reste de l'application : les cartes du
+ * tableau de bord n'avaient ni le même rayon ni la même élévation que celles
+ * des écrans de liste, sur l'écran justement le plus regardé.
+ */
 function Card({
   children,
   className = "",
@@ -70,29 +84,52 @@ function Card({
   children: React.ReactNode;
   className?: string;
 }) {
+  return <div className={`hyper-card ${className}`}>{children}</div>;
+}
+
+/**
+ * En-tête de carte.
+ *
+ * Casse normale : les titres en majuscules à fort interlettrage sont un
+ * marqueur Bootstrap explicitement abandonné par le système, et ils dégradent
+ * la lisibilité des libellés longs (« EXAMENS LES PLUS DEMANDÉS »). Les appels
+ * passent toujours le libellé en majuscules — on le normalise ici plutôt que de
+ * réécrire trente chaînes, et le Blade reste la référence du libellé lui-même.
+ */
+function CardHeader({ title }: { title: string }) {
   return (
-    <div
-      className={`bg-white rounded-lg border border-gray-200 shadow-sm ${className}`}
-    >
-      {children}
+    <div className="border-b border-gray-100 px-6 py-4">
+      <h2 className="hyper-card-heading !mb-0">{sentenceCase(title)}</h2>
     </div>
   );
 }
 
-function CardHeader({ title }: { title: string }) {
-  return (
-    <div className="px-5 py-4 border-b border-gray-100">
-      <h2 className="text-base font-semibold text-gray-800">{title}</h2>
-    </div>
-  );
+/**
+ * « EXAMENS LES PLUS DEMANDÉS » → « Examens les plus demandés ».
+ *
+ * Les sigles métier (CA, TVA, CR) restent en capitales : les remettre en bas de
+ * casse les rendrait méconnaissables.
+ */
+const ACRONYMS = new Set(["CA", "TVA", "CR", "HT", "TTC"]);
+
+function sentenceCase(label: string): string {
+  const words = label.toLocaleLowerCase("fr").split(" ");
+  return words
+    .map((word, i) => {
+      const upper = word.toLocaleUpperCase("fr");
+      if (ACRONYMS.has(upper)) return upper;
+      if (i === 0) return upper.charAt(0) + word.slice(1);
+      return word;
+    })
+    .join(" ");
 }
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
     <tr>
       {Array.from({ length: cols }).map((_, j) => (
-        <td key={j} className="py-2 px-3">
-          <div className="h-3 animate-pulse rounded bg-gray-200" />
+        <td key={j} className="px-3 py-2">
+          <Skeleton className={`h-3 ${j % 3 === 2 ? "w-1/2" : "w-4/5"}`} />
         </td>
       ))}
     </tr>
@@ -729,63 +766,58 @@ export default function HomePage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {statsLoading
               ? Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 animate-pulse"
-                  >
-                    <div className="h-3 bg-gray-200 rounded w-1/2 mb-3" />
-                    <div className="h-8 bg-gray-200 rounded w-3/4" />
+                  <div key={i} className="hyper-card p-6">
+                    <Skeleton className="mb-3 h-3 w-1/2" />
+                    <Skeleton className="h-7 w-3/4" />
+                    <Skeleton className="mt-3 h-4 w-24" />
                   </div>
                 ))
               : [
                   {
-                    title: "PATIENTS",
-                    value: stats?.valeurPatient ?? 0,
+                    title: "Patients",
+                    value: (stats?.valeurPatient ?? 0).toLocaleString("fr-FR"),
                     trend: stats?.crPatient,
+                    icon: <Users className="h-5 w-5" />,
                   },
                   {
-                    title: "CLIENTS PRO.",
-                    value: stats?.valeurClient ?? 0,
+                    title: "Clients pro.",
+                    value: (stats?.valeurClient ?? 0).toLocaleString("fr-FR"),
                     trend: stats?.crClient,
+                    icon: <Building2 className="h-5 w-5" />,
                   },
                   {
-                    title: "DEMANDE D'EXAMEN",
-                    value: stats?.valeurTestOrder ?? 0,
+                    title: "Demandes d'examen",
+                    value: (stats?.valeurTestOrder ?? 0).toLocaleString("fr-FR"),
                     trend: stats?.crTestOrder,
+                    icon: <FlaskConical className="h-5 w-5" />,
                   },
                   {
-                    title: "CHIFFRE D'AFFAIRES",
+                    title: "Chiffre d'affaires",
                     value: formatCFA(stats?.valeurInvoice ?? 0),
                     trend: stats?.crInvoice,
+                    icon: <Wallet className="h-5 w-5" />,
                   },
                 ].map((kpi) => (
-                  <Card key={kpi.title} className="p-5">
-                    {/* Pas d'icône dans la carte : seuls le libellé, la valeur et
-                        l'évolution mensuelle sont affichés. */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        {/* Tailles reprises de Laravel : titre h5 .9rem en graisse
-                            normale, valeur h3 1.42rem — le texte tient ainsi dans la
-                            carte (le 30px précédent débordait sur le chiffre d'affaires). */}
-                        <p className="text-[.9rem] text-gray-500 font-normal mt-0">
-                          {kpi.title}
-                        </p>
-                        <p className="text-[1.42rem] font-bold mt-3 mb-3 text-gray-900">
-                          {kpi.value}
-                        </p>
-                        {kpi.trend !== undefined && (
-                          <p
-                            className={`text-[.9rem] font-medium ${kpi.trend >= 0 ? "text-green-600" : "text-red-600"}`}
-                          >
-                            {kpi.trend >= 0 ? "↑" : "↓"} {kpi.trend}%{" "}
-                            <span className="text-gray-400 font-normal">
-                              Depuis le mois passé
-                            </span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
+                  <StatCard
+                    key={kpi.title}
+                    title={kpi.title}
+                    value={kpi.value}
+                    icon={kpi.icon}
+                    // `cr*` est bien une croissance mensuelle côté API
+                    // (`calcGrowth(mois courant, mois précédent)` dans
+                    // DashboardServiceImpl) : elle se lit donc en pastille de
+                    // tendance. Arrondie à l'entier — deux décimales sur un
+                    // pourcentage de croissance suggèrent une précision que le
+                    // calcul n'a pas.
+                    trend={
+                      kpi.trend === undefined
+                        ? undefined
+                        : {
+                            value: Math.round(kpi.trend),
+                            isPositive: kpi.trend >= 0,
+                          }
+                    }
+                  />
                 ))}
           </div>
 
@@ -856,7 +888,7 @@ export default function HomePage() {
             <CardHeader title="STATISTIQUE MENSUELLE" />
             <div className="p-5 space-y-6">
               {/* Carte imbriquée EXAMENS DEMANDES */}
-              <div className="border border-gray-100 rounded-lg p-4">
+              <div className="rounded-[var(--radius-control)] border border-gray-100 p-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">
                   EXAMENS DEMANDES
                 </p>
@@ -871,24 +903,24 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="rounded-[var(--radius-control)] bg-gray-50 p-4 text-center">
+                      <p className="text-[.8125rem] font-medium text-gray-500">
                         Total d&apos;examens
                       </p>
                       <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
                         {monthlyStats?.nombreTests ?? 0}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="rounded-[var(--radius-control)] bg-gray-50 p-4 text-center">
+                      <p className="text-[.8125rem] font-medium text-gray-500">
                         Chiffre d&apos;affaire
                       </p>
                       <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
                         {formatCFA(monthlyStats?.caTests ?? 0)}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <div className="rounded-[var(--radius-control)] bg-gray-50 p-4 text-center">
+                      <p className="text-[.8125rem] font-medium text-gray-500">
                         Patients
                       </p>
                       <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
@@ -900,7 +932,7 @@ export default function HomePage() {
               </div>
 
               {/* Carte imbriquée STATISTIQUE PATIENTS */}
-              <div className="border border-gray-100 rounded-lg p-4">
+              <div className="rounded-[var(--radius-control)] border border-gray-100 p-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">
                   STATISTIQUE PATIENTS
                 </p>
