@@ -13,6 +13,7 @@ import { beginPending2fa, hasPending2fa } from "@/lib/auth-2fa";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 const loginSchema = z.object({
   email: z
@@ -124,7 +125,7 @@ export default function LoginPage() {
                   type="email"
                   placeholder="julie@exemple.com"
                   {...register("email")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={inputClass}
                 />
                 {errors.email && (
                   <p className="mt-1 text-xs text-red-600">
@@ -147,7 +148,7 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Mot de passe"
                     {...register("password")}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`${inputClass} pr-10`}
                   />
                   <button
                     type="button"

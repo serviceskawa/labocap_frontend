@@ -19,6 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { typeConsultationsApi, type TypeConsultation } from "@/lib/api/consultations";
 import type { PageResponse, ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -50,7 +51,7 @@ function TypeConsultationFormFields({ register, errors }: TypeConsultationFormFi
         <input
           type="text"
           {...register("name")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className={inputClass}
         />
         {errors.name && (
           <p className="text-xs text-red-500">{errors.name.message}</p>

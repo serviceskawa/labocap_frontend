@@ -18,6 +18,7 @@ import {
 import { AppLogo } from "@/components/ui/AppLogo";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 const twoFactorSchema = z.object({
   code: z
@@ -208,7 +209,7 @@ export default function TwoFactorChallengePage() {
                   placeholder="Entrer le code"
                   {...codeField}
                   onChange={handleCodeChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg tracking-widest"
+                  className={`${inputClass} text-center text-lg tracking-widest`}
                   maxLength={6}
                 />
                 {errors.code && (

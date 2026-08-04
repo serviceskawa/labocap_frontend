@@ -30,6 +30,7 @@ import { usersApi } from "@/lib/api/users";
 import type { User } from "@/types/auth";
 import type { ApiError as ApiErrorType } from "@/types/api";
 import apiClient from "@/lib/api/client";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 /** « Affecter à » = utilisateur ayant le rôle docteur (signataire), comme Laravel. */
 function isDoctorRole(name?: string): boolean {
@@ -408,7 +409,7 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
                     type="text"
                     {...register("examenReferenceInput")}
                     placeholder="Référence de l'examen externe..."
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className={inputClass}
                   />
                   {errors.examenReferenceInput && (
                     <p className="text-xs text-red-500">
@@ -532,7 +533,7 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
                 type="text"
                 {...register("referenceHopital")}
                 placeholder="Numéro de référence..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClass}
               />
             </div>
 
@@ -544,7 +545,7 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
               <input
                 type="date"
                 {...register("prelevementDate")}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClass}
               />
               {errors.prelevementDate && (
                 <p className="text-xs text-red-500">

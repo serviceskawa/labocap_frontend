@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { authApi } from "@/lib/api/auth";
 import { AppLogo } from "@/components/ui/AppLogo";
 import { Button } from "@/components/ui/Button";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 const resetPasswordSchema = z
   .object({
@@ -129,7 +130,7 @@ function ResetPasswordForm() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     {...register("password")}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`${inputClass} pr-10`}
                   />
                   <button
                     type="button"
@@ -199,7 +200,7 @@ function ResetPasswordForm() {
                     id="passwordConfirmation"
                     type={showConfirmPassword ? "text" : "password"}
                     {...register("passwordConfirmation")}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`${inputClass} pr-10`}
                   />
                   <button
                     type="button"
