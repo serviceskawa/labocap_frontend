@@ -36,6 +36,7 @@ import {
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Badge } from "@/components/ui/Badge";
 import {
   TableLengthControl,
   TablePaginationFooter,
@@ -46,7 +47,7 @@ import { IconButton } from "@/components/ui/IconButton";
 
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuthStore } from "@/stores/auth.store";
-import { formatCFA, formatDate } from "@/lib/utils";
+import { cn, formatCFA, formatDate } from "@/lib/utils";
 import {
   dashboardApi,
   ReportToday,
@@ -136,6 +137,33 @@ function SkeletonRow({ cols }: { cols: number }) {
   );
 }
 
+/**
+ * Puce d'action de ligne (tableaux du tableau de bord).
+ *
+ * Les six actions — « Compte rendu », « CR terminé », « Imprimer », « Voir
+ * Facture », « Créer Facture » — étaient stylées une par une, en `rounded`
+ * (0.25rem, le rayon Hyper abandonné) et sur l'échelle `bg-*-100 / text-*-800`.
+ * C'est précisément la combinaison que `Badge` corrige : à ce palier, le
+ * contraste tombe sous 3:1 en petite taille. On reprend donc son échelle —
+ * fond 50, texte 700/800, liseré 200 — et le rayon des contrôles.
+ *
+ * La teinte reste porteuse de sens (ambre : compte rendu ; vert : facturation),
+ * elle n'est donc pas remplacée par une variante neutre du kit.
+ *
+ * `shadow-none` est nécessaire sur les deux `Button` : le kit pose une élévation
+ * au survol, superflue sur une puce de 24px de haut posée dans une cellule.
+ */
+function actionChip(tone: "report" | "invoice"): string {
+  return cn(
+    "inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1",
+    "text-xs font-semibold ring-1 ring-inset shadow-none hover:shadow-none",
+    "transition-colors duration-[var(--duration-fast)] ease-emphasized",
+    tone === "report"
+      ? "bg-amber-50 text-amber-700 ring-amber-200 hover:bg-amber-100"
+      : "bg-green-50 text-green-800 ring-green-200 hover:bg-green-100",
+  );
+}
+
 // ---------------------------------------------------------------------------
 // ActionButtons — boutons actions pour la table des comptes rendu
 // ---------------------------------------------------------------------------
@@ -199,7 +227,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
         <>
           <Link
             href={`/test-orders/${report.testOrderId}/details`}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+            className={actionChip("report")}
           >
             <FileText className="h-3.5 w-3.5" />
             Compte rendu
@@ -218,7 +246,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
         <>
           <Link
             href={`/reports/${report.id}`}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+            className={actionChip("report")}
           >
             <FileText className="h-3.5 w-3.5" />
             CR terminé
@@ -226,7 +254,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
           <Button
             onClick={handlePrintReport}
             disabled={isPrinting}
-            className="gap-1 rounded bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 hover:bg-yellow-200 hover:shadow-none"
+            className={actionChip("report")}
           >
             <Printer className="h-3.5 w-3.5" />
             {isPrinting ? "Génération…" : "Imprimer"}
@@ -237,7 +265,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
       {report.invoiceId ? (
         <Link
           href={`/invoices/${report.invoiceId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+          className={actionChip("invoice")}
         >
           <Eye className="h-3.5 w-3.5" />
           Voir Facture
@@ -245,7 +273,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
       ) : (
         <Button
           onClick={handleCreateInvoice}
-          className="gap-1 rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200 hover:shadow-none"
+          className={actionChip("invoice")}
         >
           Créer Facture
         </Button>
@@ -1380,13 +1408,9 @@ export default function HomePage() {
                               </td>
                               <td className="py-2 px-3">
                                 {order.reportStatus === 1 ? (
-                                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">
-                                    Terminé
-                                  </span>
+                                  <Badge variant="success">Terminé</Badge>
                                 ) : (
-                                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700">
-                                    En attente
-                                  </span>
+                                  <Badge variant="warning">En attente</Badge>
                                 )}
                               </td>
                             </tr>
@@ -1462,13 +1486,9 @@ export default function HomePage() {
                               </td>
                               <td className="py-2 px-3">
                                 {order.reportStatus === 1 ? (
-                                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">
-                                    Terminé
-                                  </span>
+                                  <Badge variant="success">Terminé</Badge>
                                 ) : (
-                                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700">
-                                    En attente
-                                  </span>
+                                  <Badge variant="warning">En attente</Badge>
                                 )}
                               </td>
                             </tr>
@@ -1520,13 +1540,14 @@ export default function HomePage() {
                                   Priorité:{" "}
                                 </span>
                                 <span
-                                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${
+                                  className={cn(
+                                    "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset",
                                     appt.priority === "Normal"
-                                      ? "bg-gray-100 text-gray-600"
+                                      ? "bg-gray-100 text-gray-700 ring-gray-200"
                                       : appt.priority === "Urgent"
-                                        ? "bg-orange-100 text-orange-700"
-                                        : "bg-red-100 text-red-700"
-                                  }`}
+                                        ? "bg-amber-50 text-amber-700 ring-amber-200"
+                                        : "bg-red-50 text-red-700 ring-red-200",
+                                  )}
                                 >
                                   {appt.priority}
                                 </span>
