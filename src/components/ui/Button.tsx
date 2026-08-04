@@ -134,7 +134,7 @@ export function Button({
       onClick={handleClick}
       className={cn(
         "inline-flex items-center justify-center font-medium leading-normal",
-        "transition-[background-color,border-color,box-shadow] duration-150",
+        "transition-[background-color,border-color,box-shadow] duration-[var(--duration-fast)] ease-emphasized",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
         "disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none",
         variantClasses[variant],

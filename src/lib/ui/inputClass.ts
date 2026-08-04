@@ -19,7 +19,7 @@
  */
 export const INPUT_CLASS =
   "w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-[.9rem] " +
-  "text-gray-800 shadow-sm transition-[border-color,box-shadow] duration-150 " +
+  "text-gray-800 shadow-sm transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-emphasized " +
   "placeholder:text-gray-400 " +
   "hover:border-gray-400 " +
   // Halo de 3px à faible opacité plutôt qu'un anneau plein de 1px : le focus

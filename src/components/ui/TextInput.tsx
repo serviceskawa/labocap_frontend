@@ -21,7 +21,7 @@ export function TextInput({ className, error, ref, ...props }: TextInputProps) {
         // Aligné sur INPUT_CLASS (`src/lib/ui/inputClass.ts`) : les deux doivent
         // rester identiques, un champ ne peut pas dépendre du composant choisi.
         "w-full rounded-lg border bg-white px-3 py-2 text-[.9rem] text-gray-800",
-        "shadow-sm transition-[border-color,box-shadow] duration-150",
+        "shadow-sm transition-[border-color,box-shadow] duration-[var(--duration-fast)] ease-emphasized",
         "placeholder:text-gray-400 focus:outline-none focus:ring-[3px]",
         "disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500",
         error

@@ -333,7 +333,7 @@ export function Sidebar() {
       <aside
         className={[
           "hyper-sidebar text-white flex flex-col overflow-hidden",
-          "transition-[transform,width] duration-300 ease-in-out",
+          "transition-[transform,width] duration-[var(--duration-slow)] ease-emphasized",
           // Mobile (< 768px) : menu hors écran par défaut, en overlay fixe une
           // fois ouvert — calque de `.leftside-menu { display:none }` +
           // `.sidebar-enable .leftside-menu` du thème Hyper.

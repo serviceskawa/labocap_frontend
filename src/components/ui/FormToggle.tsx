@@ -34,7 +34,7 @@ export function FormToggle({
         disabled={disabled}
         onClick={() => !disabled && onChange(!checked)}
         className={cn(
-          "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+          "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-[var(--duration-fast)] ease-emphasized focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
           checked ? "bg-blue-600" : "bg-gray-200",
           disabled && "cursor-not-allowed opacity-50"
         )}
@@ -42,7 +42,7 @@ export function FormToggle({
         <span
           aria-hidden="true"
           className={cn(
-            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-[var(--duration-fast)] ease-emphasized",
             checked ? "translate-x-5" : "translate-x-0"
           )}
         />

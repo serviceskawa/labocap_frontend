@@ -182,7 +182,7 @@ export function NativeSelect({
         id={id}
         onChange={onChange as SelectHTMLAttributes<HTMLSelectElement>["onChange"]}
         className={cn(
-          "native-select w-full cursor-pointer rounded-lg border bg-white px-3 py-2 min-h-[40px] pr-10 text-sm text-gray-700 shadow-sm outline-none transition-all duration-150 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400",
+          "native-select w-full cursor-pointer rounded-lg border bg-white px-3 py-2 min-h-[40px] pr-10 text-sm text-gray-700 shadow-sm outline-none transition-all duration-[var(--duration-fast)] ease-emphasized disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400",
           error
             ? "border-red-300 focus:border-red-500 focus:ring-4 focus:ring-red-500/10"
             : "border-gray-300 hover:border-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10",
