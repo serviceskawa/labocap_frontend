@@ -30,7 +30,7 @@ export function DataTableCard<T>({
   return (
     <div className={cn("hyper-card hyper-card-body", className)}>
       {filters && (
-        <div className="mb-4 flex flex-wrap items-center gap-3">{filters}</div>
+        <div className="mb-4 flex flex-wrap items-center gap-3 border-b border-gray-100 pb-4">{filters}</div>
       )}
       <DataTable {...tableProps} />
     </div>

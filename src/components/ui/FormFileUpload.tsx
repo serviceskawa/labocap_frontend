@@ -63,7 +63,7 @@ export function FormFileUpload({
           if (e.key === "Enter" || e.key === " ") handleClick();
         }}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed px-4 py-6 text-center transition-colors",
+          "flex cursor-pointer flex-col items-center justify-center rounded-[var(--radius-control)] border-2 border-dashed px-4 py-6 text-center transition-colors",
           error
             ? "border-red-300 bg-red-50 hover:bg-red-100"
             : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50"

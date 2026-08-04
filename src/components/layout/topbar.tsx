@@ -80,7 +80,7 @@ export function Topbar() {
       {/* Left: hamburger */}
       <button
         onClick={handleMenuToggle}
-        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-control)] text-gray-900 transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[var(--radius-control)] text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
         aria-label="Afficher/masquer le menu"
       >
         <MdiMenuIcon className="h-6 w-6" />
@@ -92,7 +92,7 @@ export function Topbar() {
           onClick={() => setIsOpen((prev) => !prev)}
           className="flex items-center gap-2.5 rounded-[var(--radius-control)] p-1.5 pr-2 transition-colors hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-500 text-sm font-semibold text-white shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-[.8125rem] font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20">
             {initials}
           </div>
           <div className="hidden text-left leading-tight sm:block">
@@ -109,10 +109,10 @@ export function Topbar() {
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-[var(--radius-surface)] border border-gray-200 bg-white shadow-[var(--elevation-overlay)] shadow-gray-300/40">
+          <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-[var(--radius-surface)] bg-white shadow-[var(--elevation-overlay)]">
             {/* En-tête utilisateur */}
-            <div className="flex items-center gap-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-white px-4 py-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-500 text-sm font-semibold text-white shadow-sm">
+            <div className="flex items-center gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-white/20">
                 {initials}
               </div>
               <div className="min-w-0">

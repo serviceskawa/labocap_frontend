@@ -126,10 +126,65 @@ doivent rester identiques. `.hyper-form-control` porte la même définition en C
 
 ### Tableaux (`DataTable`)
 
-En-tête sur fond **blanc**, libellés en petites capitales espacées, gris 500.
-**Pas de zébrage** : deux fonds alternés bruitent une grille dense et noyaient le
-survol une ligne sur deux. Un filet `gray-100` entre les lignes suffit à guider
-l'œil ; le survol est un azur très dilué (`blue-50/40`).
+Le tableau est une **grille contenue**, pas un bloc de texte flottant :
+`rounded-lg` + `ring-1 ring-gray-200` autour de l'ensemble.
+
+- **Séparateurs de colonnes** — `border-r border-gray-200` sur les `th`,
+  `border-gray-100` sur les `td`, `last:border-r-0` des deux côtés. Sans eux,
+  l'œil n'a aucun repère pour suivre une ligne large jusqu'à la colonne Actions,
+  à l'autre bout de l'écran. C'est ce qui manquait le plus.
+- **Séparateurs de lignes** — `divide-gray-200`. À `gray-100` ils étaient trop
+  pâles pour structurer quoi que ce soit.
+- **En-tête** — bande `bg-gray-50` + `border-b border-gray-300`, libellés en
+  petites capitales espacées `gray-600`. Les colonnes triables réagissent au
+  survol (`hover:bg-gray-100`) ; le chevron neutre reste à 60 % d'opacité pour ne
+  pas concurrencer le libellé.
+- **Pas de zébrage** — deux fonds alternés bruitent une grille déjà quadrillée,
+  et noyaient le survol une ligne sur deux. Le survol est un `blue-50` franc.
+- **Densité** — `py-2.5` par cellule. À `py-3` avec des colonnes larges, le texte
+  flottait au milieu de rien.
+
+Zébrage et filets sont deux façons concurrentes de guider l'œil : avec des
+séparateurs de colonnes, le zébrage devient du bruit. Ne pas cumuler les deux.
+
+Pagination : pastilles `rounded-lg` (plus de `rounded-full`, qui jurait avec le
+reste du système), page active en azur plein.
+
+**`PAGE_SIZE_OPTIONS` n'est pas exhaustif.** Plusieurs écrans initialisent leur
+propre `pageSize` (20 sur `/doctors`). `TableLengthControl` ajoute donc la valeur
+courante à la liste quand elle en est absente — sinon aucune option ne
+correspond et le champ affiche « Sélectionner... » au lieu du nombre.
+
+### Cartes de chiffres (`StatCard`, `KpiCard`)
+
+Surface `rounded-xl` + `--elevation-flat`, qui passe à `--elevation-raised` au
+survol. L'étiquette est en petites capitales espacées gris 500 ; la valeur en
+`1.625rem` bold avec un interlettrage resserré (`-0.02em`) — à cette taille, le
+crénage par défaut fait flotter les chiffres. La tendance devient une pastille
+teintée plutôt qu'un simple texte coloré : elle se lit d'un coup d'œil dans une
+grille de six cartes. La tuile d'icône gagne un liseré interne et se densifie au
+survol de la carte (`group-hover`).
+
+### Modales (`CrudModal`, `ConfirmModal`)
+
+Voile `gray-900/60` **plus un flou d'arrière-plan de 2px** : le `black/50` d'avant
+laissait le contenu lisible derrière et diluait la mise au point. Panneau
+`rounded-xl` à `--elevation-overlay`. Pied de modale sur `gray-50/60` pour
+détacher la zone d'action du contenu. L'icône d'avertissement de `ConfirmModal`
+porte un `ring-8` de sa propre teinte claire — un halo qui l'ancre sans ajouter
+de bordure.
+
+### Encadrés (`AlertBox`)
+
+`ring-1 ring-inset` au lieu d'une bordure pleine : le liseré ne mange pas un
+pixel de la boîte et reste net à tous les zooms. Icônes au palier 600 (elles
+étaient au 500, trop pâles sur fond 50). Le `warning` passe de jaune à ambre,
+pour rejoindre la palette.
+
+### Étiquettes de formulaire (`FormField`)
+
+`0.8125rem` semibold. À `0.9rem`/600, l'étiquette pesait autant que la valeur
+saisie et l'œil hésitait entre les deux. Message d'erreur en `red-600` semibold.
 
 ### Coque
 
@@ -137,6 +192,13 @@ l'œil ; le survol est un azur très dilué (`blue-50/40`).
   Élément actif = azur plein + ombre teintée courte.
 - Barre du haut : blanc, **bordure basse de 1px**. Une bordure nette sépare mieux
   qu'une ombre diffuse et ne salit pas le blanc du contenu.
+- Avatar : aplat azur avec liseré interne blanc. Les dégradés
+  (`bg-gradient-to-br from-blue-600 to-blue-500`) ont été retirés — c'est un
+  marqueur daté, et l'écart entre les deux paliers était invisible.
+- `PageHeader` collant : fond à 95 % + `backdrop-blur-sm` et bordure basse. Un
+  aplat opaque donnait un bandeau mort ; à 95 % avec flou, le contenu qui défile
+  dessous reste illisible mais le mouvement se devine. Ne pas descendre sous 95 %
+  sans le flou.
 
 ## Graphiques
 

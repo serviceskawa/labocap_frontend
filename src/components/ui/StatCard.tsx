@@ -51,7 +51,7 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "rounded-[var(--radius-surface)] bg-white p-6",
+        "group rounded-[var(--radius-surface)] bg-white p-6",
         "shadow-[var(--elevation-flat)]",
         interactive && [
           "cursor-pointer",
@@ -104,7 +104,7 @@ export function StatCard({
           )}
         </div>
         {icon && (
-          <div className="flex-shrink-0 rounded-[var(--radius-control)] bg-blue-50 p-3 text-blue-600">
+        <div className="flex-shrink-0 rounded-[var(--radius-control)] bg-blue-50 p-3 text-blue-600 ring-1 ring-inset ring-blue-100 transition-colors duration-[var(--duration-fast)] ease-emphasized group-hover:bg-blue-100">
             {icon}
           </div>
         )}

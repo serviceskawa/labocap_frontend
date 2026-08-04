@@ -42,7 +42,7 @@ export function FormToggle({
         <span
           aria-hidden="true"
           className={cn(
-            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-[var(--duration-fast)] ease-emphasized",
+            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-1 ring-black/[0.04] transition duration-[var(--duration-fast)] ease-emphasized",
             checked ? "translate-x-5" : "translate-x-0"
           )}
         />
@@ -53,7 +53,7 @@ export function FormToggle({
         <label
           htmlFor={toggleId}
           className={cn(
-            "text-sm font-medium",
+            "text-[.875rem] font-medium",
             disabled ? "cursor-not-allowed text-gray-400" : "cursor-pointer text-gray-700"
           )}
         >

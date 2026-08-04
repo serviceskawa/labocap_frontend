@@ -61,7 +61,7 @@ export function ConfirmModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 p-4 backdrop-blur-[2px]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
@@ -76,10 +76,10 @@ export function ConfirmModal({
           <div className="flex items-start gap-4">
             <div
               className={cn(
-                "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full",
+                "flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full ring-8",
                 confirmVariant === "danger"
-                  ? "bg-red-100"
-                  : "bg-blue-100"
+                  ? "bg-red-100 ring-red-50"
+                  : "bg-blue-100 ring-blue-50"
               )}
             >
               <AlertTriangle
@@ -92,22 +92,22 @@ export function ConfirmModal({
             <div className="flex-1 min-w-0">
               <h3
                 id="confirm-modal-title"
-                className="text-base font-semibold text-gray-900"
+                className="text-[1.0625rem] font-semibold tracking-[-0.01em] text-gray-900"
               >
                 {title}
               </h3>
-              <p className="mt-1 text-sm text-gray-600">{message}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-gray-600">{message}</p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-end gap-3 border-t border-gray-100 bg-gray-50/60 px-6 py-4">
           <button
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="rounded-[var(--radius-control)] border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-[var(--radius-control)] border border-gray-300 bg-white px-[.9rem] py-2 text-[.9rem] font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40 disabled:opacity-50"
           >
             {cancelLabel}
           </button>

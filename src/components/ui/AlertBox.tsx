@@ -13,27 +13,27 @@ interface AlertBoxProps {
 
 const alertConfig = {
   success: {
-    container: "bg-green-50 border-green-200 text-green-800",
+    container: "bg-green-50 ring-1 ring-inset ring-green-200 text-green-800",
     icon: CheckCircle,
-    iconClass: "text-green-500",
+    iconClass: "text-green-600",
     dismissClass: "text-green-500 hover:bg-green-100",
   },
   error: {
-    container: "bg-red-50 border-red-200 text-red-800",
+    container: "bg-red-50 ring-1 ring-inset ring-red-200 text-red-800",
     icon: XCircle,
-    iconClass: "text-red-500",
+    iconClass: "text-red-600",
     dismissClass: "text-red-500 hover:bg-red-100",
   },
   warning: {
-    container: "bg-yellow-50 border-yellow-200 text-yellow-800",
+    container: "bg-amber-50 ring-1 ring-inset ring-amber-200 text-amber-800",
     icon: AlertTriangle,
-    iconClass: "text-yellow-500",
-    dismissClass: "text-yellow-500 hover:bg-yellow-100",
+    iconClass: "text-amber-600",
+    dismissClass: "text-amber-600 hover:bg-amber-100",
   },
   info: {
-    container: "bg-blue-50 border-blue-200 text-blue-800",
+    container: "bg-blue-50 ring-1 ring-inset ring-blue-200 text-blue-800",
     icon: Info,
-    iconClass: "text-blue-500",
+    iconClass: "text-blue-600",
     dismissClass: "text-blue-500 hover:bg-blue-100",
   },
 } as const;
