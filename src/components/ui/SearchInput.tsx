@@ -22,7 +22,7 @@ export function SearchInput({
       <input
         type="text"
         placeholder={placeholder}
-        className="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-[.875rem] text-gray-800 shadow-sm transition-[border-color,box-shadow] duration-150 placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-[3px] focus:ring-blue-500/15"
         {...props}
       />
     </div>

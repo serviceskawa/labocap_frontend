@@ -89,30 +89,30 @@ export function CrudModal({
       // Ancrage HAUT (comme les modales Bootstrap/Laravel) : l'en-tête reste fixe
       // et c'est le bas qui s'allonge/raccourcit quand la hauteur du corps change
       // (ex. bascule d'onglets du wizard contrat), au lieu d'un recentrage vertical.
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 sm:py-8"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-gray-900/60 p-4 backdrop-blur-[2px] sm:py-8"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <div
         className={cn(
-          "relative w-full rounded bg-white shadow-xl flex flex-col max-h-[90vh]",
+          "relative flex max-h-[90vh] w-full flex-col rounded-xl bg-white shadow-[var(--elevation-overlay)]",
           sizeClasses[size],
           contentClassName
         )}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 flex-shrink-0">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2
             id="modal-title"
-            className="text-lg font-semibold text-gray-900"
+            className="text-[1.0625rem] font-semibold tracking-[-0.01em] text-gray-900"
           >
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
             aria-label="Fermer"
           >
             <X className="h-5 w-5" />
@@ -123,7 +123,7 @@ export function CrudModal({
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t border-gray-200 px-6 py-4">
+        <div className="flex-shrink-0 border-t border-gray-100 bg-gray-50/60 px-6 py-4">
           {footer !== undefined ? (
             footer
           ) : (
@@ -132,7 +132,7 @@ export function CrudModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+                className="rounded-lg border border-gray-300 bg-white px-[.9rem] py-2 text-[.9rem] font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40 disabled:opacity-50"
               >
                 Annuler
               </button>
@@ -141,7 +141,7 @@ export function CrudModal({
               <Button
                 onClick={onSubmit}
                 loading={isSubmitting}
-                className="gap-2 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
+                className="gap-2"
               >
                 {submitLabel}
               </Button>

@@ -21,20 +21,20 @@ export function FormField({
 }: FormFieldProps) {
   return (
     <div className={cn("space-y-1.5", className)}>
-      <label className="block text-[.9rem] font-semibold text-gray-700">
+      <label className="block text-[.8125rem] font-semibold tracking-[0.005em] text-gray-700">
         {label}
         {required && (
-          <span className="ml-0.5 text-red-500" aria-hidden="true">
+          <span className="ml-0.5 text-red-600" aria-hidden="true">
             *
           </span>
         )}
       </label>
       {children}
       {hint && !error && (
-        <p className="text-xs text-gray-500">{hint}</p>
+        <p className="text-xs leading-relaxed text-gray-500">{hint}</p>
       )}
       {error && (
-        <p className="text-xs text-red-500" role="alert">
+        <p className="text-xs font-medium text-red-600" role="alert">
           {error}
         </p>
       )}
