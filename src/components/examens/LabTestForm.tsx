@@ -65,7 +65,7 @@ export function LabTestForm({
       <FormField label="Nom" required error={errors.name?.message}>
         <TextInput
           type="text"
-          className="w-full rounded-lg"
+          className="w-full rounded-[var(--radius-control)]"
           {...register("name")}
           error={!!errors.name}
         />
@@ -75,7 +75,7 @@ export function LabTestForm({
         <TextInput
           type="number"
           min={0}
-          className="w-full rounded-lg"
+          className="w-full rounded-[var(--radius-control)]"
           {...register("price")}
           error={!!errors.price}
         />
@@ -83,7 +83,7 @@ export function LabTestForm({
 
       <FormField label="Statut" required error={errors.status?.message}>
         <NativeSelect
-          selectClassName="rounded-lg border-gray-300 py-2 shadow-none"
+          selectClassName="rounded-[var(--radius-control)] border-gray-300 py-2 shadow-none"
           {...register("status")}
           error={!!errors.status}
         >

@@ -96,7 +96,7 @@ export function CrudModal({
     >
       <div
         className={cn(
-          "relative w-full rounded bg-white shadow-xl flex flex-col max-h-[90vh]",
+          "relative flex max-h-[90vh] w-full flex-col rounded-[var(--radius-surface)] bg-white shadow-[var(--elevation-overlay)]",
           sizeClasses[size],
           contentClassName
         )}
@@ -112,7 +112,7 @@ export function CrudModal({
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+            className="rounded-[var(--radius-control)] p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
             aria-label="Fermer"
           >
             <X className="h-5 w-5" />
@@ -132,7 +132,7 @@ export function CrudModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+                className="rounded-[var(--radius-control)] border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
                 Annuler
               </button>
@@ -141,7 +141,7 @@ export function CrudModal({
               <Button
                 onClick={onSubmit}
                 loading={isSubmitting}
-                className="gap-2 rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700"
+                className="gap-2 rounded-[var(--radius-control)] px-4 py-2 text-sm font-medium hover:bg-blue-700"
               >
                 {submitLabel}
               </Button>

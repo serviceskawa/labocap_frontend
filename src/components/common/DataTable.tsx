@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { INPUT_CLASS } from "@/lib/ui/inputClass";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
@@ -190,7 +191,7 @@ export function DataTable<T>({
                 type="text"
                 value={onSearchChange ? (searchValue ?? "") : localSearch}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="rounded border border-gray-300 px-3 py-[.28rem] text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={cn(INPUT_CLASS, "w-auto py-[.28rem]")}
               />
             </label>
           )}

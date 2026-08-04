@@ -92,7 +92,7 @@ function NavItem({ href, icon, label, collapsed, badge = 0 }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={`flex items-center px-4 py-2.5 rounded-lg mx-2 transition-colors text-[.9rem] ${
+      className={`flex items-center px-4 py-2.5 rounded-[var(--radius-control)] mx-2 transition-colors text-[.9rem] ${
         collapsed ? "justify-center" : "gap-3"
       } ${
         isActive
@@ -139,7 +139,7 @@ function CollapseItem({
         onMouseLeave={() => setOpen(false)}
       >
         <div
-          className="flex items-center justify-center px-4 py-2.5 mx-2 text-sidebar-link cursor-pointer hover:bg-white/[0.06] hover:text-sidebar-link-hover rounded-lg transition-colors"
+          className="flex items-center justify-center px-4 py-2.5 mx-2 text-sidebar-link cursor-pointer hover:bg-white/[0.06] hover:text-sidebar-link-hover rounded-[var(--radius-control)] transition-colors"
           title={label}
         >
           <span className="flex-shrink-0 w-5 h-5">{icon}</span>
@@ -147,7 +147,7 @@ function CollapseItem({
         {open && (
           // `pl-1` sert de pont de survol entre l'icône et le panneau.
           <div className="fixed left-16 z-50 pl-1" style={{ top: flyoutTop }}>
-            <div className="min-w-[210px] rounded-xl border border-white/10 bg-gray-900 py-2 shadow-2xl">
+            <div className="min-w-[210px] rounded-[var(--radius-surface)] border border-white/10 bg-gray-900 py-2 shadow-[var(--elevation-overlay)]">
               <div className="px-4 pb-2 mb-1 border-b border-white/10 text-xs uppercase tracking-wider text-sidebar-link font-semibold">
                 {label}
               </div>
@@ -163,7 +163,7 @@ function CollapseItem({
     <div>
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-3 px-4 py-2.5 rounded-md mx-2 w-[calc(100%-16px)] text-left text-[.9375rem] text-sidebar-link hover:bg-white/5 hover:text-sidebar-link-hover transition-colors"
+        className="flex items-center gap-3 px-4 py-2.5 rounded-[var(--radius-control)] mx-2 w-[calc(100%-16px)] text-left text-[.9375rem] text-sidebar-link hover:bg-white/5 hover:text-sidebar-link-hover transition-colors"
       >
         <span className="flex-shrink-0 w-5 h-5">{icon}</span>
         <span className="flex-1 truncate">{label}</span>
@@ -352,7 +352,7 @@ export function Sidebar() {
           <AppLogo
             surface="dark"
             fallback="initial"
-            className="h-9 w-9 rounded-lg"
+            className="h-9 w-9 rounded-[var(--radius-control)]"
           />
         ) : (
           <div className="flex items-center gap-2 px-4">
@@ -367,7 +367,7 @@ export function Sidebar() {
                 <AppLogo
                   surface="dark"
                   fallback="initial"
-                  className="h-9 w-auto max-w-[90px] rounded flex-shrink-0"
+                  className="h-9 w-auto max-w-[90px] rounded-[var(--radius-control)] flex-shrink-0"
                   fallbackClassName="flex-shrink-0"
                 />
                 <span className="truncate text-base font-semibold text-white">

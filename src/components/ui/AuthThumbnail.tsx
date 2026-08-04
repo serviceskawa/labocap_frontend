@@ -45,7 +45,7 @@ export function AuthThumbnail({
   if (failed) {
     return (
       <div
-        className={`flex h-[75px] w-[75px] flex-col items-center justify-center gap-1 rounded border border-gray-200 bg-gray-50 text-gray-400 ${className ?? ""}`}
+        className={`flex h-[75px] w-[75px] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border border-gray-200 bg-gray-50 text-gray-400 ${className ?? ""}`}
         title={alt}
       >
         <ImageOff className="h-4 w-4" />
@@ -57,7 +57,7 @@ export function AuthThumbnail({
   if (!src) {
     return (
       <div
-        className={`h-[75px] w-[75px] animate-pulse rounded border border-gray-200 bg-gray-100 ${className ?? ""}`}
+        className={`h-[75px] w-[75px] animate-pulse rounded-[var(--radius-control)] border border-gray-200 bg-gray-100 ${className ?? ""}`}
       />
     );
   }
@@ -68,7 +68,7 @@ export function AuthThumbnail({
       src={src}
       alt={alt}
       onClick={onClick}
-      className={`h-[75px] w-[75px] cursor-pointer rounded border border-gray-200 object-cover p-1 transition-transform hover:scale-105 ${className ?? ""}`}
+      className={`h-[75px] w-[75px] cursor-pointer rounded-[var(--radius-control)] border border-gray-200 object-cover p-1 transition-transform hover:scale-105 ${className ?? ""}`}
     />
   );
 }

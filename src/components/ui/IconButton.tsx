@@ -69,7 +69,7 @@ export function IconButton({
       className={cn(
         // Pastille carrée de 32px : la même surface de clic qu'avant, mais une
         // empreinte visuelle nettement plus calme dans un tableau dense.
-        "inline-flex h-8 w-8 items-center justify-center rounded-lg leading-none",
+        "inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius-control)] leading-none",
         "transition-colors duration-[var(--duration-fast)] ease-emphasized",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
         "disabled:cursor-not-allowed disabled:opacity-55",

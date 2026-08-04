@@ -343,10 +343,10 @@ function ProgressTable({
       <table className="w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
-            <th className="px-3 py-2 text-left text-[.875rem] font-semibold text-gray-700">
+            <th className="px-3 py-2 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
               {headers[0]}
             </th>
-            <th className="px-3 py-2 text-right text-[.875rem] font-semibold text-gray-700">
+            <th className="px-3 py-2 text-right text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
               {headers[1]}
             </th>
             <th className="w-32 px-3 py-2" />
@@ -1152,13 +1152,13 @@ export default function HomePage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Docteurs
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Demandes Affectées
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Demandes Traitées
                         </th>
                       </tr>
@@ -1200,13 +1200,13 @@ export default function HomePage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700 w-8">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500 w-8">
                           #
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Nom
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Email
                         </th>
                       </tr>
@@ -1260,16 +1260,16 @@ export default function HomePage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                       Date
                     </th>
-                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                       Code
                     </th>
-                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                       Patiens
                     </th>
-                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                       Action
                     </th>
                   </tr>
@@ -1397,16 +1397,16 @@ export default function HomePage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Date
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Code
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Patient
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Compte rendu
                         </th>
                       </tr>
@@ -1464,16 +1464,16 @@ export default function HomePage() {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Date
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Code
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Patient
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Compte rendu
                         </th>
                       </tr>
