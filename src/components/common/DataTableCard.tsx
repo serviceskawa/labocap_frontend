@@ -23,12 +23,12 @@ export function DataTableCard<T>({
   return (
     <div
       className={cn(
-        "rounded border border-gray-200 bg-white p-6",
+        "rounded-xl bg-white p-5 shadow-[var(--elevation-flat)]",
         className
       )}
     >
       {filters && (
-        <div className="mb-4 flex flex-wrap items-center gap-3">{filters}</div>
+        <div className="mb-4 flex flex-wrap items-center gap-3 border-b border-gray-100 pb-4">{filters}</div>
       )}
       <DataTable {...tableProps} />
     </div>

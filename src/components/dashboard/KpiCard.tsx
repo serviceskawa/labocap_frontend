@@ -16,13 +16,13 @@ export function KpiCard({ title, value, trend, subtitle, icon, iconBg }: KpiCard
   const isPositive = (trend ?? 0) >= 0;
 
   return (
-    <div className="rounded border border-gray-200 bg-white p-6">
+    <div className="group rounded-xl bg-white p-5 shadow-[var(--elevation-flat)] transition-shadow duration-200 hover:shadow-[var(--elevation-raised)]">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <p className="truncate text-xs font-semibold uppercase tracking-wider text-gray-500">
+          <p className="truncate text-[.6875rem] font-semibold uppercase tracking-[0.07em] text-gray-500">
             {title}
           </p>
-          <p className="mt-1 text-2xl font-bold text-gray-900 truncate">{value}</p>
+          <p className="mt-2 truncate text-[1.625rem] font-bold leading-none tracking-[-0.02em] text-gray-900">{value}</p>
 
           {trend !== undefined && (
             <div
@@ -44,14 +44,14 @@ export function KpiCard({ title, value, trend, subtitle, icon, iconBg }: KpiCard
           )}
 
           {subtitle && (
-            <p className="mt-1 text-xs text-gray-400">{subtitle}</p>
+            <p className="mt-2 text-xs text-gray-400">{subtitle}</p>
           )}
         </div>
 
         {icon && (
           <div
             className={cn(
-              "flex-shrink-0 rounded-lg p-3",
+              "flex-shrink-0 rounded-xl p-3 ring-1 ring-inset ring-black/[0.04]",
               iconBg ?? "bg-blue-50 text-blue-600"
             )}
           >

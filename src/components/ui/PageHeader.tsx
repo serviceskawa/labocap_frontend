@@ -36,16 +36,19 @@ export function PageHeader({
           // collant se fixe SOUS ce padding : au scroll, le contenu défile dans
           // les 24px entre la barre du haut et l'en-tête et reste visible.
           // `-top-6` (= -1.5rem) le colle exactement sous la barre du haut, et
-          // `-mt-6/-mx-6` + `px-6/pt-6` couvrent le padding haut ET latéral avec un
-          // fond OPAQUE, pour qu'aucun texte ne passe dans cet espace.
-          "sticky -top-6 z-20 -mx-6 -mt-6 bg-white px-6 pb-4 pt-6",
+          // `-mt-6/-mx-6` + `px-6/pt-6` couvrent le padding haut ET latéral, pour
+          // qu'aucun texte ne passe dans cet espace. Le fond est à 95 % + flou
+          // d'arrière-plan : le contenu qui défile dessous reste illisible, tout
+          // en laissant deviner le mouvement — un aplat opaque donnait un bandeau
+          // mort. Ne pas descendre sous 95 % sans le flou.
+          "sticky -top-6 z-20 -mx-6 -mt-6 border-b border-gray-200/70 bg-gray-50/95 px-6 pb-4 pt-6 backdrop-blur-sm",
         className
       )}
     >
       {/* Breadcrumbs */}
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav aria-label="Fil d'Ariane" className="mb-2">
-          <ol className="flex flex-wrap items-center gap-1 text-xs text-gray-500">
+          <ol className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
             {breadcrumbs.map((crumb, index) => {
               const isLast = index === breadcrumbs.length - 1;
               return (
@@ -62,7 +65,7 @@ export function PageHeader({
                     </Link>
                   ) : (
                     <span
-                      className={cn(isLast && "font-medium text-gray-700")}
+                      className={cn(isLast && "font-medium text-gray-600")}
                     >
                       {crumb.label}
                     </span>

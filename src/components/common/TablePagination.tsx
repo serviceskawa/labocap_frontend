@@ -81,6 +81,18 @@ export function TableLengthControl({
   className?: string;
   children?: React.ReactNode;
 }) {
+  // La taille de page courante n'est pas forcément l'une des valeurs proposées :
+  // plusieurs écrans initialisent leur propre `pageSize` (20 sur /doctors, par
+  // exemple). Sans cette réunion, aucune option ne correspondait à la valeur
+  // sélectionnée et le champ affichait « Sélectionner... » au lieu du nombre.
+  const sizeOptions = useMemo(
+    () =>
+      PAGE_SIZE_OPTIONS.includes(pagination.pageSize)
+        ? PAGE_SIZE_OPTIONS
+        : [...PAGE_SIZE_OPTIONS, pagination.pageSize].sort((a, b) => a - b),
+    [pagination.pageSize],
+  );
+
   return (
     <div
       className={cn(
@@ -91,11 +103,13 @@ export function TableLengthControl({
       <label className="flex items-center gap-2 text-[.9rem] text-gray-700">
         <span>Afficher</span>
         <NativeSelect
-          className="w-auto"
+          // Largeur bornée : le contrôle react-select s'étirait sur toute la
+          // place disponible, ce qui donnait un champ démesuré pour deux chiffres.
+          className="w-[5.5rem] flex-shrink-0"
           value={pagination.pageSize}
           onChange={(e) => pagination.setPageSize(Number(e.target.value))}
         >
-          {PAGE_SIZE_OPTIONS.map((size) => (
+          {sizeOptions.map((size) => (
             <option key={size} value={size}>
               {size}
             </option>
@@ -142,16 +156,16 @@ export function TablePaginationFooter({
         className,
       )}
     >
-      <p className="mb-0 text-[.9rem] text-gray-600">
+      <p className="mb-0 text-[.875rem] text-gray-500">
         Afficher page {pageIndex + 1} sur {Math.max(pageCount, 1)}
       </p>
 
-      <div className="flex items-center gap-[3px]">
+      <div className="flex items-center gap-1">
         <button
           type="button"
           onClick={() => setPageIndex(pageIndex - 1)}
           disabled={pageIndex === 0}
-          className="flex h-8 items-center justify-center rounded-full px-3 text-[.9rem] text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-8 items-center justify-center rounded-lg px-3 text-[.875rem] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
         >
           Précédent
         </button>
@@ -167,10 +181,10 @@ export function TablePaginationFooter({
               type="button"
               onClick={() => setPageIndex(page)}
               className={cn(
-                "flex h-8 min-w-[2rem] items-center justify-center rounded-full px-2 text-[.9rem] transition-colors",
+                "flex h-8 min-w-[2rem] items-center justify-center rounded-lg px-2 text-[.875rem] font-medium transition-colors",
                 pageIndex === page
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 hover:bg-gray-100",
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
               )}
             >
               {page + 1}
@@ -182,7 +196,7 @@ export function TablePaginationFooter({
           type="button"
           onClick={() => setPageIndex(pageIndex + 1)}
           disabled={pageIndex >= pageCount - 1}
-          className="flex h-8 items-center justify-center rounded-full px-3 text-[.9rem] text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-8 items-center justify-center rounded-lg px-3 text-[.875rem] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
         >
           Suivant
         </button>

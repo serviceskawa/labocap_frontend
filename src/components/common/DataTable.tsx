@@ -151,7 +151,7 @@ export function DataTable<T>({
           autrement qu'en rechargeant la page. */}
       {!hideToolbar && title && (
         <div className="relative">
-          <h5 className="mb-0 text-[.9375rem] font-semibold text-gray-800">{title}</h5>
+          <h5 className="mb-0 text-[.9375rem] font-semibold tracking-[-0.006em] text-gray-800">{title}</h5>
         </div>
       )}
 
@@ -165,37 +165,43 @@ export function DataTable<T>({
                 type="text"
                 value={onSearchChange ? (searchValue ?? "") : localSearch}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="rounded border border-gray-300 px-3 py-[.28rem] text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="rounded-lg border border-gray-300 bg-white px-3 py-[.35rem] text-[.9rem] text-gray-800 shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-[3px] focus:ring-blue-500/15"
               />
             </label>
           )}
         </TableLengthControl>
 
-        {/* Tableau */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-[.9rem]">
-            <thead className="border-b border-gray-200 bg-white">
+        {/* Tableau — grille contenue par un liseré et des coins arrondis, et
+            non un bloc de texte flottant. Sans cadre ni séparateurs de colonnes,
+            l'œil n'avait aucun repère pour suivre une ligne large jusqu'à la
+            colonne Actions, à l'autre bout de l'écran. */}
+        <div className="overflow-x-auto overflow-y-hidden rounded-lg ring-1 ring-gray-200">
+          <table className="w-full border-collapse text-[.9rem]">
+            <thead className="border-b border-gray-300 bg-gray-50">
               <tr>
                 {table.getHeaderGroups().flatMap((hg) =>
                   hg.headers.map((header) => (
                     <th
                       key={header.id}
                       className={cn(
-                        "px-4 py-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500",
-                        header.column.getCanSort() && "cursor-pointer select-none"
+                        "px-4 py-2.5 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-600",
+                        // Filet vertical entre colonnes, sauf après la dernière.
+                        "border-r border-gray-200 last:border-r-0",
+                        header.column.getCanSort() &&
+                          "cursor-pointer select-none transition-colors hover:bg-gray-100 hover:text-gray-800"
                       )}
                       onClick={header.column.getToggleSortingHandler()}
                     >
                       <div className="flex items-center gap-1">
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {header.column.getCanSort() && (
-                          <span className="text-gray-600">
+                          <span className="text-gray-400">
                             {header.column.getIsSorted() === "asc" ? (
-                              <ChevronUp className="h-4 w-4 text-blue-600" strokeWidth={3} />
+                              <ChevronUp className="h-3.5 w-3.5 text-blue-600" strokeWidth={3} />
                             ) : header.column.getIsSorted() === "desc" ? (
-                              <ChevronDown className="h-4 w-4 text-blue-600" strokeWidth={3} />
+                              <ChevronDown className="h-3.5 w-3.5 text-blue-600" strokeWidth={3} />
                             ) : (
-                              <ChevronsUpDown className="h-4 w-4 text-gray-600" strokeWidth={2.5} />
+                              <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" strokeWidth={2.5} />
                             )}
                           </span>
                         )}
@@ -205,12 +211,12 @@ export function DataTable<T>({
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-200">
               {isLoading ? (
                 Array.from({ length: currentPageSize }).map((_, i) => (
                   <tr key={i}>
                     {columns.map((_, j) => (
-                      <td key={j} className="px-4 py-3">
+                      <td key={j} className="border-r border-gray-100 px-4 py-2.5 last:border-r-0">
                         <div className="h-4 animate-pulse rounded bg-gray-200" />
                       </td>
                     ))}
@@ -220,7 +226,7 @@ export function DataTable<T>({
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="px-4 py-8 text-center text-sm text-gray-500"
+                    className="px-4 py-12 text-center text-sm text-gray-500"
                   >
                     Aucune donnée disponible
                   </td>
@@ -232,12 +238,12 @@ export function DataTable<T>({
                     <tr
                       key={row.id}
                       className={cn(
-                        "transition-colors hover:bg-blue-50/40",
+                        "transition-colors duration-100 hover:bg-blue-50",
                         custom
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="px-4 py-3 align-middle text-[.875rem] text-gray-700">
+                        <td key={cell.id} className="border-r border-gray-100 px-4 py-2.5 align-middle text-[.875rem] text-gray-700 last:border-r-0">
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
