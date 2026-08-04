@@ -395,8 +395,20 @@ export function Sidebar() {
           collapsed ? "md:w-16" : "md:w-64",
         ].join(" ")}
       >
-      {/* Logo — depuis les paramètres (setting_apps.logo), repli sur l'initiale. */}
-      <div className="h-[70px] flex items-center justify-center flex-shrink-0 border-b border-white/15">
+      {/* Logo — depuis les paramètres (setting_apps.logo), repli sur la marque.
+
+          Aligné à gauche sur les entrées du menu (24px : `mx-2` + `px-4` de
+          NAV_BASE), et non centré. Centré, sa position dépendait de sa largeur :
+          un logo large, un logo étroit et le logotype LaboAnaPath se plaçaient à
+          trois abscisses différentes pour un même emplacement. Un menu vertical
+          se lit le long de son bord gauche — le logo doit tenir cet axe.
+
+          Replié, le centrage reste juste : il n'y a plus de colonne à suivre. */}
+      <div
+        className={`flex h-[70px] flex-shrink-0 items-center border-b border-white/15 ${
+          collapsed ? "justify-center" : ""
+        }`}
+      >
         {collapsed ? (
           <AppLogo
             surface="dark"
@@ -404,7 +416,7 @@ export function Sidebar() {
             className="h-9 w-9 rounded-[var(--radius-control)]"
           />
         ) : (
-          <div className="flex items-center gap-2 px-4">
+          <div className="flex min-w-0 items-center gap-2 px-6">
             {/* Deux compositions distinctes, et non un logo suivi du nom en
                 toutes circonstances :
                   — logo téléversé  → l'image, puis la raison sociale à côté ;
