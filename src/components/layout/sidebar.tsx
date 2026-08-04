@@ -32,8 +32,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useUIStore } from "@/stores/ui.store";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useBranding } from "@/hooks/useBranding";
-import { AppLogo } from "@/components/ui/AppLogo";
+import { BrandMark } from "@/components/ui/BrandMark";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { testOrdersApi } from "@/lib/api/testOrders";
 import { inventoryApi } from "@/lib/api/inventory";
@@ -366,7 +365,6 @@ export function Sidebar() {
   // Logo + nom du labo depuis les Paramètres, avec repli sur la route publique
   // `/public/branding` : `/setting-apps` exige la permission `view-settings`, si
   // bien qu'un technicien ne voyait jusqu'ici que l'initiale de repli.
-  const { appName, logo, logoWhite } = useBranding();
 
   return (
     <>
@@ -395,38 +393,20 @@ export function Sidebar() {
           collapsed ? "md:w-16" : "md:w-64",
         ].join(" ")}
       >
-      {/* Logo — depuis les paramètres (setting_apps.logo), repli sur l'initiale. */}
-      <div className="h-[70px] flex items-center justify-center flex-shrink-0 border-b border-white/15">
+      {/* ── Tête du menu : la marque du PRODUIT ─────────────────────────────
+          On se connecte à LaboAnaPath, on travaille chez un laboratoire. La
+          coque de l'application porte donc l'identité du produit ; celle du
+          client apparaît là où elle l'engage — barre du haut et documents
+          imprimés (comptes rendus, factures, feuilles de caisse).
+
+          Auparavant le logo du laboratoire occupait cet emplacement, ce qui
+          obligeait `AppLogo` à arbitrer entre trois identités par une chaîne de
+          replis. L'arbitrage disparaît avec la séparation. */}
+      <div className="flex h-[70px] flex-shrink-0 items-center justify-center border-b border-white/15">
         {collapsed ? (
-          <AppLogo
-            surface="dark"
-            fallback="initial"
-            className="h-9 w-9 rounded-[var(--radius-control)]"
-          />
+          <BrandMark compact />
         ) : (
-          <div className="flex items-center gap-2 px-4">
-            {/* Deux compositions distinctes, et non un logo suivi du nom en
-                toutes circonstances :
-                  — logo téléversé  → l'image, puis la raison sociale à côté ;
-                  — aucun logo      → la marque LaboAnaPath seule.
-                Accoler la lettrine au nom donnerait « [L] LaboAnaPath », soit
-                l'initiale répétée juste avant le mot qu'elle abrège. */}
-            {logo || logoWhite ? (
-              <>
-                <AppLogo
-                  surface="dark"
-                  fallback="initial"
-                  className="h-9 w-auto max-w-[90px] rounded-[var(--radius-control)] flex-shrink-0"
-                  fallbackClassName="flex-shrink-0"
-                />
-                <span className="truncate text-base font-semibold text-white">
-                  {appName}
-                </span>
-              </>
-            ) : (
-              <AppLogo surface="dark" fallback="name" className="text-lg" />
-            )}
-          </div>
+          <BrandMark surface="dark" className="text-lg" />
         )}
       </div>
 
