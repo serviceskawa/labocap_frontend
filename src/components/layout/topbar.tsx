@@ -16,6 +16,7 @@ function MdiMenuIcon({ className }: { className?: string }) {
 import { useUIStore } from "@/stores/ui.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { useBranchStore } from "@/stores/branch.store";
+import { useBranding } from "@/hooks/useBranding";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/Button";
 
@@ -33,6 +34,8 @@ export function Topbar() {
   };
   const { user, clearAuth } = useAuthStore();
   const clearBranch = useBranchStore((state) => state.clearBranch);
+  const branch = useBranchStore((state) => state.branch);
+  const { appName } = useBranding();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -85,6 +88,31 @@ export function Topbar() {
       >
         <MdiMenuIcon className="h-6 w-6" />
       </button>
+
+      {/* ── Contexte : chez qui et où ────────────────────────────────────────
+          L'identité du laboratoire s'affiche ici, et non plus dans la tête du
+          menu — celle-ci porte la marque du produit. C'est le bon endroit :
+          la barre du haut dit où l'on se trouve, et le nom de l'agence y était
+          déjà attendu à côté du sélecteur de branche.
+
+          Masqué sous `sm` : sur mobile la place revient au menu et au profil. */}
+      <div className="hidden min-w-0 flex-1 items-center gap-2 sm:flex">
+        {appName ? (
+          <span className="truncate text-[.9375rem] font-semibold text-gray-900">
+            {appName}
+          </span>
+        ) : null}
+        {branch?.name ? (
+          <>
+            <span aria-hidden="true" className="text-gray-300">
+              ·
+            </span>
+            <span className="truncate text-[.875rem] text-gray-500">
+              {branch.name}
+            </span>
+          </>
+        ) : null}
+      </div>
 
       {/* Right: user dropdown */}
       <div className="relative flex-shrink-0" ref={dropdownRef}>

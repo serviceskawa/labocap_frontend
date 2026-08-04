@@ -15,7 +15,7 @@ import {
   getPending2faEmail,
   getPending2faExpiry,
 } from "@/lib/auth-2fa";
-import { AppLogo } from "@/components/ui/AppLogo";
+import { BrandMark } from "@/components/ui/BrandMark";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
@@ -174,7 +174,7 @@ export default function TwoFactorChallengePage() {
           {/* Header avec logo */}
           <div className="bg-gray-50 px-8 py-6 text-center border-b">
             <Link href="/">
-              <AppLogo className="h-12 mx-auto" />
+              <BrandMark className="text-[1.75rem]" />
             </Link>
           </div>
 
