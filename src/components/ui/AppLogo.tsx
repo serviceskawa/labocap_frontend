@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useBranding } from "@/hooks/useBranding";
+import { BrandMark } from "./BrandMark";
 
 interface AppLogoProps {
   /**
@@ -57,16 +58,17 @@ export function AppLogo({
     );
   }
 
+  // Aucun logo configuré : on montre la marque du produit plutôt qu'une
+  // initiale dans un carré. Un laboratoire qui n'a pas encore téléversé la
+  // sienne voyait jusqu'ici un « L » générique — l'application paraissait
+  // inachevée dès le premier écran. La marque du client, dès qu'elle existe,
+  // continue de primer (branche `src` ci-dessus).
   if (fallback === "initial") {
     return (
-      <div
-        className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white",
-          fallbackClassName
-        )}
-      >
-        {appName.charAt(0).toUpperCase()}
-      </div>
+      <BrandMark
+        surface={surface}
+        className={cn("h-8 w-8", fallbackClassName)}
+      />
     );
   }
 

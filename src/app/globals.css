@@ -11,7 +11,13 @@
      ombre de contact courte et nette, une ombre d'ambiance plus large — qui
      donnent la matière des interfaces applicatives contemporaines.          */
   --radius-control: 0.5rem;   /* boutons, champs, badges */
-  --radius-surface: 0.75rem;  /* cartes, modales, menus */
+  /* 1rem plutôt que 0.75rem : relevé sur les cinq références du benchmark
+     (Shield, Healthqoe, osler, flux, OutcomeIQ), toutes entre 0.9 et 1.25rem
+     sur les cartes. À 0.75rem la carte restait « administrative » ; l'écart de
+     4px suffit à la faire lire comme une surface posée. Le rayon des contrôles
+     ne bouge pas — les élargir aussi effacerait la hiérarchie entre une carte
+     et un bouton. */
+  --radius-surface: 1rem;     /* cartes, modales, menus */
 
   --elevation-flat:
     0 1px 2px 0 rgba(15, 23, 42, 0.04),

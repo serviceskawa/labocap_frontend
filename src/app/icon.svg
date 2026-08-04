@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!--
+    Favicon — marque LaboAnaPath, identique à src/components/ui/BrandMark.tsx.
+    Toute retouche doit être reportée dans les deux fichiers.
+
+    Convention App Router : ce fichier suffit, Next.js pose lui-même le <link>
+    dans le <head>. Pas de balise à écrire dans layout.tsx.
+
+    Variante claire uniquement : les onglets des navigateurs posent le favicon
+    sur un fond clair comme sombre, et l'azur plein tient sur les deux.
+  -->
+  <defs>
+    <clipPath id="s">
+      <rect x="1.5" y="1.5" width="29" height="29" rx="8" />
+    </clipPath>
+  </defs>
+  <rect x="1.5" y="1.5" width="29" height="29" rx="8" fill="#2e4bd8" />
+  <g clip-path="url(#s)">
+    <path d="M 1.5 9.5 L 30.5 9.5 L 30.5 1.5 L 1.5 1.5 Z" fill="#ffffff" opacity="0.26" />
+    <path d="M 29 -2 L 36 -2 L 0 34 L -7 34 Z" fill="#ffffff" opacity="0.96" />
+    <circle cx="14" cy="16.5" r="2.5" fill="#2e4bd8" />
+  </g>
+</svg>

@@ -17,6 +17,15 @@ interface StatCardProps {
    * soulève promet une action qui n'existe pas.
    */
   interactive?: boolean;
+  /**
+   * Micro-graphique posé en pied de carte — {@link Sparkline} pour une mesure
+   * continue, {@link MiniBars} pour des relevés discrets.
+   *
+   * Le chiffre dit l'état courant, la courbe dit d'où il vient : « 128 examens »
+   * seul n'est pas interprétable, en hausse ou en chute ? Les cinq références du
+   * benchmark en portent un dans chaque carte chiffrée.
+   */
+  chart?: React.ReactNode;
 }
 
 /**
@@ -37,6 +46,7 @@ export function StatCard({
   className,
   valueClassName,
   interactive = false,
+  chart,
 }: StatCardProps) {
   return (
     <div
@@ -99,6 +109,12 @@ export function StatCard({
           </div>
         )}
       </div>
+
+      {/* Pied de carte : le graphique s'étend sur toute la largeur, sous le
+          bloc chiffré. Anatomie constante — libellé, valeur, tendance, courbe —
+          reprise des cartes du benchmark : c'est sa régularité d'une tuile à
+          l'autre qui fait lire une grille d'indicateurs d'un seul coup d'œil. */}
+      {chart ? <div className="mt-4 -mb-1">{chart}</div> : null}
     </div>
   );
 }
