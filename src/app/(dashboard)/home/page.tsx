@@ -19,7 +19,6 @@ import {
   Building2,
   FlaskConical,
   Wallet,
-  Inbox,
   AlertTriangle,
 } from "lucide-react";
 import {
@@ -39,7 +38,6 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
-import { EmptyState } from "@/components/ui/EmptyState";
 import {
   TableLengthControl,
   TablePaginationFooter,
@@ -49,12 +47,10 @@ import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { IconButton } from "@/components/ui/IconButton";
 
 import { usePermissions } from "@/hooks/usePermissions";
-import { useAuthStore } from "@/stores/auth.store";
 import { cn, formatCFA, formatDate } from "@/lib/utils";
 import {
   dashboardApi,
   ReportToday,
-  DoctorStat,
   RevenueData,
   AppointmentItem,
   DoctorOrder,
@@ -297,95 +293,6 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
 }
 
 // ---------------------------------------------------------------------------
-// ProgressTable
-// ---------------------------------------------------------------------------
-
-interface ProgressTableProps {
-  headers: [string, string];
-  data: Array<{ label: string; value: number }>;
-  color?: string;
-}
-
-function ProgressTable({
-  headers,
-  data,
-  color = "bg-blue-500",
-}: ProgressTableProps) {
-  const max = data.length > 0 ? Math.max(...data.map((d) => d.value)) : 1;
-  // La barre reste proportionnelle au maximum de TOUTE la série, pas seulement
-  // de la page affichée : sinon l'échelle changerait d'une page à l'autre.
-  const pagination = useTablePagination(data);
-
-  // Ces trois répartitions sont affichées côte à côte dans une carte imbriquée,
-  // et tiennent presque toujours sur une page. Poser systématiquement le sélecteur
-  // « Afficher 10 enregistrements par page » ET le pied de pagination donnait
-  // trois sélecteurs et trois paginateurs pour trois tableaux d'une poignée de
-  // lignes — soit plus de chrome que de donnée, et un « page 1 sur 1 » répété
-  // trois fois. On ne les montre que lorsqu'il y a réellement plusieurs pages.
-  const isPaginated = pagination.pageCount > 1;
-
-  // Sans donnée, le corps du tableau ne rendait rien : on voyait une ligne
-  // d'en-tête suivie d'un vide, puis le paginateur. L'écran paraissait cassé
-  // plutôt que vide.
-  if (data.length === 0) {
-    return (
-      <EmptyState
-        compact
-        icon={Inbox}
-        title="Aucune donnée"
-        description={`Aucun résultat par ${headers[0].toLocaleLowerCase("fr")} ce mois-ci.`}
-      />
-    );
-  }
-
-  return (
-    <>
-      {isPaginated && <TableLengthControl pagination={pagination} className="px-6" />}
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-3 py-2 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-              {headers[0]}
-            </th>
-            <th className="px-3 py-2 text-right text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-              {headers[1]}
-            </th>
-            <th className="w-32 px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {pagination.pageRows.map((item, i) => {
-            const ratio = Math.round((item.value / (max || 1)) * 100);
-            return (
-              <tr
-                key={i}
-                // Même survol que `DataTable` : le gris était une troisième
-                // teinte de survol dans une application qui en a déjà une.
-                className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
-              >
-                <td className="px-3 py-2 text-gray-700">{item.label}</td>
-                <td className="px-3 py-2 text-right font-semibold text-gray-900">
-                  {item.value}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="h-[3px] rounded-full bg-gray-100">
-                    <div
-                      className={`h-[3px] rounded-full ${color}`}
-                      style={{ width: `${ratio}%` }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      {isPaginated && <TablePaginationFooter pagination={pagination} className="px-6 pb-5" />}
-    </>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // DonutChart — générique
 // ---------------------------------------------------------------------------
 
@@ -611,7 +518,6 @@ function SimpleCalendar() {
 
 export default function HomePage() {
   const { can } = usePermissions();
-  const { user } = useAuthStore();
   const queryClient = useQueryClient();
 
   const isAdmin = can(PERMISSIONS.VIEW_ADMIN_DASHBOARD);
@@ -652,29 +558,8 @@ export default function HomePage() {
     [reportsToday]
   );
 
-  // -- Top examens
-  const { data: topExamens = [], isLoading: topExamensLoading } = useQuery({
-    queryKey: ["dashboard", "top-examens"],
-    queryFn: () => dashboardApi.getTopExamens().then((r) => r.data),
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-    enabled: isAdmin,
-  });
 
-  // -- Monthly stats
-  const { data: monthlyStats, isLoading: monthlyLoading } = useQuery({
-    queryKey: ["dashboard", "monthly-stats"],
-    queryFn: () => dashboardApi.getMonthlyStats().then((r) => r.data),
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-    enabled: isAdmin,
-  });
 
-  // -- Admin exam status pie (pour la section admin)
-  const adminPieData = [
-    { name: "Terminé", value: stats?.finishTest ?? 0, color: CHART_STATUS.good },
-    { name: "En attente", value: stats?.noFinishTest ?? 0, color: CHART_STATUS.critical },
-  ];
 
   // -- Finance
   const { data: revenueData } = useQuery({
@@ -727,23 +612,7 @@ export default function HomePage() {
     return `${pct.toFixed(1).replace(".", ",")} %`;
   };
 
-  // -- Doctor stats
-  const { data: doctorStats = [], isLoading: doctorStatsLoading } = useQuery({
-    queryKey: ["dashboard", "doctor-stats"],
-    queryFn: () => dashboardApi.getDoctorStats().then((r) => r.data),
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-    enabled: isAdmin || isFinance,
-  });
 
-  // -- Connected users
-  const { data: connectedUsers = [], isLoading: connectedLoading } = useQuery({
-    queryKey: ["dashboard", "connected-users"],
-    queryFn: () => dashboardApi.getConnectedUsers().then((r) => r.data),
-    staleTime: 2 * 60 * 1000,
-    refetchInterval: 2 * 60 * 1000,
-    enabled: isAdmin || isFinance,
-  });
 
   // -- Pathologist
   const { data: doctorExamStatus } = useQuery({
@@ -797,8 +666,6 @@ export default function HomePage() {
   ];
 
   // Pagination des tableaux du tableau de bord dont la liste n'est pas bornée.
-  const doctorStatsPagination = useTablePagination(doctorStats, 10);
-  const connectedUsersPagination = useTablePagination(connectedUsers, 10);
   const reportsDeliveredPagination = useTablePagination(reportsDelivered, 10);
   const doctorOrdersPagination = useTablePagination(doctorOrders, 10);
   const doctorOrdersTodayPagination = useTablePagination(doctorOrdersToday, 10);
@@ -1067,163 +934,6 @@ export default function HomePage() {
                 ))}
           </div>
 
-          {/* LIGNE 2 : EXAMENS LES PLUS DEMANDÉS + STATUT D'EXAMENS */}
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Gauche 50% : EXAMENS LES PLUS DEMANDÉS */}
-            <div className="flex-1">
-              <Card>
-                <CardHeader title="EXAMENS LES PLUS DEMANDÉS" />
-                <div className="overflow-x-auto px-3">
-                  {/* Comme dans Laravel (dashboardPlus.blade.php) : le tableau des
-                      examens les plus demandés n'a pas de ligne d'en-tête. */}
-                  <table className="w-full text-sm">
-                    <tbody className="divide-y divide-gray-100">
-                      {topExamensLoading
-                        ? Array.from({ length: 5 }).map((_, i) => (
-                            <SkeletonRow key={i} cols={3} />
-                          ))
-                        : topExamens.slice(0, 7).map((ex, idx) => (
-                            <tr
-                              key={idx}
-                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
-                            >
-                              <td className="py-2 px-3 text-gray-500 text-sm w-10">
-                                {idx + 1}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {ex.testName}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {ex.totalDemandes}
-                              </td>
-                            </tr>
-                          ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </div>
-
-            {/* Droite 50% : STATUT D'EXAMENS */}
-            <div className="flex-1">
-              <Card>
-                <CardHeader title="STATUT D'EXAMENS" />
-                <div className="p-5">
-                  <DonutChart segments={adminPieData} />
-                  <div className="flex justify-around mt-3">
-                    <div className="text-center">
-                      <p className="text-green-600 font-semibold text-lg">
-                        ↑ {stats?.finishTest ?? 0}
-                      </p>
-                      <p className="text-xs text-gray-500">Terminé</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-red-600 font-semibold text-lg">
-                        ↓ {stats?.noFinishTest ?? 0}
-                      </p>
-                      <p className="text-xs text-gray-500">En attente</p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-
-          {/* LIGNE 3 : STATISTIQUE MENSUELLE (full width) */}
-          <Card>
-            <CardHeader title="STATISTIQUE MENSUELLE" />
-            <div className="p-5 space-y-6">
-              {/* Carte imbriquée EXAMENS DEMANDES */}
-              <div className="rounded-[var(--radius-control)] border border-gray-100 p-4">
-                <p className="mb-3 text-[.875rem] font-semibold text-gray-800">
-                  Examens demandés
-                </p>
-                {monthlyLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-16 animate-pulse rounded bg-gray-200"
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="rounded-[var(--radius-control)] bg-gray-50 p-4 text-center">
-                      <p className="text-[.8125rem] font-medium text-gray-500">
-                        Total d&apos;examens
-                      </p>
-                      <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
-                        {monthlyStats?.nombreTests ?? 0}
-                      </p>
-                    </div>
-                    <div className="rounded-[var(--radius-control)] bg-gray-50 p-4 text-center">
-                      <p className="text-[.8125rem] font-medium text-gray-500">
-                        Chiffre d&apos;affaire
-                      </p>
-                      <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
-                        {formatCFA(monthlyStats?.caTests ?? 0)}
-                      </p>
-                    </div>
-                    <div className="rounded-[var(--radius-control)] bg-gray-50 p-4 text-center">
-                      <p className="text-[.8125rem] font-medium text-gray-500">
-                        Patients
-                      </p>
-                      <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
-                        {monthlyStats?.totalPatientTest ?? 0}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Carte imbriquée STATISTIQUE PATIENTS */}
-              <div className="rounded-[var(--radius-control)] border border-gray-100 p-4">
-                <p className="mb-3 text-[.875rem] font-semibold text-gray-800">
-                  Statistique patients
-                </p>
-                {monthlyLoading ? (
-                  <div className="h-20 animate-pulse rounded bg-gray-200" />
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Hôpitaux */}
-                    <div>
-                      <ProgressTable
-                        headers={["Hôpital", "Patients"]}
-                        data={(monthlyStats?.byHopital ?? []).map((h) => ({
-                          label: h.nom,
-                          value: h.totalPatients,
-                        }))}
-                        color="bg-blue-500"
-                      />
-                    </div>
-                    {/* Médecin traitant */}
-                    <div>
-                      <ProgressTable
-                        headers={["Médécin", "Patients"]}
-                        data={(monthlyStats?.byMedecin ?? []).map((h) => ({
-                          label: h.nom,
-                          value: h.totalPatients,
-                        }))}
-                        color="bg-blue-500"
-                      />
-                    </div>
-                    {/* Type de demande */}
-                    <div>
-                      <ProgressTable
-                        headers={["Type", "Patients"]}
-                        data={(monthlyStats?.byType ?? []).map((h) => ({
-                          label: h.nom,
-                          value: h.totalPatients,
-                        }))}
-                        color="bg-blue-500"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
         </>
       )}
 
@@ -1329,109 +1039,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* LIGNE 5 : Statistique par docteurs + Utilisateurs connectés */}
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Gauche 50% : Statistique par docteurs */}
-            <div className="flex-1">
-              <Card>
-                <CardHeader title="Statistique par docteurs" />
-                <TableLengthControl pagination={doctorStatsPagination} className="px-6" />
-                <div className="overflow-x-auto px-3">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                          Docteurs
-                        </th>
-                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                          Demandes Affectées
-                        </th>
-                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                          Demandes Traitées
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {doctorStatsLoading
-                        ? Array.from({ length: 4 }).map((_, i) => (
-                            <SkeletonRow key={i} cols={3} />
-                          ))
-                        : doctorStatsPagination.pageRows.map((ds: DoctorStat, i) => (
-                            <tr
-                              key={i}
-                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
-                            >
-                              <td className="py-2 px-3 text-gray-700">
-                                {ds.doctor}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {ds.assigne}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {ds.traite}
-                              </td>
-                            </tr>
-                          ))}
-                    </tbody>
-                  </table>
-                </div>
-                <TablePaginationFooter pagination={doctorStatsPagination} className="px-6 pb-5" />
-              </Card>
-            </div>
-
-            {/* Droite 50% : Utilisateurs connectés */}
-            <div className="flex-1">
-              <Card>
-                <CardHeader title="Utilisateurs connectés" />
-                <TableLengthControl pagination={connectedUsersPagination} className="px-6" />
-                <div className="overflow-x-auto px-3">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500 w-8">
-                          #
-                        </th>
-                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                          Nom
-                        </th>
-                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                          Email
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {connectedLoading
-                        ? Array.from({ length: 3 }).map((_, i) => (
-                            <SkeletonRow key={i} cols={3} />
-                          ))
-                        : connectedUsersPagination.pageRows.map((u, idx) => (
-                            <tr
-                              key={u.id}
-                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
-                            >
-                              <td className="py-2 px-3 text-gray-400 text-xs">
-                                {idx + 1}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {u.lastname} {u.firstname}
-                                {u.id === user?.id && (
-                                  <span className="ml-1 text-xs text-gray-400">
-                                    (Vous)
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-2 px-3 text-gray-600">
-                                {u.email}
-                              </td>
-                            </tr>
-                          ))}
-                    </tbody>
-                  </table>
-                </div>
-                <TablePaginationFooter pagination={connectedUsersPagination} className="px-6 pb-5" />
-              </Card>
-            </div>
-          </div>
         </>
       )}
 

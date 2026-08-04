@@ -27,6 +27,7 @@ import {
   ChevronRight,
   FlaskConical,
   Syringe,
+  BarChart3,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useUIStore } from "@/stores/ui.store";
@@ -388,6 +389,11 @@ export function Sidebar() {
         <SectionLabel label="TABLEAU DE BORD" collapsed={collapsed} />
 
         <NavItem href="/home" icon={<Home className="w-5 h-5" />} label="Tableau de bord" collapsed={collapsed} />
+        {/* Analyses sorties du tableau de bord : même permission, rythme de
+            consultation différent (hebdomadaire plutôt que quotidien). */}
+        {can(PERMISSIONS.VIEW_ADMIN_DASHBOARD) && (
+          <NavItem href="/statistiques" icon={<BarChart3 className="w-5 h-5" />} label="Statistiques" collapsed={collapsed} />
+        )}
 
         {/* ══════════════ EXAMENS ══════════════ */}
         <SectionLabel label="EXAMENS" collapsed={collapsed} />
