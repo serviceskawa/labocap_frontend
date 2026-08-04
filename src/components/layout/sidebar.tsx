@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Children, isValidElement } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -27,6 +27,7 @@ import {
   ChevronRight,
   FlaskConical,
   Syringe,
+  BarChart3,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useUIStore } from "@/stores/ui.store";
@@ -76,6 +77,35 @@ interface SubItemProps {
 // Small helpers
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// État actif du menu — un seul langage pour les trois niveaux
+// ---------------------------------------------------------------------------
+
+/**
+ * Les trois niveaux de navigation signalaient l'élément courant de trois façons
+ * sans rapport entre elles :
+ *
+ *   entrée de premier niveau   pastille azur pleine + une ombre colorée écrite
+ *                              à la main (`0 2px 8px -2px rgba(46,75,216,.55)`)
+ *   sous-entrée                fond blanc à 7 %, angles arrondis à droite
+ *                              seulement, aucune trace d'azur
+ *   section dépliante          rien du tout, même lorsqu'elle contient la page
+ *                              affichée
+ *
+ * D'où l'impression que le tableau de bord « s'allume » autrement que le reste
+ * du menu. L'azur devient la seule couleur de l'état courant, et la hiérarchie
+ * s'exprime par son intensité : aplat plein au premier niveau, voile teinté
+ * doublé d'un filet vertical pour une sous-entrée, simple mise en blanc du
+ * libellé pour la section qui la contient.
+ */
+const NAV_ACTIVE = "bg-blue-600 text-white";
+const NAV_IDLE =
+  "text-sidebar-link hover:bg-white/[0.06] hover:text-sidebar-link-hover";
+/** Assiette commune : même gouttière, même rayon, même tempo qu'ailleurs. */
+const NAV_BASE =
+  "mx-2 flex items-center rounded-[var(--radius-control)] px-4 py-2.5 " +
+  "text-[.9rem] transition-colors duration-[var(--duration-fast)] ease-emphasized";
+
 function Badge({ count }: BadgeProps) {
   if (count <= 0) return null;
   return (
@@ -92,12 +122,8 @@ function NavItem({ href, icon, label, collapsed, badge = 0 }: NavItemProps) {
   return (
     <Link
       href={href}
-      className={`flex items-center px-4 py-2.5 rounded-lg mx-2 transition-colors text-[.9rem] ${
-        collapsed ? "justify-center" : "gap-3"
-      } ${
-        isActive
-          ? "bg-blue-600 text-white shadow-[0_2px_8px_-2px_rgba(46,75,216,0.55)]"
-          : "text-sidebar-link hover:bg-white/[0.06] hover:text-sidebar-link-hover"
+      className={`${NAV_BASE} ${collapsed ? "justify-center" : "gap-3"} ${
+        isActive ? NAV_ACTIVE : NAV_IDLE
       }`}
       title={collapsed ? label : undefined}
     >
@@ -119,7 +145,22 @@ function CollapseItem({
   badge = 0,
   children,
 }: CollapseItemProps) {
-  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Les sous-entrées sont passées en `children` : on lit leur `href` pour savoir
+  // si la page courante appartient à cette section. Sans cela, une section
+  // repliée ne portait aucune marque alors qu'elle contenait l'écran affiché —
+  // et se refermait à chaque navigation, faisant perdre le fil.
+  const childHrefs = Children.toArray(children)
+    .map((child) =>
+      isValidElement<{ href?: string }>(child) ? child.props.href : undefined,
+    )
+    .filter((href): href is string => Boolean(href));
+  const containsActive = childHrefs.some(
+    (href) => pathname === href || pathname.startsWith(`${href}/`),
+  );
+
+  const [open, setOpen] = useState(containsActive);
   const [flyoutTop, setFlyoutTop] = useState(0);
   const triggerRef = useRef<HTMLDivElement>(null);
 
@@ -139,7 +180,9 @@ function CollapseItem({
         onMouseLeave={() => setOpen(false)}
       >
         <div
-          className="flex items-center justify-center px-4 py-2.5 mx-2 text-sidebar-link cursor-pointer hover:bg-white/[0.06] hover:text-sidebar-link-hover rounded-lg transition-colors"
+          className={`${NAV_BASE} cursor-pointer justify-center ${
+            containsActive ? NAV_ACTIVE : NAV_IDLE
+          }`}
           title={label}
         >
           <span className="flex-shrink-0 w-5 h-5">{icon}</span>
@@ -147,7 +190,7 @@ function CollapseItem({
         {open && (
           // `pl-1` sert de pont de survol entre l'icône et le panneau.
           <div className="fixed left-16 z-50 pl-1" style={{ top: flyoutTop }}>
-            <div className="min-w-[210px] rounded-xl border border-white/10 bg-gray-900 py-2 shadow-2xl">
+            <div className="min-w-[210px] rounded-[var(--radius-surface)] border border-white/10 bg-gray-900 py-2 shadow-[var(--elevation-overlay)]">
               <div className="px-4 pb-2 mb-1 border-b border-white/10 text-xs uppercase tracking-wider text-sidebar-link font-semibold">
                 {label}
               </div>
@@ -163,7 +206,11 @@ function CollapseItem({
     <div>
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-3 px-4 py-2.5 rounded-md mx-2 w-[calc(100%-16px)] text-left text-[.9375rem] text-sidebar-link hover:bg-white/5 hover:text-sidebar-link-hover transition-colors"
+        className={`${NAV_BASE} w-[calc(100%-16px)] gap-3 text-left ${
+          containsActive
+            ? "font-medium text-white"
+            : "text-sidebar-link hover:bg-white/[0.06] hover:text-sidebar-link-hover"
+        }`}
       >
         <span className="flex-shrink-0 w-5 h-5">{icon}</span>
         <span className="flex-1 truncate">{label}</span>
@@ -188,10 +235,12 @@ function CollapseItem({
 function SubItem({ href, label, onClick }: SubItemProps) {
   const pathname = usePathname();
   const isActive = !!href && pathname === href;
-  const cls = `flex w-full items-center pl-8 pr-4 py-2 text-left text-[.9375rem] transition-colors ${
+  // `-ml-px` fait chevaucher le filet actif sur la ligne de guidage du groupe :
+  // l'azur s'y substitue au lieu de s'y ajouter, sans décaler le libellé.
+  const cls = `flex w-full items-center rounded-r-[var(--radius-control)] py-2 pl-8 pr-4 text-left text-[.9rem] transition-colors duration-[var(--duration-fast)] ease-emphasized ${
     isActive
-      ? "text-white bg-white/[0.07] rounded-r-lg"
-      : "text-sidebar-link hover:text-sidebar-link-hover hover:bg-white/[0.05] rounded-r-lg"
+      ? "-ml-px border-l-2 border-blue-500 bg-blue-600/[0.18] pl-[calc(2rem-1px)] font-medium text-white"
+      : "text-sidebar-link hover:bg-white/[0.05] hover:text-sidebar-link-hover"
   }`;
 
   // Déclencheur (ex. modal global) : bouton au lieu d'un lien.
@@ -317,7 +366,7 @@ export function Sidebar() {
   // Logo + nom du labo depuis les Paramètres, avec repli sur la route publique
   // `/public/branding` : `/setting-apps` exige la permission `view-settings`, si
   // bien qu'un technicien ne voyait jusqu'ici que l'initiale de repli.
-  const { appName } = useBranding();
+  const { appName, logo, logoWhite } = useBranding();
 
   return (
     <>
@@ -333,7 +382,7 @@ export function Sidebar() {
       <aside
         className={[
           "hyper-sidebar text-white flex flex-col overflow-hidden",
-          "transition-[transform,width] duration-300 ease-in-out",
+          "transition-[transform,width] duration-[var(--duration-slow)] ease-emphasized",
           // Mobile (< 768px) : menu hors écran par défaut, en overlay fixe une
           // fois ouvert — calque de `.leftside-menu { display:none }` +
           // `.sidebar-enable .leftside-menu` du thème Hyper.
@@ -352,19 +401,31 @@ export function Sidebar() {
           <AppLogo
             surface="dark"
             fallback="initial"
-            className="h-9 w-9 rounded-lg"
+            className="h-9 w-9 rounded-[var(--radius-control)]"
           />
         ) : (
           <div className="flex items-center gap-2 px-4">
-            <AppLogo
-              surface="dark"
-              fallback="initial"
-              className="h-9 w-auto max-w-[90px] rounded flex-shrink-0"
-              fallbackClassName="flex-shrink-0"
-            />
-            <span className="font-semibold text-white text-base truncate">
-              {appName}
-            </span>
+            {/* Deux compositions distinctes, et non un logo suivi du nom en
+                toutes circonstances :
+                  — logo téléversé  → l'image, puis la raison sociale à côté ;
+                  — aucun logo      → la marque LaboAnaPath seule.
+                Accoler la lettrine au nom donnerait « [L] LaboAnaPath », soit
+                l'initiale répétée juste avant le mot qu'elle abrège. */}
+            {logo || logoWhite ? (
+              <>
+                <AppLogo
+                  surface="dark"
+                  fallback="initial"
+                  className="h-9 w-auto max-w-[90px] rounded-[var(--radius-control)] flex-shrink-0"
+                  fallbackClassName="flex-shrink-0"
+                />
+                <span className="truncate text-base font-semibold text-white">
+                  {appName}
+                </span>
+              </>
+            ) : (
+              <AppLogo surface="dark" fallback="name" className="text-lg" />
+            )}
           </div>
         )}
       </div>
@@ -376,6 +437,11 @@ export function Sidebar() {
         <SectionLabel label="TABLEAU DE BORD" collapsed={collapsed} />
 
         <NavItem href="/home" icon={<Home className="w-5 h-5" />} label="Tableau de bord" collapsed={collapsed} />
+        {/* Analyses sorties du tableau de bord : même permission, rythme de
+            consultation différent (hebdomadaire plutôt que quotidien). */}
+        {can(PERMISSIONS.VIEW_ADMIN_DASHBOARD) && (
+          <NavItem href="/statistiques" icon={<BarChart3 className="w-5 h-5" />} label="Statistiques" collapsed={collapsed} />
+        )}
 
         {/* ══════════════ EXAMENS ══════════════ */}
         <SectionLabel label="EXAMENS" collapsed={collapsed} />

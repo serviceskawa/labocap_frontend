@@ -52,7 +52,7 @@ export function AlertBox({
     <div
       role="alert"
       className={cn(
-        "flex items-start gap-3 rounded-lg border p-4",
+        "flex items-start gap-3 rounded-[var(--radius-control)] border p-4",
         config.container,
         className
       )}
@@ -69,7 +69,7 @@ export function AlertBox({
           type="button"
           onClick={onDismiss}
           className={cn(
-            "flex-shrink-0 rounded p-0.5 transition-colors",
+            "flex-shrink-0 rounded-[var(--radius-control)] p-0.5 transition-colors",
             config.dismissClass
           )}
           aria-label="Fermer"

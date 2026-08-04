@@ -34,7 +34,7 @@ export function CategoryForm({ register, errors }: CategoryFormProps) {
           type="text"
           maxLength={2}
           placeholder="ex : CF"
-          className="w-full rounded-lg"
+          className="w-full rounded-[var(--radius-control)]"
           {...register("code")}
           error={!!errors.code}
         />
@@ -43,7 +43,7 @@ export function CategoryForm({ register, errors }: CategoryFormProps) {
       <FormField label="Nom" required error={errors.name?.message}>
         <TextInput
           type="text"
-          className="w-full rounded-lg"
+          className="w-full rounded-[var(--radius-control)]"
           {...register("name")}
           error={!!errors.name}
         />

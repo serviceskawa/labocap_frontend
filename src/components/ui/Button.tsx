@@ -46,8 +46,8 @@ const variantClasses: Record<ButtonVariant, string> = {
 // coloré paraît délavé. Les angles quasi vifs de Bootstrap (.15rem ≈ 2px)
 // dataient l'ensemble plus que n'importe quel autre détail.
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "gap-1.5 rounded-lg px-3 py-1.5 text-[.8125rem]",
-  md: "gap-2 rounded-lg px-[.9rem] py-2 text-[.9rem]",
+  sm: "gap-1.5 rounded-[var(--radius-control)] px-3 py-1.5 text-[.8125rem]",
+  md: "gap-2 rounded-[var(--radius-control)] px-[.9rem] py-2 text-[.9rem]",
 };
 
 const spinnerSize: Record<ButtonSize, string> = {
@@ -134,7 +134,7 @@ export function Button({
       onClick={handleClick}
       className={cn(
         "inline-flex items-center justify-center font-medium leading-normal",
-        "transition-[background-color,border-color,box-shadow] duration-150",
+        "transition-[background-color,border-color,box-shadow] duration-[var(--duration-fast)] ease-emphasized",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1",
         "disabled:cursor-not-allowed disabled:opacity-55 disabled:shadow-none",
         variantClasses[variant],

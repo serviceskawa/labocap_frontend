@@ -36,6 +36,7 @@ import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
 import type { ApiError as ApiErrorType } from "@/types/api";
 import apiClient from "@/lib/api/client";
 import { generatePatientCode } from "@/lib/utils";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,8 +93,6 @@ type QuickPatientFormData = z.infer<typeof quickPatientSchema>;
 // ---------------------------------------------------------------------------
 // Shared input className
 // ---------------------------------------------------------------------------
-const inputCls =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 // ---------------------------------------------------------------------------
 // Déduplication des options react-select par libellé
@@ -444,7 +443,7 @@ export default function TestOrderCreatePage() {
                     type="text"
                     {...register("examenReferenceInput")}
                     placeholder="Référence de l'examen externe..."
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className={inputClass}
                   />
                   {errors.examenReferenceInput && (
                     <p className="text-xs text-red-500">
@@ -596,7 +595,7 @@ export default function TestOrderCreatePage() {
                 type="text"
                 {...register("referenceHopital")}
                 placeholder="Numéro de référence..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClass}
               />
             </div>
 
@@ -608,7 +607,7 @@ export default function TestOrderCreatePage() {
               <input
                 type="date"
                 {...register("prelevementDate")}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClass}
               />
               {errors.prelevementDate && (
                 <p className="text-xs text-red-500">
@@ -698,7 +697,7 @@ export default function TestOrderCreatePage() {
               type="text"
               {...registerPatient("firstname")}
               placeholder="Prénom du patient..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -712,7 +711,7 @@ export default function TestOrderCreatePage() {
               type="text"
               {...registerPatient("lastname")}
               placeholder="Nom du patient..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -746,7 +745,7 @@ export default function TestOrderCreatePage() {
                 min={0}
                 {...registerPatient("age")}
                 placeholder="Âge..."
-                className={inputCls}
+                className={inputClass}
               />
               <Controller
                 name="yearOrMonth"
@@ -777,7 +776,7 @@ export default function TestOrderCreatePage() {
               type="tel"
               {...registerPatient("telephone1")}
               placeholder="+229..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -790,7 +789,7 @@ export default function TestOrderCreatePage() {
               type="tel"
               {...registerPatient("telephone2")}
               placeholder="Numéro secondaire (optionnel)..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -803,7 +802,7 @@ export default function TestOrderCreatePage() {
               type="text"
               {...registerPatient("profession")}
               placeholder="Profession..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -817,7 +816,7 @@ export default function TestOrderCreatePage() {
               {...registerPatient("adresse")}
               rows={2}
               placeholder="Adresse du patient..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
         </div>

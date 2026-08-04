@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectField } from "@/components/ui/SelectField";
 import { docsApi, documentationCategoriesApi, formatFileSize } from "@/lib/api/docs";
 import type { ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Page
@@ -57,8 +58,6 @@ export default function DocCreatePage() {
     createMutation.mutate({ title: title.trim(), file, categoryId });
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
   return (
     <div className="space-y-6">

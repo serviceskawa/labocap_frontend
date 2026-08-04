@@ -34,7 +34,7 @@ export function Badge({ variant, children, className }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-md px-2 py-0.5",
+        "inline-flex items-center whitespace-nowrap rounded-[var(--radius-control)] px-2 py-0.5",
         "text-xs font-semibold tracking-[-0.005em]",
         variantClasses[variant],
         className

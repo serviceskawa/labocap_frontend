@@ -11,7 +11,13 @@
      ombre de contact courte et nette, une ombre d'ambiance plus large — qui
      donnent la matière des interfaces applicatives contemporaines.          */
   --radius-control: 0.5rem;   /* boutons, champs, badges */
-  --radius-surface: 0.75rem;  /* cartes, modales, menus */
+  /* 1rem plutôt que 0.75rem : relevé sur les cinq références du benchmark
+     (Shield, Healthqoe, osler, flux, OutcomeIQ), toutes entre 0.9 et 1.25rem
+     sur les cartes. À 0.75rem la carte restait « administrative » ; l'écart de
+     4px suffit à la faire lire comme une surface posée. Le rayon des contrôles
+     ne bouge pas — les élargir aussi effacerait la hiérarchie entre une carte
+     et un bouton. */
+  --radius-surface: 1rem;     /* cartes, modales, menus */
 
   --elevation-flat:
     0 1px 2px 0 rgba(15, 23, 42, 0.04),
@@ -24,6 +30,29 @@
     0 4px 6px -2px rgba(15, 23, 42, 0.06),
     0 16px 32px -8px rgba(15, 23, 42, 0.16),
     0 0 0 1px rgba(15, 23, 42, 0.06);
+
+  /* ── Mouvement ─────────────────────────────────────────────────────────
+     Les durées étaient jusqu'ici écrites à la main dans chaque composant
+     (`duration-150` ici, `duration-200` là, rien ailleurs) : le survol d'un
+     bouton, l'ouverture d'un menu et la coloration d'une ligne ne suivaient
+     pas le même tempo, ce qui se lit comme un défaut de finition avant de se
+     lire comme une animation.
+
+     Quatre paliers suffisent, adossés à un principe simple : plus la surface
+     qui bouge est grande, plus la durée est longue.
+
+       instant  retour tactile — couleur de fond, opacité d'une icône
+       fast     contrôles — bouton, champ, ligne de tableau survolée
+       base     surfaces — carte qui s'élève, popover, infobulle
+       slow     entrées d'objets larges — modale, panneau latéral
+
+     Tailwind v4 n'expose pas d'espace de nommage `--duration-*` (contrairement
+     à `--ease-*`) : ces variables se consomment donc en valeur arbitraire,
+     `duration-[var(--duration-fast)]`.                                       */
+  --duration-instant: 90ms;
+  --duration-fast: 140ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
 }
 
 @theme inline {
@@ -165,6 +194,54 @@
   --color-slate-700: #334155;
   --color-slate-800: #1e293b;
   --color-slate-900: #0f172a;
+
+  /* ── Courbes d'accélération ────────────────────────────────────────────
+     Tailwind fournit `ease-in/out/in-out`, toutes symétriques. Une interface
+     applicative gagne à démarrer vite et à finir lentement : l'élément paraît
+     répondre au doigt plutôt que s'exécuter après coup.
+
+       ease-emphasized  entrées et changements d'état — départ franc, arrivée
+                        amortie. Le défaut à utiliser.
+       ease-exit        sorties — l'inverse : on quitte l'écran sans traîner.  */
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Chargement — balayage horizontal plutôt que clignotement d'opacité.
+     `animate-pulse` fait battre le bloc, ce qui attire l'œil sur le vide ; le
+     balayage suggère un contenu en cours d'arrivée et fatigue moins sur un
+     tableau entier de squelettes. */
+  --animate-skeleton: skeleton 1.6s var(--ease-in-out) infinite;
+
+  @keyframes skeleton {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+}
+
+/* Respect de « réduire les animations » (système d'exploitation). Obligation
+   d'accessibilité — certains troubles vestibulaires sont déclenchés par le
+   mouvement. On neutralise la durée sans supprimer les transitions, pour que
+   les changements d'état restent perceptibles. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 1ms;
+    --duration-fast: 1ms;
+    --duration-base: 1ms;
+    --duration-slow: 1ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ── Menu latéral ───────────────────────────────────────────────────────
@@ -606,6 +683,11 @@ textarea::placeholder {
   border: none;
   border-radius: var(--radius-surface);
   box-shadow: var(--elevation-flat);
+  /* Transition de l'élévation seule : animer `box-shadow` est peu coûteux ici
+     (pas de recalcul de mise en page), et c'est ce qui donne à la carte sa
+     matière quand une action la survole. Le palier `base` — et non `fast` —
+     parce que la surface est large : trop rapide, l'ombre « claque ». */
+  transition: box-shadow var(--duration-base) var(--ease-emphasized);
 }
 .hyper-card-body {
   padding: 1.5rem 1.5rem;

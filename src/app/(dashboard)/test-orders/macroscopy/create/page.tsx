@@ -13,6 +13,7 @@ import { macroscopyApi } from "@/lib/api/macroscopy";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectField } from "@/components/ui/SelectField";
 import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Page — Ajouter une macroscopie (réplique exact du formulaire Laravel)
@@ -73,8 +74,6 @@ export default function AddMacroscopyPage() {
     },
   });
 
-  const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
   return (
     <div className="space-y-6">

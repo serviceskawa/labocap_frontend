@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import { cashboxApi, type CashboxDailyResponseDto } from "@/lib/api/cashbox";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 function formatFCFA(v: number | null | undefined) {
   if (v === null || v === undefined) return "—";
@@ -176,7 +177,7 @@ function RecapPrint({
         <input
           value={daily.description ?? ""}
           readOnly
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          className={inputClass}
         />
       </div>
 

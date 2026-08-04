@@ -19,6 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { expenseCategoriesApi, type ExpenseCategory } from "@/lib/api/expenses";
 import type { PageResponse, ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -51,7 +52,7 @@ function CategoryFormFields({ register, errors }: CategoryFormFieldsProps) {
         <input
           type="text"
           {...register("name")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className={inputClass}
         />
         {errors.name && (
           <p className="text-xs text-red-500">{errors.name.message}</p>
@@ -64,7 +65,7 @@ function CategoryFormFields({ register, errors }: CategoryFormFieldsProps) {
         <input
           type="text"
           {...register("description")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className={inputClass}
         />
         {errors.description && (
           <p className="text-xs text-red-500">{errors.description.message}</p>

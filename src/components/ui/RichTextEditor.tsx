@@ -102,7 +102,7 @@ const STATE_COMMANDS = [
 type ActiveState = Record<string, boolean>;
 
 const SELECT_CLASS =
-  "mr-1 rounded border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500";
+  "mr-1 rounded-[var(--radius-control)] border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 // Séparateur vertical de la barre d'outils.
 function Sep() {
@@ -131,7 +131,7 @@ function ToolBtn({
         e.preventDefault();
         onRun();
       }}
-      className={`rounded p-1.5 transition-colors ${
+      className={`rounded-[var(--radius-control)] p-1.5 transition-colors ${
         isActive
           ? "bg-blue-100 text-blue-700 ring-1 ring-inset ring-blue-300"
           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
@@ -272,7 +272,7 @@ export function RichTextEditor({
 
   return (
     <div
-      className={`rounded-lg border shadow-sm ${
+      className={`rounded-[var(--radius-surface)] border shadow-[var(--elevation-flat)] ${
         disabled
           ? "border-gray-200 bg-gray-50"
           : "border-gray-300 bg-white focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
@@ -353,7 +353,7 @@ export function RichTextEditor({
           {/* Couleurs */}
           <label
             title="Couleur du texte"
-            className="relative flex cursor-pointer items-center rounded p-1.5 text-gray-600 hover:bg-gray-100"
+            className="relative flex cursor-pointer items-center rounded-[var(--radius-control)] p-1.5 text-gray-600 hover:bg-gray-100"
             onMouseDown={(e) => e.preventDefault()}
           >
             <Baseline className="h-4 w-4" />
@@ -365,7 +365,7 @@ export function RichTextEditor({
           </label>
           <label
             title="Couleur de surlignage"
-            className="relative flex cursor-pointer items-center rounded p-1.5 text-gray-600 hover:bg-gray-100"
+            className="relative flex cursor-pointer items-center rounded-[var(--radius-control)] p-1.5 text-gray-600 hover:bg-gray-100"
             onMouseDown={(e) => e.preventDefault()}
           >
             <Highlighter className="h-4 w-4" />

@@ -3,6 +3,7 @@
 import type { InputHTMLAttributes } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 interface SearchInputProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
@@ -22,7 +23,7 @@ export function SearchInput({
       <input
         type="text"
         placeholder={placeholder}
-        className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-[.875rem] text-gray-800 shadow-sm transition-[border-color,box-shadow] duration-150 placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-[3px] focus:ring-blue-500/15"
+        className={`${inputClass} pl-9`}
         {...props}
       />
     </div>

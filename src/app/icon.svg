@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!--
+    Favicon — lettrine, pendant de la variante `compact` de BrandMark.
+
+    La marque du produit est un mot, pas un symbole : « LaboAnaPath » est
+    illisible à 16px. L'onglet reçoit donc la lettrine, seule réduction fidèle.
+
+    La pastille pleine est nécessaire ici et non contradictoire avec le refus de
+    la tuile pour le logo : un onglet pose le favicon sur fond clair comme
+    sombre, une lettre sans fond y disparaîtrait une fois sur deux.
+
+    Tracé vectoriel plutôt que <text> : le rendu d'un favicon ne peut dépendre
+    d'une police présente sur la machine du visiteur. Ce « L » reprend les
+    proportions de Nunito Bold — fût plein, angle vif, empattement nul.
+
+    Convention App Router : ce fichier suffit, Next.js pose lui-même le <link>.
+  -->
+  <rect width="32" height="32" rx="7.5" fill="#2e4bd8" />
+  <path
+    d="M 11 8 h 4.4 v 12.6 h 6.6 V 24 H 11 Z"
+    fill="#ffffff"
+  />
+</svg>

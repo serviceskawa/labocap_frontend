@@ -15,6 +15,10 @@ import {
   CalendarIcon,
   ArrowRight,
   ArrowUp,
+  FlaskConical,
+  AlertTriangle,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import {
   PieChart,
@@ -30,6 +34,9 @@ import {
 } from "recharts";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   TableLengthControl,
   TablePaginationFooter,
@@ -39,12 +46,10 @@ import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { IconButton } from "@/components/ui/IconButton";
 
 import { usePermissions } from "@/hooks/usePermissions";
-import { useAuthStore } from "@/stores/auth.store";
-import { formatCFA, formatDate } from "@/lib/utils";
+import { cn, formatCFA, formatDate } from "@/lib/utils";
 import {
   dashboardApi,
   ReportToday,
-  DoctorStat,
   RevenueData,
   AppointmentItem,
   DoctorOrder,
@@ -63,6 +68,14 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Carte du tableau de bord — `.hyper-card` du système.
+ *
+ * Portait auparavant `rounded-lg` + bordure grise + `shadow-sm`, une définition
+ * locale qui avait divergé de celle du reste de l'application : les cartes du
+ * tableau de bord n'avaient ni le même rayon ni la même élévation que celles
+ * des écrans de liste, sur l'écran justement le plus regardé.
+ */
 function Card({
   children,
   className = "",
@@ -70,32 +83,82 @@ function Card({
   children: React.ReactNode;
   className?: string;
 }) {
+  return <div className={`hyper-card ${className}`}>{children}</div>;
+}
+
+/**
+ * En-tête de carte.
+ *
+ * Casse normale : les titres en majuscules à fort interlettrage sont un
+ * marqueur Bootstrap explicitement abandonné par le système, et ils dégradent
+ * la lisibilité des libellés longs (« EXAMENS LES PLUS DEMANDÉS »). Les appels
+ * passent toujours le libellé en majuscules — on le normalise ici plutôt que de
+ * réécrire trente chaînes, et le Blade reste la référence du libellé lui-même.
+ */
+function CardHeader({ title }: { title: string }) {
   return (
-    <div
-      className={`bg-white rounded-lg border border-gray-200 shadow-sm ${className}`}
-    >
-      {children}
+    <div className="border-b border-gray-100 px-6 py-4">
+      <h2 className="hyper-card-heading !mb-0">{sentenceCase(title)}</h2>
     </div>
   );
 }
 
-function CardHeader({ title }: { title: string }) {
-  return (
-    <div className="px-5 py-4 border-b border-gray-100">
-      <h2 className="text-base font-semibold text-gray-800">{title}</h2>
-    </div>
-  );
+/**
+ * « EXAMENS LES PLUS DEMANDÉS » → « Examens les plus demandés ».
+ *
+ * Les sigles métier (CA, TVA, CR) restent en capitales : les remettre en bas de
+ * casse les rendrait méconnaissables.
+ */
+const ACRONYMS = new Set(["CA", "TVA", "CR", "HT", "TTC"]);
+
+function sentenceCase(label: string): string {
+  const words = label.toLocaleLowerCase("fr").split(" ");
+  return words
+    .map((word, i) => {
+      const upper = word.toLocaleUpperCase("fr");
+      if (ACRONYMS.has(upper)) return upper;
+      if (i === 0) return upper.charAt(0) + word.slice(1);
+      return word;
+    })
+    .join(" ");
 }
 
 function SkeletonRow({ cols }: { cols: number }) {
   return (
     <tr>
       {Array.from({ length: cols }).map((_, j) => (
-        <td key={j} className="py-2 px-3">
-          <div className="h-3 animate-pulse rounded bg-gray-200" />
+        <td key={j} className="px-3 py-2">
+          <Skeleton className={`h-3 ${j % 3 === 2 ? "w-1/2" : "w-4/5"}`} />
         </td>
       ))}
     </tr>
+  );
+}
+
+/**
+ * Puce d'action de ligne (tableaux du tableau de bord).
+ *
+ * Les six actions — « Compte rendu », « CR terminé », « Imprimer », « Voir
+ * Facture », « Créer Facture » — étaient stylées une par une, en `rounded`
+ * (0.25rem, le rayon Hyper abandonné) et sur l'échelle `bg-*-100 / text-*-800`.
+ * C'est précisément la combinaison que `Badge` corrige : à ce palier, le
+ * contraste tombe sous 3:1 en petite taille. On reprend donc son échelle —
+ * fond 50, texte 700/800, liseré 200 — et le rayon des contrôles.
+ *
+ * La teinte reste porteuse de sens (ambre : compte rendu ; vert : facturation),
+ * elle n'est donc pas remplacée par une variante neutre du kit.
+ *
+ * `shadow-none` est nécessaire sur les deux `Button` : le kit pose une élévation
+ * au survol, superflue sur une puce de 24px de haut posée dans une cellule.
+ */
+function actionChip(tone: "report" | "invoice"): string {
+  return cn(
+    "inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1",
+    "text-xs font-semibold ring-1 ring-inset shadow-none hover:shadow-none",
+    "transition-colors duration-[var(--duration-fast)] ease-emphasized",
+    tone === "report"
+      ? "bg-amber-50 text-amber-700 ring-amber-200 hover:bg-amber-100"
+      : "bg-green-50 text-green-800 ring-green-200 hover:bg-green-100",
   );
 }
 
@@ -162,7 +225,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
         <>
           <Link
             href={`/test-orders/${report.testOrderId}/details`}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+            className={actionChip("report")}
           >
             <FileText className="h-3.5 w-3.5" />
             Compte rendu
@@ -181,7 +244,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
         <>
           <Link
             href={`/reports/${report.id}`}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors"
+            className={actionChip("report")}
           >
             <FileText className="h-3.5 w-3.5" />
             CR terminé
@@ -189,7 +252,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
           <Button
             onClick={handlePrintReport}
             disabled={isPrinting}
-            className="gap-1 rounded bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800 hover:bg-yellow-200 hover:shadow-none"
+            className={actionChip("report")}
           >
             <Printer className="h-3.5 w-3.5" />
             {isPrinting ? "Génération…" : "Imprimer"}
@@ -200,7 +263,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
       {report.invoiceId ? (
         <Link
           href={`/invoices/${report.invoiceId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+          className={actionChip("invoice")}
         >
           <Eye className="h-3.5 w-3.5" />
           Voir Facture
@@ -208,7 +271,7 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
       ) : (
         <Button
           onClick={handleCreateInvoice}
-          className="gap-1 rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-200 hover:shadow-none"
+          className={actionChip("invoice")}
         >
           Créer Facture
         </Button>
@@ -225,67 +288,6 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
         isLoading={isDeleting}
       />
     </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// ProgressTable
-// ---------------------------------------------------------------------------
-
-interface ProgressTableProps {
-  headers: [string, string];
-  data: Array<{ label: string; value: number }>;
-  color?: string;
-}
-
-function ProgressTable({
-  headers,
-  data,
-  color = "bg-blue-500",
-}: ProgressTableProps) {
-  const max = data.length > 0 ? Math.max(...data.map((d) => d.value)) : 1;
-  // La barre reste proportionnelle au maximum de TOUTE la série, pas seulement
-  // de la page affichée : sinon l'échelle changerait d'une page à l'autre.
-  const pagination = useTablePagination(data);
-  return (
-    <>
-    <TableLengthControl pagination={pagination} />
-    <table className="w-full text-sm">
-      <thead className="bg-gray-50">
-        <tr>
-          <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-            {headers[0]}
-          </th>
-          <th className="py-2 px-3 text-right text-[.875rem] font-semibold text-gray-700">
-            {headers[1]}
-          </th>
-          <th className="py-2 px-3 w-32" />
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
-        {pagination.pageRows.map((item, i) => {
-          const ratio = Math.round((item.value / (max || 1)) * 100);
-          return (
-            <tr key={i} className="hover:bg-gray-50">
-              <td className="py-2 px-3 text-gray-700">{item.label}</td>
-              <td className="py-2 px-3 text-right font-semibold text-gray-900">
-                {item.value}
-              </td>
-              <td className="py-2 px-3">
-                <div className="h-[3px] bg-gray-100 rounded">
-                  <div
-                    className={`h-[3px] rounded ${color}`}
-                    style={{ width: `${ratio}%` }}
-                  />
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-    <TablePaginationFooter pagination={pagination} />
-    </>
   );
 }
 
@@ -515,7 +517,6 @@ function SimpleCalendar() {
 
 export default function HomePage() {
   const { can } = usePermissions();
-  const { user } = useAuthStore();
   const queryClient = useQueryClient();
 
   const isAdmin = can(PERMISSIONS.VIEW_ADMIN_DASHBOARD);
@@ -532,6 +533,16 @@ export default function HomePage() {
     enabled: isAdmin,
   });
 
+  // -- Compteurs opérationnels (bons sans CR, retards). Endpoint distinct de
+  // `/dashboard/stats`, qui ne renvoie que des cumuls depuis toujours.
+  const { data: opStats, isLoading: opStatsLoading } = useQuery({
+    queryKey: ["dashboard", "secretariat-stats"],
+    queryFn: () => dashboardApi.getSecretariatStats().then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    enabled: isAdmin || isSecretary,
+  });
+
   // -- Reports today
   const { data: reportsToday = [], isLoading: reportsTodayLoading } = useQuery({
     queryKey: ["dashboard", "reports-today"],
@@ -546,29 +557,8 @@ export default function HomePage() {
     [reportsToday]
   );
 
-  // -- Top examens
-  const { data: topExamens = [], isLoading: topExamensLoading } = useQuery({
-    queryKey: ["dashboard", "top-examens"],
-    queryFn: () => dashboardApi.getTopExamens().then((r) => r.data),
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-    enabled: isAdmin,
-  });
 
-  // -- Monthly stats
-  const { data: monthlyStats, isLoading: monthlyLoading } = useQuery({
-    queryKey: ["dashboard", "monthly-stats"],
-    queryFn: () => dashboardApi.getMonthlyStats().then((r) => r.data),
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-    enabled: isAdmin,
-  });
 
-  // -- Admin exam status pie (pour la section admin)
-  const adminPieData = [
-    { name: "Terminé", value: stats?.finishTest ?? 0, color: CHART_STATUS.good },
-    { name: "En attente", value: stats?.noFinishTest ?? 0, color: CHART_STATUS.critical },
-  ];
 
   // -- Finance
   const { data: revenueData } = useQuery({
@@ -621,23 +611,7 @@ export default function HomePage() {
     return `${pct.toFixed(1).replace(".", ",")} %`;
   };
 
-  // -- Doctor stats
-  const { data: doctorStats = [], isLoading: doctorStatsLoading } = useQuery({
-    queryKey: ["dashboard", "doctor-stats"],
-    queryFn: () => dashboardApi.getDoctorStats().then((r) => r.data),
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-    enabled: isAdmin || isFinance,
-  });
 
-  // -- Connected users
-  const { data: connectedUsers = [], isLoading: connectedLoading } = useQuery({
-    queryKey: ["dashboard", "connected-users"],
-    queryFn: () => dashboardApi.getConnectedUsers().then((r) => r.data),
-    staleTime: 2 * 60 * 1000,
-    refetchInterval: 2 * 60 * 1000,
-    enabled: isAdmin || isFinance,
-  });
 
   // -- Pathologist
   const { data: doctorExamStatus } = useQuery({
@@ -691,8 +665,6 @@ export default function HomePage() {
   ];
 
   // Pagination des tableaux du tableau de bord dont la liste n'est pas bornée.
-  const doctorStatsPagination = useTablePagination(doctorStats, 10);
-  const connectedUsersPagination = useTablePagination(connectedUsers, 10);
   const reportsDeliveredPagination = useTablePagination(reportsDelivered, 10);
   const doctorOrdersPagination = useTablePagination(doctorOrders, 10);
   const doctorOrdersTodayPagination = useTablePagination(doctorOrdersToday, 10);
@@ -721,516 +693,365 @@ export default function HomePage() {
       <PageHeader title="Tableau de bord" />
 
       {/* ==================================================================
-          SECTION ADMIN
+          ZONES OPÉRATIONNELLES — administrateur ET secrétariat
+
+          Les rôles composaient jusqu'ici par empilement : `{isAdmin && …}`
+          puis `{isSecretary && …}` puis `{isDoctor && …}`, chacun apportant
+          ses rangées. Un utilisateur à deux rôles recevait donc les deux blocs
+          bout à bout, et personne n'avait d'écran pensé pour lui.
+
+          Ce qui relève de l'exploitation quotidienne — ce qu'il reste à faire,
+          et le travail du jour — est désormais commun aux deux profils. Les
+          analyses cumulées restent réservées à l'administrateur.
       ================================================================== */}
-      {isAdmin && (
+      {(isAdmin || isSecretary) && (
         <>
-          {/* LIGNE 1 : 4 KPI cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {statsLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-white rounded-lg border border-gray-200 shadow-sm p-5 animate-pulse"
-                  >
-                    <div className="h-3 bg-gray-200 rounded w-1/2 mb-3" />
-                    <div className="h-8 bg-gray-200 rounded w-3/4" />
-                  </div>
-                ))
-              : [
-                  {
-                    title: "PATIENTS",
-                    value: stats?.valeurPatient ?? 0,
-                    trend: stats?.crPatient,
-                  },
-                  {
-                    title: "CLIENTS PRO.",
-                    value: stats?.valeurClient ?? 0,
-                    trend: stats?.crClient,
-                  },
-                  {
-                    title: "DEMANDE D'EXAMEN",
-                    value: stats?.valeurTestOrder ?? 0,
-                    trend: stats?.crTestOrder,
-                  },
-                  {
-                    title: "CHIFFRE D'AFFAIRES",
-                    value: formatCFA(stats?.valeurInvoice ?? 0),
-                    trend: stats?.crInvoice,
-                  },
-                ].map((kpi) => (
-                  <Card key={kpi.title} className="p-5">
-                    {/* Pas d'icône dans la carte : seuls le libellé, la valeur et
-                        l'évolution mensuelle sont affichés. */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        {/* Tailles reprises de Laravel : titre h5 .9rem en graisse
-                            normale, valeur h3 1.42rem — le texte tient ainsi dans la
-                            carte (le 30px précédent débordait sur le chiffre d'affaires). */}
-                        <p className="text-[.9rem] text-gray-500 font-normal mt-0">
+          {/* ════════════════════════════════════════════════════════════════
+              BLOC MÉTRIQUES — une seule surface
+
+              Les indicateurs formaient deux grilles de cartes séparées par la
+              liste de travail : huit ombres portées, deux gouttières, aucune
+              lecture d'ensemble. Réunis ici en une seule carte découpée par des
+              filets d'un pixel (`gap-px` sur fond gris), ils se lisent comme un
+              tableau de bord et non comme huit vignettes.
+
+              La hiérarchie est conservée par le traitement, pas par la distance :
+                — rangée haute, « à traiter » : cliquable, valeur pleine, icône
+                  teintée. Ce sont les chiffres qui appellent une action ;
+                — rangée basse, cumuls : inerte, valeur atténuée, tendance en
+                  pastille. Des repères, pas des signaux.
+          ════════════════════════════════════════════════════════════════ */}
+          <Card className="overflow-hidden">
+            {/* Rangée « à traiter » */}
+            <div className="grid grid-cols-1 gap-px bg-gray-100 sm:grid-cols-2 xl:grid-cols-4">
+              {opStatsLoading || statsLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="bg-white p-5">
+                      <Skeleton className="mb-3 h-3 w-2/3" />
+                      <Skeleton className="h-7 w-1/2" />
+                    </div>
+                  ))
+                : [
+                    {
+                      title: "Bons sans compte rendu",
+                      value: opStats?.noSaveTest ?? 0,
+                      href: "/test-orders",
+                      icon: <FileText className="h-5 w-5" />,
+                      alert: false,
+                    },
+                    // Seule tuile issue de `/dashboard/stats`, réservé au profil
+                    // administrateur : un secrétariat y lirait un zéro permanent.
+                    ...(isAdmin
+                      ? [
+                          {
+                            title: "Comptes rendus à valider",
+                            value: stats?.noFinishTest ?? 0,
+                            href: "/reports",
+                            icon: <FlaskConical className="h-5 w-5" />,
+                            alert: false,
+                          },
+                        ]
+                      : []),
+                    {
+                      title: "À remettre au client",
+                      value: opStats?.noFinishTest ?? 0,
+                      href: "/reports/suivi",
+                      icon: <Folder className="h-5 w-5" />,
+                      alert: false,
+                    },
+                    {
+                      // Au-delà de trois semaines, un bon en attente est une
+                      // anomalie. Teinté seulement s'il y en a : un écran où
+                      // tout est rouge n'alerte plus.
+                      title: "En retard (> 3 semaines)",
+                      value: opStats?.noFinishWeek ?? 0,
+                      href: "/test-orders",
+                      icon: <AlertTriangle className="h-5 w-5" />,
+                      alert: true,
+                    },
+                  ].map((kpi) => {
+                    const isAlert = kpi.alert && kpi.value > 0;
+                    return (
+                      <Link
+                        key={kpi.title}
+                        href={kpi.href}
+                        className="group bg-white p-5 transition-colors duration-[var(--duration-fast)] ease-emphasized hover:bg-blue-50/40"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-[.8125rem] font-medium text-gray-500">
+                            {kpi.title}
+                          </p>
+                          <span
+                            className={cn(
+                              "flex-shrink-0 rounded-[var(--radius-control)] p-2",
+                              isAlert
+                                ? "bg-red-50 text-red-600"
+                                : "bg-blue-50 text-blue-600",
+                            )}
+                          >
+                            {kpi.icon}
+                          </span>
+                        </div>
+                        <p
+                          className={cn(
+                            "mt-2 text-[1.75rem] font-semibold leading-none tracking-[-0.02em]",
+                            isAlert ? "text-red-600" : "text-gray-900",
+                          )}
+                        >
+                          {kpi.value.toLocaleString("fr-FR")}
+                        </p>
+                      </Link>
+                    );
+                  })}
+            </div>
+
+            {/* Rangée « volumes cumulés » — réservée à l'administrateur, seul
+                profil pour lequel `/dashboard/stats` répond. */}
+            {isAdmin && (
+              <div className="grid grid-cols-1 gap-px border-t border-gray-200 bg-gray-100 sm:grid-cols-2 xl:grid-cols-4">
+                {statsLoading
+                  ? Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="bg-gray-50/60 p-4">
+                        <Skeleton className="mb-2 h-3 w-1/2" />
+                        <Skeleton className="h-5 w-2/3" />
+                      </div>
+                    ))
+                  : [
+                      { title: "Patients", value: (stats?.valeurPatient ?? 0).toLocaleString("fr-FR"), trend: stats?.crPatient },
+                      { title: "Clients pro.", value: (stats?.valeurClient ?? 0).toLocaleString("fr-FR"), trend: stats?.crClient },
+                      { title: "Demandes d'examen", value: (stats?.valeurTestOrder ?? 0).toLocaleString("fr-FR"), trend: stats?.crTestOrder },
+                      { title: "Chiffre d'affaires", value: formatCFA(stats?.valeurInvoice ?? 0), trend: stats?.crInvoice },
+                    ].map((kpi) => (
+                      <div key={kpi.title} className="bg-gray-50/60 p-4">
+                        <p className="truncate text-[.75rem] font-medium uppercase tracking-[0.04em] text-gray-500">
                           {kpi.title}
                         </p>
-                        <p className="text-[1.42rem] font-bold mt-3 mb-3 text-gray-900">
-                          {kpi.value}
-                        </p>
-                        {kpi.trend !== undefined && (
-                          <p
-                            className={`text-[.9rem] font-medium ${kpi.trend >= 0 ? "text-green-600" : "text-red-600"}`}
-                          >
-                            {kpi.trend >= 0 ? "↑" : "↓"} {kpi.trend}%{" "}
-                            <span className="text-gray-400 font-normal">
-                              Depuis le mois passé
-                            </span>
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-          </div>
-
-          {/* LIGNE 2 : EXAMENS LES PLUS DEMANDÉS + STATUT D'EXAMENS */}
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Gauche 50% : EXAMENS LES PLUS DEMANDÉS */}
-            <div className="flex-1">
-              <Card>
-                <CardHeader title="EXAMENS LES PLUS DEMANDÉS" />
-                <div className="overflow-x-auto">
-                  {/* Comme dans Laravel (dashboardPlus.blade.php) : le tableau des
-                      examens les plus demandés n'a pas de ligne d'en-tête. */}
-                  <table className="w-full text-sm">
-                    <tbody className="divide-y divide-gray-100">
-                      {topExamensLoading
-                        ? Array.from({ length: 5 }).map((_, i) => (
-                            <SkeletonRow key={i} cols={3} />
-                          ))
-                        : topExamens.slice(0, 7).map((ex, idx) => (
-                            <tr
-                              key={idx}
-                              className="hover:bg-gray-50 transition-colors"
+                        <div className="mt-1.5 flex items-baseline gap-2">
+                          <span className="truncate text-[1.0625rem] font-semibold tracking-[-0.01em] text-gray-700">
+                            {kpi.value}
+                          </span>
+                          {kpi.trend !== undefined && (
+                            <span
+                              className={cn(
+                                "inline-flex flex-shrink-0 items-center gap-0.5 rounded-[var(--radius-control)] px-1.5 py-0.5 text-[.6875rem] font-semibold",
+                                kpi.trend >= 0
+                                  ? "bg-green-50 text-green-700"
+                                  : "bg-red-50 text-red-700",
+                              )}
                             >
-                              <td className="py-2 px-3 text-gray-500 text-sm w-10">
-                                {idx + 1}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {ex.testName}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {ex.totalDemandes}
-                              </td>
-                            </tr>
-                          ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
-            </div>
-
-            {/* Droite 50% : STATUT D'EXAMENS */}
-            <div className="flex-1">
-              <Card>
-                <CardHeader title="STATUT D'EXAMENS" />
-                <div className="p-5">
-                  <DonutChart segments={adminPieData} />
-                  <div className="flex justify-around mt-3">
-                    <div className="text-center">
-                      <p className="text-green-600 font-semibold text-lg">
-                        ↑ {stats?.finishTest ?? 0}
-                      </p>
-                      <p className="text-xs text-gray-500">Terminé</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-red-600 font-semibold text-lg">
-                        ↓ {stats?.noFinishTest ?? 0}
-                      </p>
-                      <p className="text-xs text-gray-500">En attente</p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-
-          {/* LIGNE 3 : STATISTIQUE MENSUELLE (full width) */}
-          <Card>
-            <CardHeader title="STATISTIQUE MENSUELLE" />
-            <div className="p-5 space-y-6">
-              {/* Carte imbriquée EXAMENS DEMANDES */}
-              <div className="border border-gray-100 rounded-lg p-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">
-                  EXAMENS DEMANDES
-                </p>
-                {monthlyLoading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="h-16 animate-pulse rounded bg-gray-200"
-                      />
+                              {kpi.trend >= 0 ? (
+                                <TrendingUp className="h-3 w-3" />
+                              ) : (
+                                <TrendingDown className="h-3 w-3" />
+                              )}
+                              {Math.round(kpi.trend)}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     ))}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total d&apos;examens
-                      </p>
-                      <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
-                        {monthlyStats?.nombreTests ?? 0}
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Chiffre d&apos;affaire
-                      </p>
-                      <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
-                        {formatCFA(monthlyStats?.caTests ?? 0)}
-                      </p>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 text-center">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Patients
-                      </p>
-                      <p className="text-3xl font-semibold mt-3 mb-3 text-gray-900">
-                        {monthlyStats?.totalPatientTest ?? 0}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
-
-              {/* Carte imbriquée STATISTIQUE PATIENTS */}
-              <div className="border border-gray-100 rounded-lg p-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">
-                  STATISTIQUE PATIENTS
-                </p>
-                {monthlyLoading ? (
-                  <div className="h-20 animate-pulse rounded bg-gray-200" />
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Hôpitaux */}
-                    <div>
-                      <ProgressTable
-                        headers={["Hôpital", "Patients"]}
-                        data={(monthlyStats?.byHopital ?? []).map((h) => ({
-                          label: h.nom,
-                          value: h.totalPatients,
-                        }))}
-                        color="bg-blue-500"
-                      />
-                    </div>
-                    {/* Médecin traitant */}
-                    <div>
-                      <ProgressTable
-                        headers={["Médécin", "Patients"]}
-                        data={(monthlyStats?.byMedecin ?? []).map((h) => ({
-                          label: h.nom,
-                          value: h.totalPatients,
-                        }))}
-                        color="bg-blue-500"
-                      />
-                    </div>
-                    {/* Type de demande */}
-                    <div>
-                      <ProgressTable
-                        headers={["Type", "Patients"]}
-                        data={(monthlyStats?.byType ?? []).map((h) => ({
-                          label: h.nom,
-                          value: h.totalPatients,
-                        }))}
-                        color="bg-blue-500"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
           </Card>
         </>
       )}
 
       {/* ==================================================================
-          SECTION FINANCE
+          LIGNE PLEINE LARGEUR — le travail du jour
+
+          Un tableau ne se met pas en demi-colonne : ses colonnes (date, code,
+          patient, actions) s'y compriment et sa hauteur ne s'accorde à rien.
+          Ce qui ne tient pas dans une moitié d'écran prend sa propre ligne,
+          avant le bloc à deux colonnes.
+      ================================================================== */}
+      {(isAdmin || isSecretary) && (
+        <>
+        {/* ════════════════════════════════════════════════════════════════
+            ZONE 2 — LE TRAVAIL DU JOUR
+            Remontée depuis la section « secrétariat », où elle était la seule
+            vraie liste de travail de l'écran — et invisible aux profils
+            administrateur, qui n'avaient donc aucune action à portée de clic.
+            Les données étaient pourtant déjà chargées pour eux
+            (`enabled: isSecretary || isAdmin`) : seul l'affichage était filtré.
+        ════════════════════════════════════════════════════════════════ */}
+        <Card>
+          <CardHeader title="Comptes rendu disponible aujourd'hui" />
+          <TableLengthControl pagination={reportsDeliveredPagination} className="px-6" />
+          <div className="overflow-x-auto px-3">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                    Date
+                  </th>
+                  <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                    Code
+                  </th>
+                  <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                    Patients
+                  </th>
+                  <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {reportsTodayLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <SkeletonRow key={i} cols={4} />
+                  ))
+                ) : reportsDelivered.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-0">
+                      <EmptyState
+                        compact
+                        icon={FileText}
+                        title="Aucun compte rendu aujourd'hui"
+                        description="Les comptes rendus disponibles du jour s'afficheront ici."
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
+                    <tr
+                      key={report.id}
+                      className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
+                    >
+                      <td className="py-2 px-3 text-gray-600">
+                        {formatDate(report.createdAt)}
+                      </td>
+                      <td className="py-2 px-3 text-gray-700">
+                        {report.code}
+                      </td>
+                      <td className="py-2 px-3 text-gray-700">
+                        {report.patientLastname} {report.patientFirstname}
+                      </td>
+                      <td className="py-2 px-3">
+                        <ActionButtons
+                          report={report}
+                          onDeleted={() =>
+                            queryClient.invalidateQueries({
+                              queryKey: ["dashboard", "reports-today"],
+                            })
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <TablePaginationFooter pagination={reportsDeliveredPagination} className="px-6 pb-5" />
+        </Card>
+        </>
+      )}
+
+      {/* ==================================================================
+          DEUX COLONNES — éléments de gabarit comparable
+
+          N'y figure que ce qui s'équilibre : les deux lectures financières.
+          Y placer le tableau du jour laissait une colonne s'arrêter à
+          mi-hauteur pendant que l'autre continuait.
       ================================================================== */}
       {isFinance && (
         <>
-          {/* LIGNE 4 : CHIFFRE D'AFFAIRES + FACTURES */}
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Gauche col-8 : CHIFFRE D'AFFAIRES */}
-            <div className="lg:flex-[2]">
-              <Card>
-                <CardHeader title="CHIFFRE D'AFFAIRES" />
-                <div className="p-5">
-                  {/* Bandeau des deux totaux hebdomadaires — calque du bloc
-                      `chart-content-bg` de Laravel : libellé au-dessus, montant en
-                      gros précédé d'une puce de la couleur de la série. */}
-                  <div className="rounded bg-gray-50 py-3">
-                    <div className="grid grid-cols-1 text-center sm:grid-cols-2">
-                      <div>
-                        <p className="mb-0 mt-3 text-sm text-gray-500">
-                          Semaine actuelle
-                        </p>
-                        <p className="mb-3 text-2xl font-normal text-gray-900">
-                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-600 align-middle" />
-                          {formatCFA(revenueData?.totalCurrentWeek ?? 0)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="mb-0 mt-3 text-sm text-gray-500">
-                          Semaine précédente
-                        </p>
-                        <p className="mb-3 text-2xl font-normal text-gray-900">
-                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-green-600 align-middle" />
-                          {formatCFA(revenueData?.totalLastWeek ?? 0)}
-                        </p>
-                      </div>
+        {/* LIGNE 4 : CHIFFRE D'AFFAIRES + FACTURES */}
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+          {/* Gauche col-8 : CHIFFRE D'AFFAIRES */}
+          <div>
+            <Card>
+              <CardHeader title="CHIFFRE D'AFFAIRES" />
+              <div className="p-5">
+                {/* Bandeau des deux totaux hebdomadaires — calque du bloc
+                    `chart-content-bg` de Laravel : libellé au-dessus, montant en
+                    gros précédé d'une puce de la couleur de la série. */}
+                <div className="rounded bg-gray-50 py-3">
+                  <div className="grid grid-cols-1 text-center sm:grid-cols-2">
+                    <div>
+                      <p className="mb-0 mt-3 text-sm text-gray-500">
+                        Semaine actuelle
+                      </p>
+                      <p className="mb-3 text-2xl font-normal text-gray-900">
+                        <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-600 align-middle" />
+                        {formatCFA(revenueData?.totalCurrentWeek ?? 0)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="mb-0 mt-3 text-sm text-gray-500">
+                        Semaine précédente
+                      </p>
+                      <p className="mb-3 text-2xl font-normal text-gray-900">
+                        <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-green-600 align-middle" />
+                        {formatCFA(revenueData?.totalLastWeek ?? 0)}
+                      </p>
                     </div>
                   </div>
-                  {/* Total du jour + accès aux relevés (bouton Laravel
-                      « View Statements », classe btn-outline-primary). */}
-                  <div className="mt-4 mb-4">
-                    <h5 className="mb-2 text-base font-semibold text-gray-800">
-                      Aujourd&apos;hui: {formatCFA(revenueData?.totalToday ?? 0)}
-                    </h5>
-                    <Link
-                      href="/invoices/business"
-                      className="inline-flex items-center gap-2 rounded-[.15rem] border border-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] text-blue-600 transition-colors hover:bg-blue-600 hover:text-white"
-                    >
-                      View Statements
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                  {/* Graphique ligne */}
-                  {revenueData ? (
-                    <RevenueLineChart data={revenueData} />
-                  ) : (
-                    <div className="h-[220px] animate-pulse rounded bg-gray-100" />
-                  )}
                 </div>
-              </Card>
-            </div>
-
-            {/* Droite col-4 : FACTURES */}
-            <div className="lg:flex-[1]">
-              <Card>
-                <CardHeader title="FACTURES" />
-                <div className="p-5">
-                  {invoiceStatus ? (
-                    <>
-                      <DonutChart segments={invoiceSegments} />
-                      {/* Légende — mêmes couleurs et même ordre que les segments
-                          du donut, la part exacte compensant l'arc plancher. */}
-                      <div className="space-y-2 mt-3">
-                        {invoiceSegments.map((segment) => (
-                          <div
-                            key={segment.name}
-                            className="flex items-center gap-2 text-xs text-gray-600"
-                          >
-                            <span
-                              className="h-3 w-3 rounded-sm inline-block shrink-0"
-                              style={{ backgroundColor: segment.color }}
-                            />
-                            <span className="flex-1 leading-tight">
-                              {segment.name}
-                            </span>
-                            <span className="text-gray-400 whitespace-nowrap">
-                              {invoiceShare(segment.value)}
-                            </span>
-                            <span className="font-semibold text-gray-800 w-12 text-right">
-                              {segment.value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="h-[200px] animate-pulse rounded bg-gray-100" />
-                  )}
+                {/* Total du jour + accès aux relevés (bouton Laravel
+                    « View Statements », classe btn-outline-primary). */}
+                <div className="mt-4 mb-4">
+                  <h5 className="mb-2 text-base font-semibold text-gray-800">
+                    Aujourd&apos;hui: {formatCFA(revenueData?.totalToday ?? 0)}
+                  </h5>
+                  <Link
+                    href="/invoices/business"
+                    className="inline-flex items-center gap-2 rounded-[var(--radius-control)] border border-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] font-medium text-blue-600 transition-colors duration-[var(--duration-fast)] ease-emphasized hover:bg-blue-600 hover:text-white"
+                  >
+                    Voir les relevés
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </div>
-              </Card>
-            </div>
+                {/* Graphique ligne */}
+                {revenueData ? (
+                  <RevenueLineChart data={revenueData} />
+                ) : (
+                  <div className="h-[220px] animate-pulse rounded bg-gray-100" />
+                )}
+              </div>
+            </Card>
           </div>
-
-          {/* LIGNE 5 : Statistique par docteurs + Utilisateurs connectés */}
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Gauche 50% : Statistique par docteurs */}
-            <div className="flex-1">
-              <Card>
-                <CardHeader title="Statistique par docteurs" />
-                <TableLengthControl pagination={doctorStatsPagination} />
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-                          Docteurs
-                        </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-                          Demandes Affectées
-                        </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-                          Demandes Traitées
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {doctorStatsLoading
-                        ? Array.from({ length: 4 }).map((_, i) => (
-                            <SkeletonRow key={i} cols={3} />
-                          ))
-                        : doctorStatsPagination.pageRows.map((ds: DoctorStat, i) => (
-                            <tr
-                              key={i}
-                              className="hover:bg-gray-50 transition-colors"
-                            >
-                              <td className="py-2 px-3 text-gray-700">
-                                {ds.doctor}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {ds.assigne}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {ds.traite}
-                              </td>
-                            </tr>
-                          ))}
-                    </tbody>
-                  </table>
-                </div>
-                <TablePaginationFooter pagination={doctorStatsPagination} />
-              </Card>
-            </div>
-
-            {/* Droite 50% : Utilisateurs connectés */}
-            <div className="flex-1">
-              <Card>
-                <CardHeader title="Utilisateurs connectés" />
-                <TableLengthControl pagination={connectedUsersPagination} />
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700 w-8">
-                          #
-                        </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-                          Nom
-                        </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-                          Email
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {connectedLoading
-                        ? Array.from({ length: 3 }).map((_, i) => (
-                            <SkeletonRow key={i} cols={3} />
-                          ))
-                        : connectedUsersPagination.pageRows.map((u, idx) => (
-                            <tr
-                              key={u.id}
-                              className="hover:bg-gray-50 transition-colors"
-                            >
-                              <td className="py-2 px-3 text-gray-400 text-xs">
-                                {idx + 1}
-                              </td>
-                              <td className="py-2 px-3 text-gray-700">
-                                {u.lastname} {u.firstname}
-                                {u.id === user?.id && (
-                                  <span className="ml-1 text-xs text-gray-400">
-                                    (Vous)
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-2 px-3 text-gray-600">
-                                {u.email}
-                              </td>
-                            </tr>
-                          ))}
-                    </tbody>
-                  </table>
-                </div>
-                <TablePaginationFooter pagination={connectedUsersPagination} />
-              </Card>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ==================================================================
-          SECTION SECRÉTARIAT
-      ================================================================== */}
-      {isSecretary && (
-        <>
-          {/* LIGNE 6 : Comptes rendu dsponible aujourd'hui (full width) */}
-          <Card>
-            <CardHeader title="Comptes rendu dsponible aujourd'hui" />
-            <TableLengthControl pagination={reportsDeliveredPagination} />
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-                      Date
-                    </th>
-                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-                      Code
-                    </th>
-                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-                      Patiens
-                    </th>
-                    <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {reportsTodayLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <SkeletonRow key={i} cols={4} />
-                    ))
-                  ) : reportsDelivered.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="py-4 px-3 text-center text-gray-400 text-sm"
-                      >
-                        Aucun compte rendu disponible aujourd&apos;hui
-                      </td>
-                    </tr>
-                  ) : (
-                    reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
-                      <tr
-                        key={report.id}
-                        className="hover:bg-gray-50 transition-colors"
-                      >
-                        <td className="py-2 px-3 text-gray-600">
-                          {formatDate(report.createdAt)}
-                        </td>
-                        <td className="py-2 px-3 text-gray-700">
-                          {report.code}
-                        </td>
-                        <td className="py-2 px-3 text-gray-700">
-                          {report.patientLastname} {report.patientFirstname}
-                        </td>
-                        <td className="py-2 px-3">
-                          <ActionButtons
-                            report={report}
-                            onDeleted={() =>
-                              queryClient.invalidateQueries({
-                                queryKey: ["dashboard", "reports-today"],
-                              })
-                            }
+  
+          {/* Droite col-4 : FACTURES */}
+          <div>
+            <Card>
+              <CardHeader title="FACTURES" />
+              <div className="p-5">
+                {invoiceStatus ? (
+                  <>
+                    <DonutChart segments={invoiceSegments} />
+                    {/* Légende — mêmes couleurs et même ordre que les segments
+                        du donut, la part exacte compensant l'arc plancher. */}
+                    <div className="space-y-2 mt-3">
+                      {invoiceSegments.map((segment) => (
+                        <div
+                          key={segment.name}
+                          className="flex items-center gap-2 text-xs text-gray-600"
+                        >
+                          <span
+                            className="h-3 w-3 rounded-sm inline-block shrink-0"
+                            style={{ backgroundColor: segment.color }}
                           />
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <TablePaginationFooter pagination={reportsDeliveredPagination} />
-          </Card>
+                          <span className="flex-1 leading-tight">
+                            {segment.name}
+                          </span>
+                          <span className="text-gray-400 whitespace-nowrap">
+                            {invoiceShare(segment.value)}
+                          </span>
+                          <span className="font-semibold text-gray-800 w-12 text-right">
+                            {segment.value}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-[200px] animate-pulse rounded bg-gray-100" />
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
         </>
       )}
 
@@ -1302,21 +1123,21 @@ export default function HomePage() {
                     {doctorOrdersTotal}
                   </p>
                 </div>
-                <TableLengthControl pagination={doctorOrdersPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl pagination={doctorOrdersPagination} className="px-6" />
+                <div className="overflow-x-auto px-3">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Date
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Code
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Patient
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Compte rendu
                         </th>
                       </tr>
@@ -1329,7 +1150,7 @@ export default function HomePage() {
                         : doctorOrdersPagination.pageRows.map((order: DoctorOrder) => (
                             <tr
                               key={order.id}
-                              className="hover:bg-gray-50 transition-colors"
+                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
                             >
                               <td className="py-2 px-3 text-gray-600">
                                 {formatDate(order.createdAt)}
@@ -1348,13 +1169,9 @@ export default function HomePage() {
                               </td>
                               <td className="py-2 px-3">
                                 {order.reportStatus === 1 ? (
-                                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">
-                                    Terminé
-                                  </span>
+                                  <Badge variant="success">Terminé</Badge>
                                 ) : (
-                                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700">
-                                    En attente
-                                  </span>
+                                  <Badge variant="warning">En attente</Badge>
                                 )}
                               </td>
                             </tr>
@@ -1362,7 +1179,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={doctorOrdersPagination} />
+                <TablePaginationFooter pagination={doctorOrdersPagination} className="px-6 pb-5" />
               </Card>
             </div>
           </div>
@@ -1373,21 +1190,21 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Activités récentes" />
-                <TableLengthControl pagination={doctorOrdersTodayPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl pagination={doctorOrdersTodayPagination} className="px-6" />
+                <div className="overflow-x-auto px-3">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Date
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Code
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Patient
                         </th>
-                        <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
+                        <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
                           Compte rendu
                         </th>
                       </tr>
@@ -1410,7 +1227,7 @@ export default function HomePage() {
                           doctorOrdersTodayPagination.pageRows.map((order: DoctorOrder) => (
                             <tr
                               key={order.id}
-                              className="hover:bg-gray-50 transition-colors"
+                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
                             >
                               <td className="py-2 px-3 text-gray-600">
                                 {formatDate(order.createdAt)}
@@ -1430,13 +1247,9 @@ export default function HomePage() {
                               </td>
                               <td className="py-2 px-3">
                                 {order.reportStatus === 1 ? (
-                                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-green-100 text-green-700">
-                                    Terminé
-                                  </span>
+                                  <Badge variant="success">Terminé</Badge>
                                 ) : (
-                                  <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-700">
-                                    En attente
-                                  </span>
+                                  <Badge variant="warning">En attente</Badge>
                                 )}
                               </td>
                             </tr>
@@ -1445,7 +1258,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={doctorOrdersTodayPagination} />
+                <TablePaginationFooter pagination={doctorOrdersTodayPagination} className="px-6 pb-5" />
               </Card>
             </div>
 
@@ -1488,13 +1301,14 @@ export default function HomePage() {
                                   Priorité:{" "}
                                 </span>
                                 <span
-                                  className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${
+                                  className={cn(
+                                    "inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-semibold ring-1 ring-inset",
                                     appt.priority === "Normal"
-                                      ? "bg-gray-100 text-gray-600"
+                                      ? "bg-gray-100 text-gray-700 ring-gray-200"
                                       : appt.priority === "Urgent"
-                                        ? "bg-orange-100 text-orange-700"
-                                        : "bg-red-100 text-red-700"
-                                  }`}
+                                        ? "bg-amber-50 text-amber-700 ring-amber-200"
+                                        : "bg-red-50 text-red-700 ring-red-200",
+                                  )}
                                 >
                                   {appt.priority}
                                 </span>
