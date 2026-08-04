@@ -245,11 +245,39 @@ function ProgressTable({
 }: ProgressTableProps) {
   const max = data.length > 0 ? Math.max(...data.map((d) => d.value)) : 1;
   // La barre reste proportionnelle au maximum de TOUTE la série, pas seulement
-  // de la page affichée : sinon l'échelle changerait d'une page à l'autre.
-  const pagination = useTablePagination(data);
+  // de la page affichée (ni de la page filtrée) : sinon l'échelle changerait
+  // d'une page à l'autre.
+  // Chaque tableau filtre sa propre série : la recherche du DataTable Laravel
+  // ne porte que sur la table qui la surmonte.
+  const [search, setSearch] = useState("");
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return data;
+    return data.filter(
+      (d) =>
+        d.label.toLowerCase().includes(q) || String(d.value).includes(q),
+    );
+  }, [data, search]);
+  const pagination = useTablePagination(filtered);
   return (
     <>
-    <TableLengthControl pagination={pagination} />
+    {/* Les trois cartes n'occupent qu'un tiers de la largeur en grand écran :
+        la ligne « Afficher … » + « Rechercher: » y repasse en colonne, sinon
+        les deux contrôles se serrent au point de tronquer le champ. */}
+    <TableLengthControl
+      pagination={pagination}
+      className="lg:flex-col lg:items-start"
+    >
+      <label className="flex w-full items-center gap-2 text-[.9rem] text-gray-700">
+        <span>Rechercher:</span>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-[.35rem] text-[.9rem] text-gray-800 shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-[3px] focus:ring-blue-500/15 sm:w-40"
+        />
+      </label>
+    </TableLengthControl>
     <table className="w-full text-sm">
       <thead className="bg-gray-50">
         <tr>
@@ -263,6 +291,16 @@ function ProgressTable({
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
+        {pagination.total === 0 && (
+          <tr>
+            <td
+              colSpan={3}
+              className="py-4 px-3 text-center text-gray-400 text-sm"
+            >
+              Aucun enregistrement disponible
+            </td>
+          </tr>
+        )}
         {pagination.pageRows.map((item, i) => {
           const ratio = Math.round((item.value / (max || 1)) * 100);
           return (
@@ -690,8 +728,29 @@ export default function HomePage() {
     },
   ];
 
+  // « Rechercher: » du tableau « Statistique par docteurs ». C'est le seul
+  // tableau du dashboard Laravel réellement initialisé en DataTable
+  // (viewjs/home.js sur #datatable1, et jQuery ne prend que la première des
+  // trois tables portant cet id) : il est donc le seul à avoir un champ de
+  // recherche. Laravel exclut la colonne « Docteurs » de la recherche
+  // (columnDefs searchable:false sur la colonne 0), ce qui ne laisse chercher
+  // que sur les compteurs ; on cherche ici sur les trois colonnes, ce que
+  // l'utilisateur attend d'un champ posé au-dessus d'une liste de docteurs.
+  const [doctorStatsSearch, setDoctorStatsSearch] = useState("");
+  const doctorStatsFiltered = useMemo(() => {
+    const q = doctorStatsSearch.trim().toLowerCase();
+    if (!q) return doctorStats;
+    return doctorStats.filter((ds: DoctorStat) =>
+      [ds.doctor, ds.assigne, ds.traite].some((v) =>
+        String(v ?? "")
+          .toLowerCase()
+          .includes(q),
+      ),
+    );
+  }, [doctorStats, doctorStatsSearch]);
+
   // Pagination des tableaux du tableau de bord dont la liste n'est pas bornée.
-  const doctorStatsPagination = useTablePagination(doctorStats, 10);
+  const doctorStatsPagination = useTablePagination(doctorStatsFiltered, 10);
   const connectedUsersPagination = useTablePagination(connectedUsers, 10);
   const reportsDeliveredPagination = useTablePagination(reportsDelivered, 10);
   const doctorOrdersPagination = useTablePagination(doctorOrders, 10);
@@ -795,7 +854,9 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="EXAMENS LES PLUS DEMANDÉS" />
-                <div className="overflow-x-auto">
+                {/* Ce tableau n'a ni contrôle de longueur ni pagination : il
+                    porte lui-même la respiration verticale de la carte. */}
+                <div className="overflow-x-auto px-2 py-3">
                   {/* Comme dans Laravel (dashboardPlus.blade.php) : le tableau des
                       examens les plus demandés n'a pas de ligne d'en-tête. */}
                   <table className="w-full text-sm">
@@ -856,7 +917,7 @@ export default function HomePage() {
             <CardHeader title="STATISTIQUE MENSUELLE" />
             <div className="p-5 space-y-6">
               {/* Carte imbriquée EXAMENS DEMANDES */}
-              <div className="border border-gray-100 rounded-lg p-4">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">
                   EXAMENS DEMANDES
                 </p>
@@ -871,7 +932,7 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 text-center">
+                    <div className="rounded-lg bg-white border border-gray-200 shadow-sm p-4 text-center">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Total d&apos;examens
                       </p>
@@ -879,7 +940,7 @@ export default function HomePage() {
                         {monthlyStats?.nombreTests ?? 0}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 text-center">
+                    <div className="rounded-lg bg-white border border-gray-200 shadow-sm p-4 text-center">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Chiffre d&apos;affaire
                       </p>
@@ -887,7 +948,7 @@ export default function HomePage() {
                         {formatCFA(monthlyStats?.caTests ?? 0)}
                       </p>
                     </div>
-                    <div className="rounded-lg bg-gray-50 border border-gray-100 p-4 text-center">
+                    <div className="rounded-lg bg-white border border-gray-200 shadow-sm p-4 text-center">
                       <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Patients
                       </p>
@@ -899,17 +960,30 @@ export default function HomePage() {
                 )}
               </div>
 
-              {/* Carte imbriquée STATISTIQUE PATIENTS */}
-              <div className="border border-gray-100 rounded-lg p-4">
+              {/* Carte imbriquée STATISTIQUE PATIENTS.
+                  Comme dans Laravel, les trois tableaux sont trois cartes
+                  blanches distinctes posées sur un fond gris : sans ce
+                  contraste de fond les trois datatables se confondent. */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <p className="text-sm font-semibold text-gray-700 mb-3">
                   STATISTIQUE PATIENTS
                 </p>
                 {monthlyLoading ? (
-                  <div className="h-20 animate-pulse rounded bg-gray-200" />
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="h-40 animate-pulse rounded-lg bg-gray-200"
+                      />
+                    ))}
+                  </div>
                 ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
                     {/* Hôpitaux */}
-                    <div>
+                    <div className="rounded-lg bg-white border border-gray-200 shadow-sm p-4">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">
+                        Hôpitaux
+                      </h4>
                       <ProgressTable
                         headers={["Hôpital", "Patients"]}
                         data={(monthlyStats?.byHopital ?? []).map((h) => ({
@@ -920,7 +994,10 @@ export default function HomePage() {
                       />
                     </div>
                     {/* Médecin traitant */}
-                    <div>
+                    <div className="rounded-lg bg-white border border-gray-200 shadow-sm p-4">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">
+                        Médécin traitant
+                      </h4>
                       <ProgressTable
                         headers={["Médécin", "Patients"]}
                         data={(monthlyStats?.byMedecin ?? []).map((h) => ({
@@ -931,7 +1008,10 @@ export default function HomePage() {
                       />
                     </div>
                     {/* Type de demande */}
-                    <div>
+                    <div className="rounded-lg bg-white border border-gray-200 shadow-sm p-4">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3">
+                        Type de demande
+                      </h4>
                       <ProgressTable
                         headers={["Type", "Patients"]}
                         data={(monthlyStats?.byType ?? []).map((h) => ({
@@ -1057,8 +1137,21 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Statistique par docteurs" />
-                <TableLengthControl pagination={doctorStatsPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl
+                  pagination={doctorStatsPagination}
+                  className="px-5 pt-4"
+                >
+                  <label className="flex items-center gap-2 text-[.9rem] text-gray-700">
+                    <span>Rechercher:</span>
+                    <input
+                      type="text"
+                      value={doctorStatsSearch}
+                      onChange={(e) => setDoctorStatsSearch(e.target.value)}
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-[.35rem] text-[.9rem] text-gray-800 shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-[3px] focus:ring-blue-500/15"
+                    />
+                  </label>
+                </TableLengthControl>
+                <div className="overflow-x-auto px-2">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
@@ -1074,11 +1167,21 @@ export default function HomePage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {doctorStatsLoading
-                        ? Array.from({ length: 4 }).map((_, i) => (
-                            <SkeletonRow key={i} cols={3} />
-                          ))
-                        : doctorStatsPagination.pageRows.map((ds: DoctorStat, i) => (
+                      {doctorStatsLoading ? (
+                        Array.from({ length: 4 }).map((_, i) => (
+                          <SkeletonRow key={i} cols={3} />
+                        ))
+                      ) : doctorStatsPagination.total === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={3}
+                            className="py-4 px-3 text-center text-gray-400 text-sm"
+                          >
+                            Aucun enregistrement disponible
+                          </td>
+                        </tr>
+                      ) : (
+                        doctorStatsPagination.pageRows.map((ds: DoctorStat, i) => (
                             <tr
                               key={i}
                               className="hover:bg-gray-50 transition-colors"
@@ -1093,11 +1196,15 @@ export default function HomePage() {
                                 {ds.traite}
                               </td>
                             </tr>
-                          ))}
+                          ))
+                      )}
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={doctorStatsPagination} />
+                <TablePaginationFooter
+                  pagination={doctorStatsPagination}
+                  className="px-5 pb-4"
+                />
               </Card>
             </div>
 
@@ -1105,8 +1212,11 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Utilisateurs connectés" />
-                <TableLengthControl pagination={connectedUsersPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl
+                  pagination={connectedUsersPagination}
+                  className="px-5 pt-4"
+                />
+                <div className="overflow-x-auto px-2">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
@@ -1150,7 +1260,10 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={connectedUsersPagination} />
+                <TablePaginationFooter
+                  pagination={connectedUsersPagination}
+                  className="px-5 pb-4"
+                />
               </Card>
             </div>
           </div>
@@ -1165,8 +1278,11 @@ export default function HomePage() {
           {/* LIGNE 6 : Comptes rendu dsponible aujourd'hui (full width) */}
           <Card>
             <CardHeader title="Comptes rendu dsponible aujourd'hui" />
-            <TableLengthControl pagination={reportsDeliveredPagination} />
-            <div className="overflow-x-auto">
+            <TableLengthControl
+              pagination={reportsDeliveredPagination}
+              className="px-5 pt-4"
+            />
+            <div className="overflow-x-auto px-2">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -1229,7 +1345,10 @@ export default function HomePage() {
                 </tbody>
               </table>
             </div>
-            <TablePaginationFooter pagination={reportsDeliveredPagination} />
+            <TablePaginationFooter
+                  pagination={reportsDeliveredPagination}
+                  className="px-5 pb-4"
+                />
           </Card>
         </>
       )}
@@ -1302,8 +1421,11 @@ export default function HomePage() {
                     {doctorOrdersTotal}
                   </p>
                 </div>
-                <TableLengthControl pagination={doctorOrdersPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl
+                  pagination={doctorOrdersPagination}
+                  className="px-5 pt-4"
+                />
+                <div className="overflow-x-auto px-2">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
@@ -1362,7 +1484,10 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={doctorOrdersPagination} />
+                <TablePaginationFooter
+                  pagination={doctorOrdersPagination}
+                  className="px-5 pb-4"
+                />
               </Card>
             </div>
           </div>
@@ -1373,8 +1498,11 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Activités récentes" />
-                <TableLengthControl pagination={doctorOrdersTodayPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl
+                  pagination={doctorOrdersTodayPagination}
+                  className="px-5 pt-4"
+                />
+                <div className="overflow-x-auto px-2">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
@@ -1445,7 +1573,10 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={doctorOrdersTodayPagination} />
+                <TablePaginationFooter
+                  pagination={doctorOrdersTodayPagination}
+                  className="px-5 pb-4"
+                />
               </Card>
             </div>
 
