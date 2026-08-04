@@ -317,7 +317,7 @@ export function Sidebar() {
   // Logo + nom du labo depuis les Paramètres, avec repli sur la route publique
   // `/public/branding` : `/setting-apps` exige la permission `view-settings`, si
   // bien qu'un technicien ne voyait jusqu'ici que l'initiale de repli.
-  const { appName } = useBranding();
+  const { appName, logo, logoWhite } = useBranding();
 
   return (
     <>
@@ -356,15 +356,27 @@ export function Sidebar() {
           />
         ) : (
           <div className="flex items-center gap-2 px-4">
-            <AppLogo
-              surface="dark"
-              fallback="initial"
-              className="h-9 w-auto max-w-[90px] rounded flex-shrink-0"
-              fallbackClassName="flex-shrink-0"
-            />
-            <span className="font-semibold text-white text-base truncate">
-              {appName}
-            </span>
+            {/* Deux compositions distinctes, et non un logo suivi du nom en
+                toutes circonstances :
+                  — logo téléversé  → l'image, puis la raison sociale à côté ;
+                  — aucun logo      → la marque LaboAnaPath seule.
+                Accoler la lettrine au nom donnerait « [L] LaboAnaPath », soit
+                l'initiale répétée juste avant le mot qu'elle abrège. */}
+            {logo || logoWhite ? (
+              <>
+                <AppLogo
+                  surface="dark"
+                  fallback="initial"
+                  className="h-9 w-auto max-w-[90px] rounded flex-shrink-0"
+                  fallbackClassName="flex-shrink-0"
+                />
+                <span className="truncate text-base font-semibold text-white">
+                  {appName}
+                </span>
+              </>
+            ) : (
+              <AppLogo surface="dark" fallback="name" className="text-lg" />
+            )}
           </div>
         )}
       </div>

@@ -58,29 +58,38 @@ export function AppLogo({
     );
   }
 
-  // Aucun logo configuré : on montre la marque du produit plutôt qu'une
-  // initiale dans un carré. Un laboratoire qui n'a pas encore téléversé la
-  // sienne voyait jusqu'ici un « L » générique — l'application paraissait
-  // inachevée dès le premier écran. La marque du client, dès qu'elle existe,
-  // continue de primer (branche `src` ci-dessus).
+  // Aucun logo configuré : on montre la marque du produit. Un laboratoire qui
+  // n'a pas encore téléversé la sienne voyait jusqu'ici son nom en gras générique
+  // ou une initiale dans un carré — l'application paraissait inachevée dès le
+  // premier écran. La marque du client, dès qu'elle existe, continue de primer
+  // (branche `src` ci-dessus).
+  //
+  // `initial` correspond aux contextes contraints (menu replié) : la lettrine.
   if (fallback === "initial") {
+    return <BrandMark surface={surface} compact className={fallbackClassName} />;
+  }
+
+  // Le nom paramétré prime sur celui du produit : un laboratoire qui a saisi sa
+  // raison sociale doit la voir, c'est la sienne. La marque LaboAnaPath ne
+  // s'affiche que tant qu'aucun nom propre n'a été renseigné.
+  if (appName && appName !== "Labo AnaPath") {
     return (
-      <BrandMark
-        surface={surface}
-        className={cn("h-8 w-8", fallbackClassName)}
-      />
+      <span
+        className={cn(
+          "text-xl font-bold tracking-[-0.02em]",
+          surface === "dark" ? "text-white" : "text-gray-900",
+          fallbackClassName,
+        )}
+      >
+        {appName}
+      </span>
     );
   }
 
   return (
-    <span
-      className={cn(
-        "text-xl font-bold",
-        surface === "dark" ? "text-white" : "text-gray-800",
-        fallbackClassName
-      )}
-    >
-      {appName}
-    </span>
+    <BrandMark
+      surface={surface}
+      className={cn("text-xl", fallbackClassName)}
+    />
   );
 }
