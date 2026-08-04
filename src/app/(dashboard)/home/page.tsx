@@ -20,6 +20,7 @@ import {
   FlaskConical,
   Wallet,
   Inbox,
+  AlertTriangle,
 } from "lucide-react";
 import {
   PieChart,
@@ -627,6 +628,16 @@ export default function HomePage() {
     enabled: isAdmin,
   });
 
+  // -- Compteurs opérationnels (bons sans CR, retards). Endpoint distinct de
+  // `/dashboard/stats`, qui ne renvoie que des cumuls depuis toujours.
+  const { data: opStats, isLoading: opStatsLoading } = useQuery({
+    queryKey: ["dashboard", "secretariat-stats"],
+    queryFn: () => dashboardApi.getSecretariatStats().then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    enabled: isAdmin || isSecretary,
+  });
+
   // -- Reports today
   const { data: reportsToday = [], isLoading: reportsTodayLoading } = useQuery({
     queryKey: ["dashboard", "reports-today"],
@@ -820,7 +831,83 @@ export default function HomePage() {
       ================================================================== */}
       {isAdmin && (
         <>
-          {/* LIGNE 1 : 4 KPI cards */}
+          {/* ════════════════════════════════════════════════════════════════
+              ZONE 1 — À TRAITER
+              Ce qui appelle une action aujourd'hui, en tête d'écran. Chaque
+              tuile mène à la liste filtrée correspondante : un indicateur qu'on
+              ne peut pas ouvrir ne sert qu'à constater.
+
+              Les cumuls depuis toujours (patients, clients, CA) descendent en
+              zone 3 : ils bougent d'une fraction de pourcent par jour et ne
+              disent rien de ce qu'il reste à faire.
+          ════════════════════════════════════════════════════════════════ */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {opStatsLoading || statsLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="hyper-card p-6">
+                    <Skeleton className="mb-3 h-3 w-1/2" />
+                    <Skeleton className="h-7 w-3/4" />
+                  </div>
+                ))
+              : [
+                  {
+                    title: "Bons sans compte rendu",
+                    value: opStats?.noSaveTest ?? 0,
+                    href: "/test-orders",
+                    icon: <FileText className="h-5 w-5" />,
+                    tone: "neutral" as const,
+                  },
+                  {
+                    title: "Comptes rendus à valider",
+                    value: stats?.noFinishTest ?? 0,
+                    href: "/reports",
+                    icon: <FlaskConical className="h-5 w-5" />,
+                    tone: "neutral" as const,
+                  },
+                  {
+                    title: "À remettre au client",
+                    value: opStats?.noFinishTest ?? 0,
+                    href: "/reports/suivi",
+                    icon: <Folder className="h-5 w-5" />,
+                    tone: "neutral" as const,
+                  },
+                  {
+                    // Seul indicateur d'alerte de la rangée : au-delà de trois
+                    // semaines, un bon en attente est une anomalie, pas un
+                    // encours. Il se teinte donc — mais uniquement s'il y en a.
+                    title: "En retard (> 3 semaines)",
+                    value: opStats?.noFinishWeek ?? 0,
+                    href: "/test-orders",
+                    icon: <AlertTriangle className="h-5 w-5" />,
+                    tone: "alert" as const,
+                  },
+                ].map((kpi) => (
+                  <Link key={kpi.title} href={kpi.href} className="block">
+                    <StatCard
+                      interactive
+                      title={kpi.title}
+                      value={kpi.value.toLocaleString("fr-FR")}
+                      icon={kpi.icon}
+                      className={
+                        kpi.tone === "alert" && kpi.value > 0
+                          ? "ring-1 ring-inset ring-red-200"
+                          : undefined
+                      }
+                      valueClassName={
+                        kpi.tone === "alert" && kpi.value > 0
+                          ? "text-red-600"
+                          : undefined
+                      }
+                    />
+                  </Link>
+                ))}
+          </div>
+
+          {/* ════════════════════════════════════════════════════════════════
+              ZONE 3 — VOLUMES CUMULÉS
+              Conservés (ils figurent au Blade) mais relégués : ce sont des
+              totaux de référence, pas des signaux d'action.
+          ════════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {statsLoading
               ? Array.from({ length: 4 }).map((_, i) => (

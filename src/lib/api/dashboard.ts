@@ -1,23 +1,50 @@
 import apiClient from "./client";
 
-export interface DashboardStats {
+/**
+ * `/dashboard/stats` — profil administrateur (`DashboardDto.AdminStats`).
+ *
+ * Valeurs CUMULÉES depuis toujours (`countByBranchId`, `sumTotalByBranchId`),
+ * assorties d'une croissance mensuelle `cr*` (`calcGrowth(mois courant, mois
+ * précédent)`). Ce ne sont donc pas des compteurs du jour : les indicateurs
+ * opérationnels sont dans {@link SecretariatStats}.
+ */
+export interface AdminStats {
+  valeurPatient: number;
+  crPatient: number;
+  valeurClient: number;
+  crClient: number;
+  valeurTestOrder: number;
+  crTestOrder: number;
+  valeurInvoice: number;
+  crInvoice: number;
+  /** Comptes rendus validés ou remis. */
+  finishTest: number;
+  /** Comptes rendus en brouillon ou en relecture — donc à traiter. */
+  noFinishTest: number;
+}
+
+/**
+ * `/dashboard/secretariat-stats` — compteurs opérationnels
+ * (`DashboardDto.SecretariatStats`).
+ *
+ * ⚠ `finishTest` et `noFinishTest` n'ont PAS le même sens que dans
+ * {@link AdminStats} : ici ils comptent les comptes rendus *remis* ou *non
+ * remis*, là-bas les comptes rendus *validés* ou *en cours de rédaction*. Même
+ * nom, deux questions différentes — ne pas les intervertir.
+ */
+export interface SecretariatStats {
   patients: number;
   contrats: number;
   tests: number;
   testOrdersCount: number;
+  /** Comptes rendus remis au client. */
   finishTest: number;
-  noSaveTest: number;
+  /** Comptes rendus non remis. */
   noFinishTest: number;
+  /** Bons d'examen sans aucun compte rendu — le travail pas encore commencé. */
+  noSaveTest: number;
+  /** Bons d'examen en attente depuis plus de trois semaines — les retards. */
   noFinishWeek: number;
-  // Admin
-  valeurPatient?: number;
-  crPatient?: number;
-  valeurClient?: number;
-  crClient?: number;
-  valeurTestOrder?: number;
-  crTestOrder?: number;
-  valeurInvoice?: number;
-  crInvoice?: number;
 }
 
 export interface ReportToday {
@@ -108,7 +135,14 @@ export interface DoctorOrder {
 }
 
 export const dashboardApi = {
-  getStats: () => apiClient.get<DashboardStats>("/dashboard/stats"),
+  getStats: () => apiClient.get<AdminStats>("/dashboard/stats"),
+  /**
+   * Compteurs opérationnels. Exposé par l'API mais jamais appelé jusqu'ici :
+   * c'est pourtant la seule source de `noSaveTest` (bons sans compte rendu) et
+   * `noFinishWeek` (retards de plus de trois semaines).
+   */
+  getSecretariatStats: () =>
+    apiClient.get<SecretariatStats>("/dashboard/secretariat-stats"),
   getReportsToday: () => apiClient.get<ReportToday[]>("/dashboard/reports-today"),
   getDoctorStats: () => apiClient.get<DoctorStat[]>("/dashboard/doctor-stats"),
   getTopExamens: () => apiClient.get<TopExamen[]>("/dashboard/top-examens"),
