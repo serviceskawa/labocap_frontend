@@ -15,11 +15,10 @@ import {
   CalendarIcon,
   ArrowRight,
   ArrowUp,
-  Users,
-  Building2,
   FlaskConical,
-  Wallet,
   AlertTriangle,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 import {
   PieChart,
@@ -35,7 +34,6 @@ import {
 } from "recharts";
 
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatCard } from "@/components/ui/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import {
@@ -708,338 +706,349 @@ export default function HomePage() {
       {(isAdmin || isSecretary) && (
         <>
           {/* ════════════════════════════════════════════════════════════════
-              ZONE 1 — À TRAITER
-              Ce qui appelle une action aujourd'hui, en tête d'écran. Chaque
-              tuile mène à la liste filtrée correspondante : un indicateur qu'on
-              ne peut pas ouvrir ne sert qu'à constater.
+              BLOC MÉTRIQUES — une seule surface
 
-              Les cumuls depuis toujours (patients, clients, CA) descendent en
-              zone 3 : ils bougent d'une fraction de pourcent par jour et ne
-              disent rien de ce qu'il reste à faire.
-          ════════════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {opStatsLoading || statsLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="hyper-card p-6">
-                    <Skeleton className="mb-3 h-3 w-1/2" />
-                    <Skeleton className="h-7 w-3/4" />
-                  </div>
-                ))
-              : [
-                  {
-                    title: "Bons sans compte rendu",
-                    value: opStats?.noSaveTest ?? 0,
-                    href: "/test-orders",
-                    icon: <FileText className="h-5 w-5" />,
-                    tone: "neutral" as const,
-                  },
-                  // Seule tuile issue de `/dashboard/stats`, réservé au profil
-                  // administrateur : affichée à lui seul, sans quoi un
-                  // secrétariat lirait un zéro permanent au lieu d'un compteur.
-                  ...(isAdmin
-                    ? [
-                        {
-                          title: "Comptes rendus à valider",
-                          value: stats?.noFinishTest ?? 0,
-                          href: "/reports",
-                          icon: <FlaskConical className="h-5 w-5" />,
-                          tone: "neutral" as const,
-                        },
-                      ]
-                    : []),
-                  {
-                    title: "À remettre au client",
-                    value: opStats?.noFinishTest ?? 0,
-                    href: "/reports/suivi",
-                    icon: <Folder className="h-5 w-5" />,
-                    tone: "neutral" as const,
-                  },
-                  {
-                    // Seul indicateur d'alerte de la rangée : au-delà de trois
-                    // semaines, un bon en attente est une anomalie, pas un
-                    // encours. Il se teinte donc — mais uniquement s'il y en a.
-                    title: "En retard (> 3 semaines)",
-                    value: opStats?.noFinishWeek ?? 0,
-                    href: "/test-orders",
-                    icon: <AlertTriangle className="h-5 w-5" />,
-                    tone: "alert" as const,
-                  },
-                ].map((kpi) => (
-                  <Link key={kpi.title} href={kpi.href} className="block">
-                    <StatCard
-                      interactive
-                      title={kpi.title}
-                      value={kpi.value.toLocaleString("fr-FR")}
-                      icon={kpi.icon}
-                      className={
-                        kpi.tone === "alert" && kpi.value > 0
-                          ? "ring-1 ring-inset ring-red-200"
-                          : undefined
-                      }
-                      valueClassName={
-                        kpi.tone === "alert" && kpi.value > 0
-                          ? "text-red-600"
-                          : undefined
-                      }
-                    />
-                  </Link>
-                ))}
-          </div>
+              Les indicateurs formaient deux grilles de cartes séparées par la
+              liste de travail : huit ombres portées, deux gouttières, aucune
+              lecture d'ensemble. Réunis ici en une seule carte découpée par des
+              filets d'un pixel (`gap-px` sur fond gris), ils se lisent comme un
+              tableau de bord et non comme huit vignettes.
 
-          {/* ════════════════════════════════════════════════════════════════
-              ZONE 2 — LE TRAVAIL DU JOUR
-              Remontée depuis la section « secrétariat », où elle était la seule
-              vraie liste de travail de l'écran — et invisible aux profils
-              administrateur, qui n'avaient donc aucune action à portée de clic.
-              Les données étaient pourtant déjà chargées pour eux
-              (`enabled: isSecretary || isAdmin`) : seul l'affichage était filtré.
+              La hiérarchie est conservée par le traitement, pas par la distance :
+                — rangée haute, « à traiter » : cliquable, valeur pleine, icône
+                  teintée. Ce sont les chiffres qui appellent une action ;
+                — rangée basse, cumuls : inerte, valeur atténuée, tendance en
+                  pastille. Des repères, pas des signaux.
           ════════════════════════════════════════════════════════════════ */}
-          <Card>
-            <CardHeader title="Comptes rendu disponible aujourd'hui" />
-            <TableLengthControl pagination={reportsDeliveredPagination} className="px-6" />
-            <div className="overflow-x-auto px-3">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                      Date
-                    </th>
-                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                      Code
-                    </th>
-                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                      Patiens
-                    </th>
-                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {reportsTodayLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <SkeletonRow key={i} cols={4} />
+          <Card className="overflow-hidden">
+            {/* Rangée « à traiter » */}
+            <div className="grid grid-cols-1 gap-px bg-gray-100 sm:grid-cols-2 xl:grid-cols-4">
+              {opStatsLoading || statsLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="bg-white p-5">
+                      <Skeleton className="mb-3 h-3 w-2/3" />
+                      <Skeleton className="h-7 w-1/2" />
+                    </div>
+                  ))
+                : [
+                    {
+                      title: "Bons sans compte rendu",
+                      value: opStats?.noSaveTest ?? 0,
+                      href: "/test-orders",
+                      icon: <FileText className="h-5 w-5" />,
+                      alert: false,
+                    },
+                    // Seule tuile issue de `/dashboard/stats`, réservé au profil
+                    // administrateur : un secrétariat y lirait un zéro permanent.
+                    ...(isAdmin
+                      ? [
+                          {
+                            title: "Comptes rendus à valider",
+                            value: stats?.noFinishTest ?? 0,
+                            href: "/reports",
+                            icon: <FlaskConical className="h-5 w-5" />,
+                            alert: false,
+                          },
+                        ]
+                      : []),
+                    {
+                      title: "À remettre au client",
+                      value: opStats?.noFinishTest ?? 0,
+                      href: "/reports/suivi",
+                      icon: <Folder className="h-5 w-5" />,
+                      alert: false,
+                    },
+                    {
+                      // Au-delà de trois semaines, un bon en attente est une
+                      // anomalie. Teinté seulement s'il y en a : un écran où
+                      // tout est rouge n'alerte plus.
+                      title: "En retard (> 3 semaines)",
+                      value: opStats?.noFinishWeek ?? 0,
+                      href: "/test-orders",
+                      icon: <AlertTriangle className="h-5 w-5" />,
+                      alert: true,
+                    },
+                  ].map((kpi) => {
+                    const isAlert = kpi.alert && kpi.value > 0;
+                    return (
+                      <Link
+                        key={kpi.title}
+                        href={kpi.href}
+                        className="group bg-white p-5 transition-colors duration-[var(--duration-fast)] ease-emphasized hover:bg-blue-50/40"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-[.8125rem] font-medium text-gray-500">
+                            {kpi.title}
+                          </p>
+                          <span
+                            className={cn(
+                              "flex-shrink-0 rounded-[var(--radius-control)] p-2",
+                              isAlert
+                                ? "bg-red-50 text-red-600"
+                                : "bg-blue-50 text-blue-600",
+                            )}
+                          >
+                            {kpi.icon}
+                          </span>
+                        </div>
+                        <p
+                          className={cn(
+                            "mt-2 text-[1.75rem] font-semibold leading-none tracking-[-0.02em]",
+                            isAlert ? "text-red-600" : "text-gray-900",
+                          )}
+                        >
+                          {kpi.value.toLocaleString("fr-FR")}
+                        </p>
+                      </Link>
+                    );
+                  })}
+            </div>
+
+            {/* Rangée « volumes cumulés » — réservée à l'administrateur, seul
+                profil pour lequel `/dashboard/stats` répond. */}
+            {isAdmin && (
+              <div className="grid grid-cols-1 gap-px border-t border-gray-200 bg-gray-100 sm:grid-cols-2 xl:grid-cols-4">
+                {statsLoading
+                  ? Array.from({ length: 4 }).map((_, i) => (
+                      <div key={i} className="bg-gray-50/60 p-4">
+                        <Skeleton className="mb-2 h-3 w-1/2" />
+                        <Skeleton className="h-5 w-2/3" />
+                      </div>
                     ))
-                  ) : reportsDelivered.length === 0 ? (
+                  : [
+                      { title: "Patients", value: (stats?.valeurPatient ?? 0).toLocaleString("fr-FR"), trend: stats?.crPatient },
+                      { title: "Clients pro.", value: (stats?.valeurClient ?? 0).toLocaleString("fr-FR"), trend: stats?.crClient },
+                      { title: "Demandes d'examen", value: (stats?.valeurTestOrder ?? 0).toLocaleString("fr-FR"), trend: stats?.crTestOrder },
+                      { title: "Chiffre d'affaires", value: formatCFA(stats?.valeurInvoice ?? 0), trend: stats?.crInvoice },
+                    ].map((kpi) => (
+                      <div key={kpi.title} className="bg-gray-50/60 p-4">
+                        <p className="truncate text-[.75rem] font-medium uppercase tracking-[0.04em] text-gray-500">
+                          {kpi.title}
+                        </p>
+                        <div className="mt-1.5 flex items-baseline gap-2">
+                          <span className="truncate text-[1.0625rem] font-semibold tracking-[-0.01em] text-gray-700">
+                            {kpi.value}
+                          </span>
+                          {kpi.trend !== undefined && (
+                            <span
+                              className={cn(
+                                "inline-flex flex-shrink-0 items-center gap-0.5 rounded-[var(--radius-control)] px-1.5 py-0.5 text-[.6875rem] font-semibold",
+                                kpi.trend >= 0
+                                  ? "bg-green-50 text-green-700"
+                                  : "bg-red-50 text-red-700",
+                              )}
+                            >
+                              {kpi.trend >= 0 ? (
+                                <TrendingUp className="h-3 w-3" />
+                              ) : (
+                                <TrendingDown className="h-3 w-3" />
+                              )}
+                              {Math.round(kpi.trend)}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+              </div>
+            )}
+          </Card>
+        </>
+      )}
+
+      {/* ==================================================================
+          DEUX COLONNES — répartition des tableaux
+
+          Sous le bloc de métriques, le reste de l'écran se partage en deux :
+          à gauche le travail du jour, à droite la lecture financière. Chaque
+          colonne garde sa propre permission — un profil finance sans accès au
+          tableau de bord voit sa colonne seule, en pleine largeur.
+      ================================================================== */}
+      {(isAdmin || isSecretary || isFinance) && (
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
+          {(isAdmin || isSecretary) && (
+            <div className="space-y-6">
+            {/* ════════════════════════════════════════════════════════════════
+                ZONE 2 — LE TRAVAIL DU JOUR
+                Remontée depuis la section « secrétariat », où elle était la seule
+                vraie liste de travail de l'écran — et invisible aux profils
+                administrateur, qui n'avaient donc aucune action à portée de clic.
+                Les données étaient pourtant déjà chargées pour eux
+                (`enabled: isSecretary || isAdmin`) : seul l'affichage était filtré.
+            ════════════════════════════════════════════════════════════════ */}
+            <Card>
+              <CardHeader title="Comptes rendu disponible aujourd'hui" />
+              <TableLengthControl pagination={reportsDeliveredPagination} className="px-6" />
+              <div className="overflow-x-auto px-3">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td
-                        colSpan={4}
-                        className="py-4 px-3 text-center text-gray-400 text-sm"
-                      >
-                        Aucun compte rendu disponible aujourd&apos;hui
-                      </td>
+                      <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                        Date
+                      </th>
+                      <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                        Code
+                      </th>
+                      <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                        Patiens
+                      </th>
+                      <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                        Action
+                      </th>
                     </tr>
-                  ) : (
-                    reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
-                      <tr
-                        key={report.id}
-                        className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
-                      >
-                        <td className="py-2 px-3 text-gray-600">
-                          {formatDate(report.createdAt)}
-                        </td>
-                        <td className="py-2 px-3 text-gray-700">
-                          {report.code}
-                        </td>
-                        <td className="py-2 px-3 text-gray-700">
-                          {report.patientLastname} {report.patientFirstname}
-                        </td>
-                        <td className="py-2 px-3">
-                          <ActionButtons
-                            report={report}
-                            onDeleted={() =>
-                              queryClient.invalidateQueries({
-                                queryKey: ["dashboard", "reports-today"],
-                              })
-                            }
-                          />
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {reportsTodayLoading ? (
+                      Array.from({ length: 4 }).map((_, i) => (
+                        <SkeletonRow key={i} cols={4} />
+                      ))
+                    ) : reportsDelivered.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="py-4 px-3 text-center text-gray-400 text-sm"
+                        >
+                          Aucun compte rendu disponible aujourd&apos;hui
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
+                        <tr
+                          key={report.id}
+                          className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
+                        >
+                          <td className="py-2 px-3 text-gray-600">
+                            {formatDate(report.createdAt)}
+                          </td>
+                          <td className="py-2 px-3 text-gray-700">
+                            {report.code}
+                          </td>
+                          <td className="py-2 px-3 text-gray-700">
+                            {report.patientLastname} {report.patientFirstname}
+                          </td>
+                          <td className="py-2 px-3">
+                            <ActionButtons
+                              report={report}
+                              onDeleted={() =>
+                                queryClient.invalidateQueries({
+                                  queryKey: ["dashboard", "reports-today"],
+                                })
+                              }
+                            />
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <TablePaginationFooter pagination={reportsDeliveredPagination} className="px-6 pb-5" />
+            </Card>
+  
             </div>
-            <TablePaginationFooter pagination={reportsDeliveredPagination} className="px-6 pb-5" />
-          </Card>
+          )}
 
-        </>
-      )}
-
-      {/* ==================================================================
-          SECTION ADMIN — analyses
-      ================================================================== */}
-      {isAdmin && (
-        <>
-          {/* ════════════════════════════════════════════════════════════════
-              ZONE 3 — VOLUMES CUMULÉS
-              Conservés (ils figurent au Blade) mais relégués : ce sont des
-              totaux de référence, pas des signaux d'action.
-          ════════════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {statsLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="hyper-card p-6">
-                    <Skeleton className="mb-3 h-3 w-1/2" />
-                    <Skeleton className="h-7 w-3/4" />
-                    <Skeleton className="mt-3 h-4 w-24" />
-                  </div>
-                ))
-              : [
-                  {
-                    title: "Patients",
-                    value: (stats?.valeurPatient ?? 0).toLocaleString("fr-FR"),
-                    trend: stats?.crPatient,
-                    icon: <Users className="h-5 w-5" />,
-                  },
-                  {
-                    title: "Clients pro.",
-                    value: (stats?.valeurClient ?? 0).toLocaleString("fr-FR"),
-                    trend: stats?.crClient,
-                    icon: <Building2 className="h-5 w-5" />,
-                  },
-                  {
-                    title: "Demandes d'examen",
-                    value: (stats?.valeurTestOrder ?? 0).toLocaleString("fr-FR"),
-                    trend: stats?.crTestOrder,
-                    icon: <FlaskConical className="h-5 w-5" />,
-                  },
-                  {
-                    title: "Chiffre d'affaires",
-                    value: formatCFA(stats?.valeurInvoice ?? 0),
-                    trend: stats?.crInvoice,
-                    icon: <Wallet className="h-5 w-5" />,
-                  },
-                ].map((kpi) => (
-                  <StatCard
-                    key={kpi.title}
-                    title={kpi.title}
-                    value={kpi.value}
-                    icon={kpi.icon}
-                    // `cr*` est bien une croissance mensuelle côté API
-                    // (`calcGrowth(mois courant, mois précédent)` dans
-                    // DashboardServiceImpl) : elle se lit donc en pastille de
-                    // tendance. Arrondie à l'entier — deux décimales sur un
-                    // pourcentage de croissance suggèrent une précision que le
-                    // calcul n'a pas.
-                    trend={
-                      kpi.trend === undefined
-                        ? undefined
-                        : {
-                            value: Math.round(kpi.trend),
-                            isPositive: kpi.trend >= 0,
-                          }
-                    }
-                  />
-                ))}
-          </div>
-
-        </>
-      )}
-
-      {/* ==================================================================
-          SECTION FINANCE
-      ================================================================== */}
-      {isFinance && (
-        <>
-          {/* LIGNE 4 : CHIFFRE D'AFFAIRES + FACTURES */}
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Gauche col-8 : CHIFFRE D'AFFAIRES */}
-            <div className="lg:flex-[2]">
-              <Card>
-                <CardHeader title="CHIFFRE D'AFFAIRES" />
-                <div className="p-5">
-                  {/* Bandeau des deux totaux hebdomadaires — calque du bloc
-                      `chart-content-bg` de Laravel : libellé au-dessus, montant en
-                      gros précédé d'une puce de la couleur de la série. */}
-                  <div className="rounded bg-gray-50 py-3">
-                    <div className="grid grid-cols-1 text-center sm:grid-cols-2">
-                      <div>
-                        <p className="mb-0 mt-3 text-sm text-gray-500">
-                          Semaine actuelle
-                        </p>
-                        <p className="mb-3 text-2xl font-normal text-gray-900">
-                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-600 align-middle" />
-                          {formatCFA(revenueData?.totalCurrentWeek ?? 0)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="mb-0 mt-3 text-sm text-gray-500">
-                          Semaine précédente
-                        </p>
-                        <p className="mb-3 text-2xl font-normal text-gray-900">
-                          <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-green-600 align-middle" />
-                          {formatCFA(revenueData?.totalLastWeek ?? 0)}
-                        </p>
+          {isFinance && (
+            <div className="space-y-6">
+            {/* LIGNE 4 : CHIFFRE D'AFFAIRES + FACTURES */}
+            <div className="flex flex-col gap-6">
+              {/* Gauche col-8 : CHIFFRE D'AFFAIRES */}
+              <div className="lg:flex-[2]">
+                <Card>
+                  <CardHeader title="CHIFFRE D'AFFAIRES" />
+                  <div className="p-5">
+                    {/* Bandeau des deux totaux hebdomadaires — calque du bloc
+                        `chart-content-bg` de Laravel : libellé au-dessus, montant en
+                        gros précédé d'une puce de la couleur de la série. */}
+                    <div className="rounded bg-gray-50 py-3">
+                      <div className="grid grid-cols-1 text-center sm:grid-cols-2">
+                        <div>
+                          <p className="mb-0 mt-3 text-sm text-gray-500">
+                            Semaine actuelle
+                          </p>
+                          <p className="mb-3 text-2xl font-normal text-gray-900">
+                            <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-blue-600 align-middle" />
+                            {formatCFA(revenueData?.totalCurrentWeek ?? 0)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="mb-0 mt-3 text-sm text-gray-500">
+                            Semaine précédente
+                          </p>
+                          <p className="mb-3 text-2xl font-normal text-gray-900">
+                            <span className="mr-1 inline-block h-2.5 w-2.5 rounded-full bg-green-600 align-middle" />
+                            {formatCFA(revenueData?.totalLastWeek ?? 0)}
+                          </p>
+                        </div>
                       </div>
                     </div>
+                    {/* Total du jour + accès aux relevés (bouton Laravel
+                        « View Statements », classe btn-outline-primary). */}
+                    <div className="mt-4 mb-4">
+                      <h5 className="mb-2 text-base font-semibold text-gray-800">
+                        Aujourd&apos;hui: {formatCFA(revenueData?.totalToday ?? 0)}
+                      </h5>
+                      <Link
+                        href="/invoices/business"
+                        className="inline-flex items-center gap-2 rounded-[.15rem] border border-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] text-blue-600 transition-colors hover:bg-blue-600 hover:text-white"
+                      >
+                        View Statements
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                    {/* Graphique ligne */}
+                    {revenueData ? (
+                      <RevenueLineChart data={revenueData} />
+                    ) : (
+                      <div className="h-[220px] animate-pulse rounded bg-gray-100" />
+                    )}
                   </div>
-                  {/* Total du jour + accès aux relevés (bouton Laravel
-                      « View Statements », classe btn-outline-primary). */}
-                  <div className="mt-4 mb-4">
-                    <h5 className="mb-2 text-base font-semibold text-gray-800">
-                      Aujourd&apos;hui: {formatCFA(revenueData?.totalToday ?? 0)}
-                    </h5>
-                    <Link
-                      href="/invoices/business"
-                      className="inline-flex items-center gap-2 rounded-[.15rem] border border-blue-600 px-[.9rem] py-[.45rem] text-[.9rem] text-blue-600 transition-colors hover:bg-blue-600 hover:text-white"
-                    >
-                      View Statements
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
+                </Card>
+              </div>
+  
+              {/* Droite col-4 : FACTURES */}
+              <div className="lg:flex-[1]">
+                <Card>
+                  <CardHeader title="FACTURES" />
+                  <div className="p-5">
+                    {invoiceStatus ? (
+                      <>
+                        <DonutChart segments={invoiceSegments} />
+                        {/* Légende — mêmes couleurs et même ordre que les segments
+                            du donut, la part exacte compensant l'arc plancher. */}
+                        <div className="space-y-2 mt-3">
+                          {invoiceSegments.map((segment) => (
+                            <div
+                              key={segment.name}
+                              className="flex items-center gap-2 text-xs text-gray-600"
+                            >
+                              <span
+                                className="h-3 w-3 rounded-sm inline-block shrink-0"
+                                style={{ backgroundColor: segment.color }}
+                              />
+                              <span className="flex-1 leading-tight">
+                                {segment.name}
+                              </span>
+                              <span className="text-gray-400 whitespace-nowrap">
+                                {invoiceShare(segment.value)}
+                              </span>
+                              <span className="font-semibold text-gray-800 w-12 text-right">
+                                {segment.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="h-[200px] animate-pulse rounded bg-gray-100" />
+                    )}
                   </div>
-                  {/* Graphique ligne */}
-                  {revenueData ? (
-                    <RevenueLineChart data={revenueData} />
-                  ) : (
-                    <div className="h-[220px] animate-pulse rounded bg-gray-100" />
-                  )}
-                </div>
-              </Card>
+                </Card>
+              </div>
             </div>
-
-            {/* Droite col-4 : FACTURES */}
-            <div className="lg:flex-[1]">
-              <Card>
-                <CardHeader title="FACTURES" />
-                <div className="p-5">
-                  {invoiceStatus ? (
-                    <>
-                      <DonutChart segments={invoiceSegments} />
-                      {/* Légende — mêmes couleurs et même ordre que les segments
-                          du donut, la part exacte compensant l'arc plancher. */}
-                      <div className="space-y-2 mt-3">
-                        {invoiceSegments.map((segment) => (
-                          <div
-                            key={segment.name}
-                            className="flex items-center gap-2 text-xs text-gray-600"
-                          >
-                            <span
-                              className="h-3 w-3 rounded-sm inline-block shrink-0"
-                              style={{ backgroundColor: segment.color }}
-                            />
-                            <span className="flex-1 leading-tight">
-                              {segment.name}
-                            </span>
-                            <span className="text-gray-400 whitespace-nowrap">
-                              {invoiceShare(segment.value)}
-                            </span>
-                            <span className="font-semibold text-gray-800 w-12 text-right">
-                              {segment.value}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="h-[200px] animate-pulse rounded bg-gray-100" />
-                  )}
-                </div>
-              </Card>
+  
             </div>
-          </div>
-
-        </>
+          )}
+        </div>
       )}
 
       {/* ==================================================================
