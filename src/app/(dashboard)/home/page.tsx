@@ -19,6 +19,7 @@ import {
   Building2,
   FlaskConical,
   Wallet,
+  Inbox,
 } from "lucide-react";
 import {
   PieChart,
@@ -37,6 +38,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   TableLengthControl,
   TablePaginationFooter,
@@ -312,44 +314,72 @@ function ProgressTable({
   // La barre reste proportionnelle au maximum de TOUTE la série, pas seulement
   // de la page affichée : sinon l'échelle changerait d'une page à l'autre.
   const pagination = useTablePagination(data);
+
+  // Ces trois répartitions sont affichées côte à côte dans une carte imbriquée,
+  // et tiennent presque toujours sur une page. Poser systématiquement le sélecteur
+  // « Afficher 10 enregistrements par page » ET le pied de pagination donnait
+  // trois sélecteurs et trois paginateurs pour trois tableaux d'une poignée de
+  // lignes — soit plus de chrome que de donnée, et un « page 1 sur 1 » répété
+  // trois fois. On ne les montre que lorsqu'il y a réellement plusieurs pages.
+  const isPaginated = pagination.pageCount > 1;
+
+  // Sans donnée, le corps du tableau ne rendait rien : on voyait une ligne
+  // d'en-tête suivie d'un vide, puis le paginateur. L'écran paraissait cassé
+  // plutôt que vide.
+  if (data.length === 0) {
+    return (
+      <EmptyState
+        compact
+        icon={Inbox}
+        title="Aucune donnée"
+        description={`Aucun résultat par ${headers[0].toLocaleLowerCase("fr")} ce mois-ci.`}
+      />
+    );
+  }
+
   return (
     <>
-    <TableLengthControl pagination={pagination} />
-    <table className="w-full text-sm">
-      <thead className="bg-gray-50">
-        <tr>
-          <th className="py-2 px-3 text-left text-[.875rem] font-semibold text-gray-700">
-            {headers[0]}
-          </th>
-          <th className="py-2 px-3 text-right text-[.875rem] font-semibold text-gray-700">
-            {headers[1]}
-          </th>
-          <th className="py-2 px-3 w-32" />
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-100">
-        {pagination.pageRows.map((item, i) => {
-          const ratio = Math.round((item.value / (max || 1)) * 100);
-          return (
-            <tr key={i} className="hover:bg-gray-50">
-              <td className="py-2 px-3 text-gray-700">{item.label}</td>
-              <td className="py-2 px-3 text-right font-semibold text-gray-900">
-                {item.value}
-              </td>
-              <td className="py-2 px-3">
-                <div className="h-[3px] bg-gray-100 rounded">
-                  <div
-                    className={`h-[3px] rounded ${color}`}
-                    style={{ width: `${ratio}%` }}
-                  />
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-    <TablePaginationFooter pagination={pagination} />
+      {isPaginated && <TableLengthControl pagination={pagination} />}
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-3 py-2 text-left text-[.875rem] font-semibold text-gray-700">
+              {headers[0]}
+            </th>
+            <th className="px-3 py-2 text-right text-[.875rem] font-semibold text-gray-700">
+              {headers[1]}
+            </th>
+            <th className="w-32 px-3 py-2" />
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {pagination.pageRows.map((item, i) => {
+            const ratio = Math.round((item.value / (max || 1)) * 100);
+            return (
+              <tr
+                key={i}
+                // Même survol que `DataTable` : le gris était une troisième
+                // teinte de survol dans une application qui en a déjà une.
+                className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
+              >
+                <td className="px-3 py-2 text-gray-700">{item.label}</td>
+                <td className="px-3 py-2 text-right font-semibold text-gray-900">
+                  {item.value}
+                </td>
+                <td className="px-3 py-2">
+                  <div className="h-[3px] rounded-full bg-gray-100">
+                    <div
+                      className={`h-[3px] rounded-full ${color}`}
+                      style={{ width: `${ratio}%` }}
+                    />
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      {isPaginated && <TablePaginationFooter pagination={pagination} />}
     </>
   );
 }
@@ -917,8 +947,8 @@ export default function HomePage() {
             <div className="p-5 space-y-6">
               {/* Carte imbriquée EXAMENS DEMANDES */}
               <div className="rounded-[var(--radius-control)] border border-gray-100 p-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">
-                  EXAMENS DEMANDES
+                <p className="mb-3 text-[.875rem] font-semibold text-gray-800">
+                  Examens demandés
                 </p>
                 {monthlyLoading ? (
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -961,8 +991,8 @@ export default function HomePage() {
 
               {/* Carte imbriquée STATISTIQUE PATIENTS */}
               <div className="rounded-[var(--radius-control)] border border-gray-100 p-4">
-                <p className="text-sm font-semibold text-gray-700 mb-3">
-                  STATISTIQUE PATIENTS
+                <p className="mb-3 text-[.875rem] font-semibold text-gray-800">
+                  Statistique patients
                 </p>
                 {monthlyLoading ? (
                   <div className="h-20 animate-pulse rounded bg-gray-200" />
