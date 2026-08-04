@@ -827,9 +827,18 @@ export default function HomePage() {
       <PageHeader title="Tableau de bord" />
 
       {/* ==================================================================
-          SECTION ADMIN
+          ZONES OPÉRATIONNELLES — administrateur ET secrétariat
+
+          Les rôles composaient jusqu'ici par empilement : `{isAdmin && …}`
+          puis `{isSecretary && …}` puis `{isDoctor && …}`, chacun apportant
+          ses rangées. Un utilisateur à deux rôles recevait donc les deux blocs
+          bout à bout, et personne n'avait d'écran pensé pour lui.
+
+          Ce qui relève de l'exploitation quotidienne — ce qu'il reste à faire,
+          et le travail du jour — est désormais commun aux deux profils. Les
+          analyses cumulées restent réservées à l'administrateur.
       ================================================================== */}
-      {isAdmin && (
+      {(isAdmin || isSecretary) && (
         <>
           {/* ════════════════════════════════════════════════════════════════
               ZONE 1 — À TRAITER
@@ -857,13 +866,20 @@ export default function HomePage() {
                     icon: <FileText className="h-5 w-5" />,
                     tone: "neutral" as const,
                   },
-                  {
-                    title: "Comptes rendus à valider",
-                    value: stats?.noFinishTest ?? 0,
-                    href: "/reports",
-                    icon: <FlaskConical className="h-5 w-5" />,
-                    tone: "neutral" as const,
-                  },
+                  // Seule tuile issue de `/dashboard/stats`, réservé au profil
+                  // administrateur : affichée à lui seul, sans quoi un
+                  // secrétariat lirait un zéro permanent au lieu d'un compteur.
+                  ...(isAdmin
+                    ? [
+                        {
+                          title: "Comptes rendus à valider",
+                          value: stats?.noFinishTest ?? 0,
+                          href: "/reports",
+                          icon: <FlaskConical className="h-5 w-5" />,
+                          tone: "neutral" as const,
+                        },
+                      ]
+                    : []),
                   {
                     title: "À remettre au client",
                     value: opStats?.noFinishTest ?? 0,
@@ -903,6 +919,91 @@ export default function HomePage() {
                 ))}
           </div>
 
+          {/* ════════════════════════════════════════════════════════════════
+              ZONE 2 — LE TRAVAIL DU JOUR
+              Remontée depuis la section « secrétariat », où elle était la seule
+              vraie liste de travail de l'écran — et invisible aux profils
+              administrateur, qui n'avaient donc aucune action à portée de clic.
+              Les données étaient pourtant déjà chargées pour eux
+              (`enabled: isSecretary || isAdmin`) : seul l'affichage était filtré.
+          ════════════════════════════════════════════════════════════════ */}
+          <Card>
+            <CardHeader title="Comptes rendu disponible aujourd'hui" />
+            <TableLengthControl pagination={reportsDeliveredPagination} className="px-6" />
+            <div className="overflow-x-auto px-3">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                      Date
+                    </th>
+                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                      Code
+                    </th>
+                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                      Patiens
+                    </th>
+                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {reportsTodayLoading ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <SkeletonRow key={i} cols={4} />
+                    ))
+                  ) : reportsDelivered.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="py-4 px-3 text-center text-gray-400 text-sm"
+                      >
+                        Aucun compte rendu disponible aujourd&apos;hui
+                      </td>
+                    </tr>
+                  ) : (
+                    reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
+                      <tr
+                        key={report.id}
+                        className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
+                      >
+                        <td className="py-2 px-3 text-gray-600">
+                          {formatDate(report.createdAt)}
+                        </td>
+                        <td className="py-2 px-3 text-gray-700">
+                          {report.code}
+                        </td>
+                        <td className="py-2 px-3 text-gray-700">
+                          {report.patientLastname} {report.patientFirstname}
+                        </td>
+                        <td className="py-2 px-3">
+                          <ActionButtons
+                            report={report}
+                            onDeleted={() =>
+                              queryClient.invalidateQueries({
+                                queryKey: ["dashboard", "reports-today"],
+                              })
+                            }
+                          />
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <TablePaginationFooter pagination={reportsDeliveredPagination} className="px-6 pb-5" />
+          </Card>
+
+        </>
+      )}
+
+      {/* ==================================================================
+          SECTION ADMIN — analyses
+      ================================================================== */}
+      {isAdmin && (
+        <>
           {/* ════════════════════════════════════════════════════════════════
               ZONE 3 — VOLUMES CUMULÉS
               Conservés (ils figurent au Blade) mais relégués : ce sont des
@@ -1331,83 +1432,6 @@ export default function HomePage() {
               </Card>
             </div>
           </div>
-        </>
-      )}
-
-      {/* ==================================================================
-          SECTION SECRÉTARIAT
-      ================================================================== */}
-      {isSecretary && (
-        <>
-          {/* LIGNE 6 : Comptes rendu disponible aujourd'hui (full width) */}
-          <Card>
-            <CardHeader title="Comptes rendu disponible aujourd'hui" />
-            <TableLengthControl pagination={reportsDeliveredPagination} className="px-6" />
-            <div className="overflow-x-auto px-3">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                      Date
-                    </th>
-                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                      Code
-                    </th>
-                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                      Patiens
-                    </th>
-                    <th className="py-2 px-3 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {reportsTodayLoading ? (
-                    Array.from({ length: 4 }).map((_, i) => (
-                      <SkeletonRow key={i} cols={4} />
-                    ))
-                  ) : reportsDelivered.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="py-4 px-3 text-center text-gray-400 text-sm"
-                      >
-                        Aucun compte rendu disponible aujourd&apos;hui
-                      </td>
-                    </tr>
-                  ) : (
-                    reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
-                      <tr
-                        key={report.id}
-                        className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
-                      >
-                        <td className="py-2 px-3 text-gray-600">
-                          {formatDate(report.createdAt)}
-                        </td>
-                        <td className="py-2 px-3 text-gray-700">
-                          {report.code}
-                        </td>
-                        <td className="py-2 px-3 text-gray-700">
-                          {report.patientLastname} {report.patientFirstname}
-                        </td>
-                        <td className="py-2 px-3">
-                          <ActionButtons
-                            report={report}
-                            onDeleted={() =>
-                              queryClient.invalidateQueries({
-                                queryKey: ["dashboard", "reports-today"],
-                              })
-                            }
-                          />
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <TablePaginationFooter pagination={reportsDeliveredPagination} className="px-6 pb-5" />
-          </Card>
         </>
       )}
 
