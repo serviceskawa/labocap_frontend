@@ -339,7 +339,7 @@ function ProgressTable({
 
   return (
     <>
-      {isPaginated && <TableLengthControl pagination={pagination} />}
+      {isPaginated && <TableLengthControl pagination={pagination} className="px-6" />}
       <table className="w-full text-sm">
         <thead className="bg-gray-50">
           <tr>
@@ -379,7 +379,7 @@ function ProgressTable({
           })}
         </tbody>
       </table>
-      {isPaginated && <TablePaginationFooter pagination={pagination} />}
+      {isPaginated && <TablePaginationFooter pagination={pagination} className="px-6 pb-5" />}
     </>
   );
 }
@@ -885,7 +885,7 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="EXAMENS LES PLUS DEMANDÉS" />
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto px-3">
                   {/* Comme dans Laravel (dashboardPlus.blade.php) : le tableau des
                       examens les plus demandés n'a pas de ligne d'en-tête. */}
                   <table className="w-full text-sm">
@@ -897,7 +897,7 @@ export default function HomePage() {
                         : topExamens.slice(0, 7).map((ex, idx) => (
                             <tr
                               key={idx}
-                              className="hover:bg-gray-50 transition-colors"
+                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
                             >
                               <td className="py-2 px-3 text-gray-500 text-sm w-10">
                                 {idx + 1}
@@ -1147,8 +1147,8 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Statistique par docteurs" />
-                <TableLengthControl pagination={doctorStatsPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl pagination={doctorStatsPagination} className="px-6" />
+                <div className="overflow-x-auto px-3">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
@@ -1171,7 +1171,7 @@ export default function HomePage() {
                         : doctorStatsPagination.pageRows.map((ds: DoctorStat, i) => (
                             <tr
                               key={i}
-                              className="hover:bg-gray-50 transition-colors"
+                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
                             >
                               <td className="py-2 px-3 text-gray-700">
                                 {ds.doctor}
@@ -1187,7 +1187,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={doctorStatsPagination} />
+                <TablePaginationFooter pagination={doctorStatsPagination} className="px-6 pb-5" />
               </Card>
             </div>
 
@@ -1195,8 +1195,8 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Utilisateurs connectés" />
-                <TableLengthControl pagination={connectedUsersPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl pagination={connectedUsersPagination} className="px-6" />
+                <div className="overflow-x-auto px-3">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
@@ -1219,7 +1219,7 @@ export default function HomePage() {
                         : connectedUsersPagination.pageRows.map((u, idx) => (
                             <tr
                               key={u.id}
-                              className="hover:bg-gray-50 transition-colors"
+                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
                             >
                               <td className="py-2 px-3 text-gray-400 text-xs">
                                 {idx + 1}
@@ -1240,7 +1240,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={connectedUsersPagination} />
+                <TablePaginationFooter pagination={connectedUsersPagination} className="px-6 pb-5" />
               </Card>
             </div>
           </div>
@@ -1252,11 +1252,11 @@ export default function HomePage() {
       ================================================================== */}
       {isSecretary && (
         <>
-          {/* LIGNE 6 : Comptes rendu dsponible aujourd'hui (full width) */}
+          {/* LIGNE 6 : Comptes rendu disponible aujourd'hui (full width) */}
           <Card>
-            <CardHeader title="Comptes rendu dsponible aujourd'hui" />
-            <TableLengthControl pagination={reportsDeliveredPagination} />
-            <div className="overflow-x-auto">
+            <CardHeader title="Comptes rendu disponible aujourd'hui" />
+            <TableLengthControl pagination={reportsDeliveredPagination} className="px-6" />
+            <div className="overflow-x-auto px-3">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
@@ -1292,7 +1292,7 @@ export default function HomePage() {
                     reportsDeliveredPagination.pageRows.map((report: ReportToday) => (
                       <tr
                         key={report.id}
-                        className="hover:bg-gray-50 transition-colors"
+                        className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
                       >
                         <td className="py-2 px-3 text-gray-600">
                           {formatDate(report.createdAt)}
@@ -1319,7 +1319,7 @@ export default function HomePage() {
                 </tbody>
               </table>
             </div>
-            <TablePaginationFooter pagination={reportsDeliveredPagination} />
+            <TablePaginationFooter pagination={reportsDeliveredPagination} className="px-6 pb-5" />
           </Card>
         </>
       )}
@@ -1392,8 +1392,8 @@ export default function HomePage() {
                     {doctorOrdersTotal}
                   </p>
                 </div>
-                <TableLengthControl pagination={doctorOrdersPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl pagination={doctorOrdersPagination} className="px-6" />
+                <div className="overflow-x-auto px-3">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
@@ -1419,7 +1419,7 @@ export default function HomePage() {
                         : doctorOrdersPagination.pageRows.map((order: DoctorOrder) => (
                             <tr
                               key={order.id}
-                              className="hover:bg-gray-50 transition-colors"
+                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
                             >
                               <td className="py-2 px-3 text-gray-600">
                                 {formatDate(order.createdAt)}
@@ -1448,7 +1448,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={doctorOrdersPagination} />
+                <TablePaginationFooter pagination={doctorOrdersPagination} className="px-6 pb-5" />
               </Card>
             </div>
           </div>
@@ -1459,8 +1459,8 @@ export default function HomePage() {
             <div className="flex-1">
               <Card>
                 <CardHeader title="Activités récentes" />
-                <TableLengthControl pagination={doctorOrdersTodayPagination} />
-                <div className="overflow-x-auto">
+                <TableLengthControl pagination={doctorOrdersTodayPagination} className="px-6" />
+                <div className="overflow-x-auto px-3">
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50">
                       <tr>
@@ -1496,7 +1496,7 @@ export default function HomePage() {
                           doctorOrdersTodayPagination.pageRows.map((order: DoctorOrder) => (
                             <tr
                               key={order.id}
-                              className="hover:bg-gray-50 transition-colors"
+                              className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
                             >
                               <td className="py-2 px-3 text-gray-600">
                                 {formatDate(order.createdAt)}
@@ -1527,7 +1527,7 @@ export default function HomePage() {
                     </tbody>
                   </table>
                 </div>
-                <TablePaginationFooter pagination={doctorOrdersTodayPagination} />
+                <TablePaginationFooter pagination={doctorOrdersTodayPagination} className="px-6 pb-5" />
               </Card>
             </div>
 
