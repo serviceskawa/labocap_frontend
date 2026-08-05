@@ -77,7 +77,17 @@ export default function LoginPage() {
       if (result.user) {
         setUser(result.user);
         const next = await resolvePostLoginRoute();
-        router.push(next);
+        // Navigation DOCUMENT et non `router.push/replace` : l'état
+        // d'authentification vient de changer, et la garde de routes est posée
+        // dans `proxy.ts`, côté serveur. Le routeur de Next conserve un cache
+        // client des payloads RSC — dont celui obtenu AVANT connexion, qui
+        // était la redirection vers /login. Une navigation client réutiliserait
+        // cette réponse périmée : l'écran ne bascule pas, et seul un
+        // rechargement manuel débloque la situation.
+        //
+        // `assign` force une requête document : le proxy réévalue les cookies
+        // fraîchement posés, et le cache client repart de zéro.
+        window.location.assign(next);
       }
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } }; message?: string };
