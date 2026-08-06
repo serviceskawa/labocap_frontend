@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
-import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,7 +14,8 @@ import {
   getPending2faEmail,
   getPending2faExpiry,
 } from "@/lib/auth-2fa";
-import { BrandMark } from "@/components/ui/BrandMark";
+import { AuthCard } from "@/components/ui/AuthCard";
+import { OtpCountdown } from "@/components/ui/OtpCountdown";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
@@ -29,6 +29,13 @@ const twoFactorSchema = z.object({
 
 type TwoFactorFormData = z.infer<typeof twoFactorSchema>;
 
+/**
+ * Durée totale de validité du code, pour la proportion de la barre de décompte.
+ * Doit rester alignée sur `JwtTokenProvider.TEMP_TOKEN_VALIDITY_MS` côté API
+ * (5 minutes) : l'API n'expose pas cette durée dans sa réponse de login.
+ */
+const OTP_TOTAL_MS = 5 * 60 * 1000;
+
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
   if (!domain) return email;
@@ -40,10 +47,6 @@ function maskEmail(email: string): string {
 }
 
 /** « 4:07 » — temps restant avant expiration du code. */
-function formatRemaining(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1000));
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
-}
 
 export default function TwoFactorChallengePage() {
   const router = useRouter();
@@ -178,96 +181,81 @@ export default function TwoFactorChallengePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Header avec logo */}
-          <div className="bg-gray-50 px-8 py-6 text-center border-b">
-            <Link href="/">
-              <BrandMark className="text-[1.75rem]" />
-            </Link>
-          </div>
+    <AuthCard
+      title="Vérifiez votre e-mail"
+      subtitle={
+        <>
+          Nous avons envoyé un code à 6 chiffres à{" "}
+          <strong className="font-semibold text-gray-700">{maskedEmail}</strong>.
+        </>
+      }
+      footer={
+        <a
+          href="mailto:serviceskawa@gmail.com?subject=Support"
+          className="font-medium text-blue-600 hover:underline"
+        >
+          Contacter le support technique
+        </a>
+      }
+    >
+      {/* Le décompte précède le champ : il conditionne l'action, il doit donc
+          être lu avant elle. Il était auparavant relégué en fin de paragraphe. */}
+      {remainingMs !== null && (
+        <OtpCountdown
+          remainingMs={remainingMs}
+          totalMs={OTP_TOTAL_MS}
+          className="mb-5"
+        />
+      )}
 
-          {/* Body */}
-          <div className="px-8 py-8">
-            <h4 className="text-2xl font-bold text-gray-800 mb-2">
-              Vérifiez votre e-mail pour un code
-            </h4>
-            <p className="text-gray-500 mb-2 text-sm">
-              Nous avons envoyé un code à 6 caractères à{" "}
-              <strong>{maskedEmail}</strong>. Le code expire sous peu, veuillez
-              donc le saisir rapidement.
-            </p>
-            {remainingMs !== null && (
-              <p className="mb-6 text-sm font-semibold text-gray-700">
-                Expire dans {formatRemaining(remainingMs)}.
-              </p>
-            )}
-
-            {/* `handleSubmit` est appelé DANS le gestionnaire (et non au rendu) :
-                `onSubmit` lit un ref, que React Compiler interdit de toucher
-                pendant le rendu. */}
-            <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} noValidate>
-              {/* Code */}
-              <div className="mb-6">
-                <input
-                  id="code"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  autoFocus
-                  placeholder="Entrer le code"
-                  {...codeField}
-                  onChange={handleCodeChange}
-                  className={`${inputClass} text-center text-lg tracking-widest`}
-                  maxLength={6}
-                />
-                {errors.code && (
-                  <p className="mt-1 text-xs text-red-600">
-                    {errors.code.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Bouton submit — spinner et libellé centrés, bouton neutralisé
-                  pendant la vérification pour empêcher un double envoi. */}
-              <Button
-                type="submit"
-                loading={isLoading}
-                className="w-full justify-center rounded py-2 text-sm font-medium hover:bg-blue-700"
-              >
-                {isLoading ? "Vérification..." : "Confirmer"}
-              </Button>
-
-              {/* Lien renvoyer */}
-              <p className="text-center mt-4 text-sm text-gray-500">
-                Vous n&apos;aviez pas reçu le code ?{" "}
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    if (!isResending) handleResend();
-                  }}
-                  aria-disabled={isResending}
-                  className={`font-semibold ${isResending ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:underline"}`}
-                >
-                  {isResending ? "Envoi en cours…" : "Renvoyer"}
-                </a>
-              </p>
-            </form>
-          </div>
+      {/* `handleSubmit` est appelé DANS le gestionnaire (et non au rendu) :
+          `onSubmit` lit un ref, que React Compiler interdit de toucher
+          pendant le rendu. */}
+      <form onSubmit={(event) => void handleSubmit(onSubmit)(event)} noValidate>
+        <div className="mb-5">
+          <label htmlFor="code" className="mb-1.5 block text-[.875rem] font-medium text-gray-700">
+            Code de vérification
+          </label>
+          <input
+            id="code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            placeholder="000000"
+            {...codeField}
+            onChange={handleCodeChange}
+            // Chasse fixe et interlettrage large : six chiffres se relisent
+            // ainsi caractère par caractère, ce qu'un texte proportionnel
+            // rend malaisé.
+            className={`${inputClass} text-center font-mono text-[1.375rem] tracking-[0.35em] tabular-nums`}
+            maxLength={6}
+            aria-invalid={errors.code ? true : undefined}
+          />
+          {errors.code && (
+            <p className="mt-1.5 text-[.8125rem] text-red-600">{errors.code.message}</p>
+          )}
         </div>
 
-        {/* Footer */}
-        <p className="text-center mt-4 text-sm text-gray-500">
-          <a
-            href="mailto:serviceskawa@gmail.com?subject=Support"
-            className="text-blue-600 hover:underline"
+        <Button type="submit" loading={isLoading} className="w-full justify-center">
+          {isLoading ? "Vérification…" : "Confirmer"}
+        </Button>
+
+        <p className="mt-4 text-center text-[.875rem] text-gray-500">
+          Vous n&apos;avez pas reçu le code ?{" "}
+          {/* <button> et non <a href="#"> : ce n'est pas une navigation. Un lien
+              vide reste focalisable et annoncé comme tel par un lecteur
+              d'écran, alors qu'il déclenche une action. */}
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={isResending}
+            className="rounded-[var(--radius-control)] font-semibold text-blue-600 transition-colors duration-[var(--duration-fast)] ease-emphasized hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
           >
-            Cliquez ici pour contacter le Support Technique
-          </a>
+            {isResending ? "Envoi en cours…" : "Renvoyer"}
+          </button>
         </p>
-      </div>
-    </div>
+      </form>
+    </AuthCard>
   );
 }
