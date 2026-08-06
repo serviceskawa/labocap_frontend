@@ -17,6 +17,7 @@ import {
 } from "@/lib/auth-2fa";
 import { AuthCard } from "@/components/ui/AuthCard";
 import { OtpCountdown } from "@/components/ui/OtpCountdown";
+import { OTP_TIP } from "@/lib/auth-tips";
 import { Button } from "@/components/ui/Button";
 import { useAuthStore } from "@/stores/auth.store";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
@@ -180,10 +181,14 @@ export default function TwoFactorChallengePage() {
 
   return (
     <AuthCard
-      title="Vérifiez votre e-mail"
+      title="Vérification en deux étapes"
+      // Le conseil du panneau est imposé ici, au lieu de celui du jour : c'est
+      // le seul écran où une menace précise est active — quelqu'un qui détient
+      // déjà le mot de passe appelle pour réclamer le code qui vient d'arriver.
+      tip={OTP_TIP}
       subtitle={
         <>
-          Nous avons envoyé un code à 6 chiffres à{" "}
+          Saisissez le code à 6 chiffres envoyé à{" "}
           <strong className="font-semibold text-gray-700">{maskedEmail}</strong>.
         </>
       }

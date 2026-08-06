@@ -218,8 +218,13 @@
   --color-orange-100: #fbe9dc;
   --color-orange-700: #903d00;
 
-  /* Menu latéral — teintes claires cyanées sur le fond profond du menu.
-     Le lien au repos tient 5,32:1 sur `.hyper-sidebar`. */
+  /* Surface sombre du produit — menu latéral et panneau d'authentification.
+     Un seul jeton pour les deux : ce sont deux faces de la même coque, et deux
+     valeurs voisines mais distinctes se liraient comme une inattention.
+     Justification de la teinte : cf. `.hyper-sidebar` plus bas. */
+  --color-surface-deep: #0d3446;
+
+  /* Teintes claires cyanées posées dessus. Le lien au repos tient 5,32:1. */
   --color-sidebar-link: #8fa9b4;
   --color-sidebar-link-hover: #dbe7ec;
 
@@ -334,7 +339,7 @@
    Un liseré interne très discret sépare le menu du contenu sans recourir à une
    ombre portée, que le fond sombre rendait de toute façon invisible.        */
 .hyper-sidebar {
-  background: #0d3446;
+  background: var(--color-surface-deep);
   border-right: 1px solid rgba(143, 169, 180, 0.14);
 }
 
