@@ -72,7 +72,7 @@ type FieldDef = {
 
 // Onglet Général → sous-onglet « Général »
 const GENERAL_FIELDS: FieldDef[] = [
-  { key: "app_name", label: "Nom du laboratoire", full: true, placeholder: "Ex : Labo AnaPath" },
+  { key: "app_name", label: "Nom du laboratoire", full: true, placeholder: "Ex : Laboratoire d'anatomopathologie" },
   { key: "devise", label: "Devise", placeholder: "Ex : FCFA" },
   { key: "phone", label: "Téléphone", placeholder: "97000000" },
   { key: "email", label: "Email", type: "email", placeholder: "contact@laboratoire.bj" },
@@ -108,7 +108,7 @@ const EMAIL_FIELDS: FieldDef[] = [
     ],
   },
   { key: "from_adresse", label: "Adresse d'expédition", type: "email", placeholder: "no-reply@laboratoire.bj" },
-  { key: "from_name", label: "Nom d'expéditeur", placeholder: "Labo AnaPath" },
+  { key: "from_name", label: "Nom d'expéditeur", placeholder: "Nom du laboratoire" },
   { key: "email_technician", label: "Email du technicien", type: "email", placeholder: "technicien@laboratoire.bj" },
 ];
 

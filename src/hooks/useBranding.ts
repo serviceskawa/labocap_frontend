@@ -5,7 +5,7 @@ import { brandingApi } from "@/lib/api/branding";
 import { useAppSettings } from "@/hooks/useAppSettings";
 
 /** Nom affiché quand aucun `app_name` n'est configuré côté Paramètres. */
-export const DEFAULT_APP_NAME = "Labo AnaPath";
+export const DEFAULT_APP_NAME = "AnapathLab";
 
 export interface Branding {
   /** Nom du laboratoire (onglet, alt du logo, repli textuel). */

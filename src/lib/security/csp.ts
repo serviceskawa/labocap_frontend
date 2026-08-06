@@ -16,7 +16,7 @@
  * | blob:          | aperçus PDF/pièces jointes, miniatures  | img-src, media   |
  *
  * Aucun script externe (pas d'analytics, pas de SDK de paiement), aucune police
- * distante : `next/font/google` télécharge Nunito AU BUILD et la sert depuis
+ * distante : `next/font/google` télécharge Source Serif 4 et IBM Plex Sans AU BUILD et la sert depuis
  * `self` (cf. src/app/layout.tsx). Il n'existe aucun `<script>` inline dans le
  * code applicatif — les seuls scripts inline sont ceux injectés par Next.js
  * lui-même, qui reçoivent automatiquement le nonce de la requête.
@@ -153,7 +153,7 @@ export function buildCspPolicy(
     // Repli pour navigateurs sans style-src-elem/-attr (Safari < 15.4).
     ["style-src", ["'self'", "'unsafe-inline'"]],
     ["img-src", imgSrc],
-    // next/font auto-héberge Nunito ; `data:` couvre les polices inlinées.
+    // next/font auto-héberge les deux fontes ; `data:` couvre les inlinées.
     ["font-src", ["'self'", "data:"]],
     ["connect-src", connectSrc],
     // Aperçus de documents ouverts depuis un blob: (factures, rapports, paie).

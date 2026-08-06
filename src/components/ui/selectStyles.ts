@@ -29,15 +29,33 @@ export const SELECT_CONTROL_MIN_HEIGHT = 40;
 export function buildSelectStyles(
   hasError: boolean
 ): StylesConfig<SelectOption, boolean, GroupBase<SelectOption>> {
-  // Alignés sur INPUT_CLASS / .hyper-form-control : bordure ardoise 300,
-  // focus azur avec halo de 3px. react-select ne lit pas les classes Tailwind,
-  // les valeurs sont donc reprises ici — les garder synchronisées.
-  const borderColor = hasError ? "#f87171" : "#cbd5e1";
-  const hoverColor = hasError ? "#ef4444" : "#94a3b8";
-  const focusColor = hasError ? "#ef4444" : "#3f63ec";
+  // Alignés sur INPUT_CLASS / .hyper-form-control : bordure neutre 300, focus
+  // primaire avec halo de 3px.
+  //
+  // react-select ne lit pas les classes Tailwind. La version précédente
+  // recopiait donc des hexadécimaux, en promettant de « les garder
+  // synchronisées » — promesse jamais tenue : les valeurs étaient restées au
+  // bleu Tailwind d'origine (#2563eb, #eff6ff, #dbeafe) que le remap de
+  // `globals.css` n'a jamais touché. Les 23 écrans à sélecteurs étaient hors
+  // palette depuis le passage à « Ardoise & Azur ».
+  //
+  // On référence désormais les jetons CSS eux-mêmes : le navigateur résout
+  // `var(--color-blue-600)` dans un style en ligne comme ailleurs, et le
+  // prochain changement de palette se propage sans toucher ce fichier. Les
+  // halos passent par `color-mix`, faute de pouvoir composer une alpha sur une
+  // variable en `rgba()`.
+  const borderColor = hasError
+    ? "var(--color-red-400)"
+    : "var(--color-gray-300)";
+  const hoverColor = hasError
+    ? "var(--color-red-500)"
+    : "var(--color-gray-400)";
+  const focusColor = hasError
+    ? "var(--color-red-500)"
+    : "var(--color-blue-600)";
   const focusHalo = hasError
-    ? "0 0 0 3px rgba(239, 68, 68, 0.15)"
-    : "0 0 0 3px rgba(63, 99, 236, 0.15)";
+    ? "0 0 0 3px color-mix(in srgb, var(--color-red-500) 18%, transparent)"
+    : "0 0 0 3px color-mix(in srgb, var(--color-blue-600) 18%, transparent)";
 
   return {
     control: (base, state) => ({
@@ -47,28 +65,30 @@ export function buildSelectStyles(
       borderColor: state.isFocused ? focusColor : borderColor,
       boxShadow: state.isFocused
         ? focusHalo
-        : "0 1px 2px 0 rgba(15, 23, 42, 0.04)",
-      backgroundColor: state.isDisabled ? "#f1f5f9" : "white",
+        : "var(--elevation-flat)",
+      backgroundColor: state.isDisabled ? "var(--color-gray-100)" : "white",
       paddingLeft: "2px",
       transition: "border-color .15s ease, box-shadow .15s ease",
+      // `hoverColor` était déclaré sans jamais servir : le survol retombait sur
+      // un gris en dur, y compris sur un champ en erreur, dont la bordure
+      // rouge s'éteignait au passage de la souris.
       "&:hover": {
-        borderColor: state.isFocused ? focusColor : "#9ca3af",
+        borderColor: state.isFocused ? focusColor : hoverColor,
       },
       fontSize: "0.9rem",
     }),
     valueContainer: (base) => ({ ...base, padding: "2px 8px", gap: "4px" }),
     placeholder: (base) => ({
       ...base,
-      color: "#9ca3af",
+      color: "var(--color-gray-400)",
       fontSize: "0.9rem",
     }),
     menu: (base) => ({
       ...base,
       borderRadius: "0.625rem",
       overflow: "hidden",
-      border: "1px solid #e5e7eb",
-      boxShadow:
-        "0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.05)",
+      border: "1px solid var(--color-gray-200)",
+      boxShadow: "var(--elevation-overlay)",
       zIndex: 50,
     }),
     // Menu rendu via un portail (menuPortal) : doit passer au-dessus des cartes
@@ -87,52 +107,52 @@ export function buildSelectStyles(
       marginBottom: "2px",
       // Sélection (statique) en BLEU PUR ; curseur (survol/navigation) en BLEU CLAIR.
       backgroundColor: state.isSelected
-        ? "#2563eb"
+        ? "var(--color-blue-600)"
         : state.isFocused
-          ? "#eff6ff"
+          ? "var(--color-blue-50)"
           : "white",
-      color: state.isSelected ? "white" : "#374151",
+      color: state.isSelected ? "white" : "var(--color-gray-700)",
       fontSize: "0.9rem",
       cursor: "pointer",
       "&:active": {
-        backgroundColor: state.isSelected ? "#2563eb" : "#dbeafe",
+        backgroundColor: state.isSelected ? "var(--color-blue-600)" : "var(--color-blue-100)",
       },
     }),
     multiValue: (base) => ({
       ...base,
-      backgroundColor: "#dbeafe",
+      backgroundColor: "var(--color-blue-100)",
       borderRadius: "0.375rem",
       overflow: "hidden",
     }),
     multiValueLabel: (base) => ({
       ...base,
-      color: "#1d4ed8",
+      color: "var(--color-blue-700)",
       fontSize: "0.75rem",
       fontWeight: 500,
     }),
     multiValueRemove: (base) => ({
       ...base,
-      color: "#1d4ed8",
-      "&:hover": { backgroundColor: "#bfdbfe", color: "#1e40af" },
+      color: "var(--color-blue-700)",
+      "&:hover": { backgroundColor: "var(--color-blue-200)", color: "var(--color-blue-800)" },
     }),
     clearIndicator: (base) => ({
       ...base,
-      color: "#9ca3af",
+      color: "var(--color-gray-400)",
       cursor: "pointer",
-      "&:hover": { color: "#4b5563" },
+      "&:hover": { color: "var(--color-gray-600)" },
     }),
     dropdownIndicator: (base) => ({
       ...base,
-      color: "#9ca3af",
-      "&:hover": { color: "#4b5563" },
+      color: "var(--color-gray-400)",
+      "&:hover": { color: "var(--color-gray-600)" },
     }),
-    indicatorSeparator: (base) => ({ ...base, backgroundColor: "#e5e7eb" }),
-    input: (base) => ({ ...base, fontSize: "0.9rem", color: "#111827" }),
-    singleValue: (base) => ({ ...base, fontSize: "0.9rem", color: "#111827" }),
+    indicatorSeparator: (base) => ({ ...base, backgroundColor: "var(--color-gray-200)" }),
+    input: (base) => ({ ...base, fontSize: "0.9rem", color: "var(--color-gray-900)" }),
+    singleValue: (base) => ({ ...base, fontSize: "0.9rem", color: "var(--color-gray-900)" }),
     noOptionsMessage: (base) => ({
       ...base,
       fontSize: "0.9rem",
-      color: "#9ca3af",
+      color: "var(--color-gray-400)",
     }),
   };
 }

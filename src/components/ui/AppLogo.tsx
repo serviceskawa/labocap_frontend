@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { useBranding } from "@/hooks/useBranding";
+import { useBranding, DEFAULT_APP_NAME } from "@/hooks/useBranding";
 import { BrandMark } from "./BrandMark";
 
 interface AppLogoProps {
@@ -70,9 +70,14 @@ export function AppLogo({
   }
 
   // Le nom paramétré prime sur celui du produit : un laboratoire qui a saisi sa
-  // raison sociale doit la voir, c'est la sienne. La marque LaboAnaPath ne
+  // raison sociale doit la voir, c'est la sienne. La marque AnapathLab ne
   // s'affiche que tant qu'aucun nom propre n'a été renseigné.
-  if (appName && appName !== "Labo AnaPath") {
+  //
+  // La comparaison lit la constante et non une chaîne recopiée : `useBranding`
+  // retombe sur `DEFAULT_APP_NAME` quand rien n'est configuré, si bien qu'un
+  // littéral divergent ici ferait passer le défaut pour un nom saisi — et le
+  // laboratoire verrait le nom du produit annoncé comme le sien.
+  if (appName && appName !== DEFAULT_APP_NAME) {
     return (
       <span
         className={cn(

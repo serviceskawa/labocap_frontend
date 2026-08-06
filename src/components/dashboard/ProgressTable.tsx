@@ -56,45 +56,47 @@ export function ProgressTable({
   return (
     <>
       {isPaginated && <TableLengthControl pagination={pagination} className="px-6" />}
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-3 py-2 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-              {headers[0]}
-            </th>
-            <th className="px-3 py-2 text-right text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
-              {headers[1]}
-            </th>
-            <th className="w-32 px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100">
-          {pagination.pageRows.map((item, i) => {
-            const ratio = Math.round((item.value / (max || 1)) * 100);
-            return (
-              <tr
-                key={i}
-                // Même survol que `DataTable` : le gris était une troisième
-                // teinte de survol dans une application qui en a déjà une.
-                className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
-              >
-                <td className="px-3 py-2 text-gray-700">{item.label}</td>
-                <td className="px-3 py-2 text-right font-semibold text-gray-900">
-                  {item.value}
-                </td>
-                <td className="px-3 py-2">
-                  <div className="h-[3px] rounded-full bg-gray-100">
-                    <div
-                      className={`h-[3px] rounded-full ${color}`}
-                      style={{ width: `${ratio}%` }}
-                    />
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-3 py-2 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                {headers[0]}
+              </th>
+              <th className="px-3 py-2 text-right text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-500">
+                {headers[1]}
+              </th>
+              <th className="w-32 px-3 py-2" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {pagination.pageRows.map((item, i) => {
+              const ratio = Math.round((item.value / (max || 1)) * 100);
+              return (
+                <tr
+                  key={i}
+                  // Même survol que `DataTable` : le gris était une troisième
+                  // teinte de survol dans une application qui en a déjà une.
+                  className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
+                >
+                  <td className="px-3 py-2 text-gray-700">{item.label}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-gray-900">
+                    {item.value}
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="h-[3px] rounded-full bg-gray-100">
+                      <div
+                        className={`h-[3px] rounded-full ${color}`}
+                        style={{ width: `${ratio}%` }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       {isPaginated && <TablePaginationFooter pagination={pagination} className="px-6 pb-5" />}
     </>
   );

@@ -14,27 +14,42 @@
  * son rang, sinon un filtre qui change le nombre de séries repeint les
  * survivantes et fausse la lecture d'un graphique à l'autre.
  *
- * L'ordre a été **calculé, pas choisi à l'œil** : il passe les six contrôles du
- * validateur de palette (bande de luminosité, plancher de chroma, séparation
- * sous déficience de vision des couleurs, plancher en vision normale, contraste
- * sur le fond). L'azur et l'émeraude, par exemple, ne sont pas voisins : c'est
- * la paire rouge/vert adjacente qui tombait à ΔE 5,6 en deutéranopie.
+ * L'ordre est **calculé, pas choisi à l'œil** : il passe les six contrôles du
+ * validateur de palette (bande de luminosité, plancher de chroma, séparation en
+ * vision normale, séparation sous les trois déficiences de vision des couleurs,
+ * contraste sur le fond, voisinage).
  *
  * Toute modification doit être revalidée :
  *
  * ```
- * node scripts/validate_palette.js "#2e4bd8,#d97706,#dc2848,#0284c7,#059669" --mode light
+ * node scripts/validate_palette.mjs "#006786,#c26e12,#5a9c80,#ac2f3b,#c480d4" --mode light
  * ```
+ *
+ * ## Pourquoi ces cinq teintes
+ *
+ * Le cyan est imposé : c'est le primaire de la charte. Les quatre autres ont
+ * été cherchées par descente locale sous les seuils du validateur.
+ *
+ * L'ancienne palette n'y survivait pas. Le validateur qu'elle invoquait
+ * n'existait pas dans le dépôt — la consigne était invérifiable depuis qu'elle
+ * était écrite. Une fois le script réellement implémenté, elle échouait à trois
+ * contrôles, dont `#0284c7` / `#059669` à **ΔE 1,6 en tritanopie** : deux séries
+ * strictement confondues. Le rôle « info » bleu ciel a donc disparu, aliasé sur
+ * le primaire.
+ *
+ * Le vert est volontairement **plus clair** que le cyan. Sous tritanopie le
+ * bleu et le vert se confondent : leur séparation ne peut plus venir de la
+ * teinte, elle doit venir de la clarté. C'est l'optimisation qui l'a trouvé.
  *
  * Au-delà de 5 séries, ne pas générer une teinte supplémentaire : regrouper la
  * queue en « Autres », ou passer en petits multiples.
  */
 export const CHART_CATEGORICAL = [
-  "#2e4bd8", // azur    — primaire
-  "#d97706", // ambre
-  "#dc2848", // rose
-  "#0284c7", // ciel
-  "#059669", // émeraude
+  "#006786", // cyan profond — primaire de la charte
+  "#c26e12", // ambre brûlé
+  "#5a9c80", // vert sauge — plus clair que le cyan, cf. tritanopie
+  "#ac2f3b", // brique
+  "#c480d4", // prune
 ] as const;
 
 /**
@@ -47,11 +62,20 @@ export const CHART_CATEGORICAL = [
  * l'information.
  */
 export const CHART_STATUS = {
-  good: "#059669",
-  warning: "#d97706",
-  critical: "#dc2848",
-  neutral: "#64748b",
+  good: "#3a8366",
+  warning: "#ab5300",
+  critical: "#ac2f3b",
+  neutral: "#777473",
 } as const;
 
-/** Grille et axes — volontairement discrets (ardoise 200). */
-export const CHART_GRID = "#e2e8f0";
+/**
+ * Urgence métier — le magenta de la charte, « accent rare réservé aux alertes ».
+ *
+ * Distinct de {@link CHART_STATUS}.critical, qui dit l'erreur : celui-ci dit le
+ * résultat critique et le délai dépassé. La charte interdit de faire cohabiter
+ * les deux dans un même composant.
+ */
+export const CHART_URGENT = "#d6006c";
+
+/** Grille et axes — volontairement discrets (neutre 200). */
+export const CHART_GRID = "#d8d5d5";
