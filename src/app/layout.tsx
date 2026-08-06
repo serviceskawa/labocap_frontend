@@ -1,16 +1,24 @@
 import type { Metadata } from "next";
-import { Nunito, IBM_Plex_Sans } from "next/font/google";
+import { Source_Serif_4, IBM_Plex_Sans } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
-// Police Nunito — identique au thème Hyper du projet Laravel. Auto-hébergée au
-// build par next/font : pas de requête vers fonts.googleapis.com au chargement.
-const nunito = Nunito({
+// Source Serif 4 — fonte d'interface ET de documents, comme la charte le pose.
+// Remplace Nunito, héritée du thème Hyper du projet Laravel.
+//
+// Fonte variable : `weight` est omis à dessein. Les quatre graisses employées
+// dans l'application (400, 500, 600, 700) tiennent alors dans un seul fichier
+// au lieu de quatre, et les valeurs intermédiaires restent disponibles sans
+// nouveau téléchargement.
+//
+// Auto-hébergée au build par next/font : aucune requête vers
+// fonts.googleapis.com au chargement, ce qui vaut aussi pour la CSP — un
+// `font-src` distant devrait sinon être ouvert.
+const serif = Source_Serif_4({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
   display: "swap",
-  variable: "--font-nunito",
+  variable: "--font-source-serif",
 });
 
 // IBM Plex Sans — réservée au mot-symbole, comme la charte le prescrit
@@ -58,7 +66,7 @@ export default async function RootLayout({
     <html
       lang="fr"
       translate="no"
-      className={`h-full notranslate ${nunito.variable} ${plexSans.variable}`}
+      className={`h-full notranslate ${serif.variable} ${plexSans.variable}`}
     >
       {/* styled-jsx ne lit pas le nonce dans l'en-tête CSP : il le cherche
           exclusivement dans cette balise (`document.querySelector(
@@ -69,7 +77,7 @@ export default async function RootLayout({
       {nonce ? <meta property="csp-nonce" content={nonce} /> : null}
       {/* `bg-gray-50` vient de main : le fond passe par le token de la palette
           plutôt que par la valeur hexadécimale qu'il portait auparavant. */}
-      <body className="h-full bg-gray-50 antialiased font-sans">
+      <body className="h-full bg-gray-50 antialiased font-serif">
         <Providers nonce={nonce}>{children}</Providers>
       </body>
     </html>
