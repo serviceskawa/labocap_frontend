@@ -223,7 +223,7 @@ function CollapseItem({
         </span>
       </button>
       {open && (
-        <div className="ml-4 border-l border-white/15 mt-0.5 mb-0.5">
+        <div className="ml-6 border-l border-white/15 mt-0.5 mb-0.5">
           {children}
         </div>
       )}
@@ -236,9 +236,9 @@ function SubItem({ href, label, onClick }: SubItemProps) {
   const isActive = !!href && pathname === href;
   // `-ml-px` fait chevaucher le filet actif sur la ligne de guidage du groupe :
   // l'azur s'y substitue au lieu de s'y ajouter, sans décaler le libellé.
-  const cls = `flex w-full items-center rounded-r-[var(--radius-control)] py-2 pl-8 pr-4 text-left text-[.9rem] transition-colors duration-[var(--duration-fast)] ease-emphasized ${
+  const cls = `flex w-full items-center rounded-r-[var(--radius-control)] py-2 pl-4 pr-4 text-left text-[.9rem] transition-colors duration-[var(--duration-fast)] ease-emphasized ${
     isActive
-      ? "-ml-px border-l-2 border-blue-500 bg-blue-600/[0.18] pl-[calc(2rem-1px)] font-medium text-white"
+      ? "-ml-px border-l-2 border-blue-500 bg-blue-600/[0.18] pl-[calc(1rem-1px)] font-medium text-white"
       : "text-sidebar-link hover:bg-white/[0.05] hover:text-sidebar-link-hover"
   }`;
 
@@ -327,7 +327,7 @@ function NavGroup({
         type="button"
         onClick={() => toggleGroup(label)}
         aria-expanded={!isCollapsed}
-        className="mt-5 mb-2 flex w-full items-center gap-1.5 px-4 text-left transition-colors duration-[var(--duration-fast)] ease-emphasized hover:text-sidebar-link-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+        className="mt-5 mb-2 flex w-full items-center gap-1.5 px-2 text-left transition-colors duration-[var(--duration-fast)] ease-emphasized hover:text-sidebar-link-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
       >
         <ChevronDown
           className={`h-3 w-3 flex-shrink-0 text-gray-500 transition-transform duration-[var(--duration-fast)] ease-emphasized ${
