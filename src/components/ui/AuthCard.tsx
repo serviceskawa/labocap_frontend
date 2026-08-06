@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
  * était arrivé au reste de l'application avant la reprise du kit.
  *
  * La marque du PRODUIT coiffe systématiquement ces écrans : on se connecte à
- * LaboAnaPath, quel que soit le laboratoire. L'identité du client apparaît une
+ * AnapathLab, quel que soit le laboratoire. L'identité du client apparaît une
  * fois entré, dans la barre du haut et sur les documents.
  *
  * @example

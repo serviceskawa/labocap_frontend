@@ -460,7 +460,7 @@ export function Sidebar() {
         ].join(" ")}
       >
       {/* ── Tête du menu : la marque du PRODUIT ─────────────────────────────
-          On se connecte à LaboAnaPath, on travaille chez un laboratoire. La
+          On se connecte à AnapathLab, on travaille chez un laboratoire. La
           coque de l'application porte donc l'identité du produit ; celle du
           client apparaît là où elle l'engage — barre du haut et documents
           imprimés (comptes rendus, factures, feuilles de caisse).
@@ -470,7 +470,7 @@ export function Sidebar() {
           replis. L'arbitrage disparaît avec la séparation. */}
       <div className="flex h-[70px] flex-shrink-0 items-center justify-center border-b border-white/15">
         {collapsed ? (
-          <BrandMark compact />
+          <BrandMark compact surface="dark" />
         ) : (
           <BrandMark surface="dark" className="text-lg" />
         )}

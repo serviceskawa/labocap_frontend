@@ -66,6 +66,9 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-nunito), "Segoe UI", system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
+  /* Mot-symbole uniquement (classe `font-marque`) — cf. BrandMark. La charte
+     réserve IBM Plex Sans à la marque et donne l'interface à Source Serif 4. */
+  --font-marque: var(--font-plex), "Segoe UI", system-ui, sans-serif;
 }
 
 /* ──────────────────────────────────────────────────────────────────────── */

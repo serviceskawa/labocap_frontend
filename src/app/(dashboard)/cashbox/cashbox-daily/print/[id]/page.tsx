@@ -6,7 +6,7 @@ import { Printer, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 import { cashboxApi, type CashboxDailyResponseDto } from "@/lib/api/cashbox";
-import { isPlaceholder } from "@/hooks/useBranding";
+import { isPlaceholder, DEFAULT_APP_NAME } from "@/hooks/useBranding";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
@@ -48,7 +48,7 @@ export default function CashboxDailyPrintPage({ params }: PageProps) {
   // « path » de `setting_apps`, qui ferait imprimer une image cassée.
   const rawLogo = appSettings?.logo?.trim() || appSettings?.logo_white?.trim() || "";
   const logoSrc = isPlaceholder(rawLogo) ? "" : rawLogo;
-  const appName = appSettings?.app_name?.trim() || "Labo AnaPath";
+  const appName = appSettings?.app_name?.trim() || DEFAULT_APP_NAME;
 
   // Déclenche l'impression automatiquement une fois les données chargées.
   useEffect(() => {

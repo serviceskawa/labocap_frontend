@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Nunito } from "next/font/google";
+import { Nunito, IBM_Plex_Sans } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -13,9 +13,25 @@ const nunito = Nunito({
   variable: "--font-nunito",
 });
 
+// IBM Plex Sans — réservée au mot-symbole, comme la charte le prescrit
+// (« Marque — IBM Plex Sans 600 »). Une seule graisse : elle ne compose rien
+// d'autre que le nom du produit, et la charger en famille complète pour un mot
+// coûterait plus que ce qu'elle rend.
+//
+// `display: "block"` et non `swap` : la marque est le seul endroit où un
+// remplacement transitoire se verrait — le nom s'afficherait dans la fonte
+// d'interface avant de sauter dans la sienne, en pleine tête de page.
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["600"],
+  display: "block",
+  variable: "--font-plex",
+});
+
 export const metadata: Metadata = {
-  title: "Labo AnaPath",
-  description: "Laboratoire d'Anatomie Pathologique",
+  title: "AnapathLab",
+  description:
+    "Gestion du laboratoire d'anatomopathologie — de la demande d'examen à la notification du résultat au patient.",
   // Renforce l'anti-traduction (Chrome honore ce meta) — voir translate="no".
   other: { google: "notranslate" },
 };
@@ -42,7 +58,7 @@ export default async function RootLayout({
     <html
       lang="fr"
       translate="no"
-      className={`h-full notranslate ${nunito.variable}`}
+      className={`h-full notranslate ${nunito.variable} ${plexSans.variable}`}
     >
       {/* styled-jsx ne lit pas le nonce dans l'en-tête CSP : il le cherche
           exclusivement dans cette balise (`document.querySelector(
