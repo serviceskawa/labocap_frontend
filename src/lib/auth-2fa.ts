@@ -19,6 +19,16 @@
 
 export const PENDING_2FA_UNTIL_COOKIE = "pending_2fa_until";
 export const PENDING_2FA_EMAIL_COOKIE = "pending_2fa_email";
+/**
+ * Durée TOTALE de validité du code, en secondes, telle que renvoyée par l'API
+ * (`expiresIn` de la réponse de login quand `requires2fa`).
+ *
+ * Mémorisée parce que `pending_2fa_until` ne porte que l'échéance : la barre de
+ * décompte a besoin de la durée initiale pour calculer sa proportion. Sans elle,
+ * l'écran devrait la supposer — et se désynchroniserait dès que la validité
+ * change côté API (`JwtTokenProvider.TEMP_TOKEN_VALIDITY_MS`).
+ */
+export const PENDING_2FA_TOTAL_COOKIE = "pending_2fa_total";
 /** Cookie HttpOnly posé par l'API — non lisible ici, lu par le proxy serveur. */
 export const PENDING_2FA_COOKIE = "pending_2fa";
 
@@ -54,12 +64,14 @@ export function beginPending2fa(email: string, expiresIn?: number | null): void 
   const ttl = expiresIn && expiresIn > 0 ? Math.floor(expiresIn) : DEFAULT_TTL_SECONDS;
   writeCookie(PENDING_2FA_UNTIL_COOKIE, String(Date.now() + ttl * 1000), ttl);
   writeCookie(PENDING_2FA_EMAIL_COOKIE, email, ttl);
+  writeCookie(PENDING_2FA_TOTAL_COOKIE, String(ttl), ttl);
 }
 
 /** Ferme le challenge (code validé, ou expiré côté client). */
 export function clearPending2fa(): void {
   deleteCookie(PENDING_2FA_UNTIL_COOKIE);
   deleteCookie(PENDING_2FA_EMAIL_COOKIE);
+  deleteCookie(PENDING_2FA_TOTAL_COOKIE);
 }
 
 /** Horodatage (ms) d'expiration du challenge en cours, `null` s'il n'y en a pas. */
@@ -74,6 +86,22 @@ export function getPending2faExpiry(): number | null {
 export function hasPending2fa(): boolean {
   const until = getPending2faExpiry();
   return until !== null && until > Date.now();
+}
+
+/**
+ * Durée totale de validité du code en cours, en millisecondes.
+ *
+ * Retombe sur {@link DEFAULT_TTL_SECONDS} si le cookie manque — challenge ouvert
+ * avant l'introduction de ce cookie, ou effacé. La barre reste alors juste dans
+ * l'ordre de grandeur, et le décompte chiffré, lui, est toujours exact puisqu'il
+ * découle de l'échéance.
+ */
+export function getPending2faTotalMs(): number {
+  const raw = readCookie(PENDING_2FA_TOTAL_COOKIE);
+  const total = Number(raw);
+  return Number.isFinite(total) && total > 0
+    ? total * 1000
+    : DEFAULT_TTL_SECONDS * 1000;
 }
 
 /** Adresse e-mail du challenge en cours, `null` si aucun. */

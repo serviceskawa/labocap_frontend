@@ -13,6 +13,7 @@ import {
   clearPending2fa,
   getPending2faEmail,
   getPending2faExpiry,
+  getPending2faTotalMs,
 } from "@/lib/auth-2fa";
 import { AuthCard } from "@/components/ui/AuthCard";
 import { OtpCountdown } from "@/components/ui/OtpCountdown";
@@ -28,13 +29,6 @@ const twoFactorSchema = z.object({
 });
 
 type TwoFactorFormData = z.infer<typeof twoFactorSchema>;
-
-/**
- * Durée totale de validité du code, pour la proportion de la barre de décompte.
- * Doit rester alignée sur `JwtTokenProvider.TEMP_TOKEN_VALIDITY_MS` côté API
- * (5 minutes) : l'API n'expose pas cette durée dans sa réponse de login.
- */
-const OTP_TOTAL_MS = 5 * 60 * 1000;
 
 function maskEmail(email: string): string {
   const [local, domain] = email.split("@");
@@ -54,6 +48,10 @@ export default function TwoFactorChallengePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
+  // Durée totale telle que renvoyée par l'API au login (`expiresIn`), mémorisée
+  // à l'ouverture du challenge. Lue une fois : elle ne change pas en cours de
+  // challenge, et la relire à chaque seconde serait inutile.
+  const [totalMs] = useState(() => getPending2faTotalMs());
 
   const storedEmail = remainingMs !== null ? getPending2faEmail() : null;
   const maskedEmail = storedEmail
@@ -203,7 +201,7 @@ export default function TwoFactorChallengePage() {
       {remainingMs !== null && (
         <OtpCountdown
           remainingMs={remainingMs}
-          totalMs={OTP_TOTAL_MS}
+          totalMs={totalMs}
           className="mb-5"
         />
       )}
