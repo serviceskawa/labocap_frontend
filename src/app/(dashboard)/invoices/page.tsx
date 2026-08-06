@@ -170,6 +170,14 @@ export default function InvoicesPage() {
     enabled: activeTab === "reports",
   });
 
+  // `months` est absent des réponses de l'API antérieure au rapport par période.
+  // Sans ce repli, un frontend déployé avant son backend ferait tomber l'onglet
+  // sur un `undefined.length` — la sûreté de la production ne doit pas reposer
+  // sur un ordre de déploiement. Le repli dégrade proprement : on retombe sur
+  // la ligne unique, exactement l'écran d'avant.
+  const moisDuRapport = report?.months ?? [];
+  const ventile = moisDuRapport.length > 1;
+
   const invoices = data?.content ?? [];
   const pageCount = data?.totalPages ?? 0;
 
@@ -569,8 +577,8 @@ export default function InvoicesPage() {
                           la suite se lirait comme une donnée manquante. La
                           ventilation est masquée sur un mois unique, où elle
                           répéterait la ligne de total. */}
-                      {report.months.length > 1 &&
-                        report.months.map((m) => (
+                      {ventile &&
+                        moisDuRapport.map((m) => (
                           <tr key={`${m.year}-${m.month}`}>
                             <td className="px-4 py-2.5 text-sm text-gray-700">{m.label}</td>
                             <td className="px-4 py-2.5 text-sm tabular-nums text-gray-700">
@@ -594,11 +602,11 @@ export default function InvoicesPage() {
                       <tr
                         className={cn(
                           "bg-gray-50",
-                          report.months.length > 1 && "border-t-2 border-gray-300",
+                          ventile && "border-t-2 border-gray-300",
                         )}
                       >
                         <td className="px-4 py-3 align-top text-sm font-semibold text-gray-900">
-                          {report.months.length > 1 ? "Total" : report.period}
+                          {ventile ? "Total" : report.period}
                         </td>
                         <td className="px-4 py-3 align-top text-sm text-gray-800">
                           <div className="font-semibold tabular-nums">
