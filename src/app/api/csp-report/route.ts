@@ -83,9 +83,25 @@ export async function POST(request: NextRequest) {
     : [normalize((payload as CspReportUriBody)["csp-report"] ?? {})];
 
   for (const violation of violations) {
-    // Un log par violation : suffisant pour la phase d'observation, et
-    // directement exploitable par l'agrégateur de logs du serveur.
-    console.warn("[csp-violation]", JSON.stringify(violation));
+    // Une violation dont aucun champ n'est reconnu ressort en « {} » : le
+    // rapport a bien été reçu, mais son format n'est ni `report-uri` ni
+    // `report-to` tels qu'attendus. Les navigateurs et les intermédiaires
+    // (Cloudflare, extensions) n'émettent pas tous la même forme, et une charge
+    // vide ne dit rien de la violation — donc rien à corriger.
+    //
+    // Dans ce cas on journalise la charge brute : sans elle, la phase
+    // d'observation ne peut pas aboutir.
+    const recognised = Object.values(violation).some((v) => v !== undefined);
+    if (recognised) {
+      console.warn("[csp-violation]", JSON.stringify(violation));
+    } else {
+      console.warn(
+        "[csp-violation] format non reconnu — charge brute :",
+        // Tronqué : la route est publique, on ne déverse pas un corps
+        // arbitrairement long dans les journaux.
+        JSON.stringify(payload).slice(0, 2000),
+      );
+    }
   }
 
   // 204 : le navigateur n'attend aucun contenu en retour.
