@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f7fa;
-  --foreground: #475569;
+  /* Papier et Encre de la charte AnapathLab. Le fond quittait le gris bleuté
+     (#f5f7fa) accordé à l'azur : sous un primaire cyan, un fond froid tire vers
+     la même teinte que les éléments actifs et le contenu perd son assise. */
+  --background: #f3f2f2;
+  --foreground: #625f5d;
 
   /* ── Forme & profondeur ───────────────────────────────────────────────
      Hyper posait des angles quasi vifs (.15rem) et une ombre unique très
@@ -19,17 +22,20 @@
      et un bouton. */
   --radius-surface: 1rem;     /* cartes, modales, menus */
 
+  /* Les ombres portent l'Encre de la charte (32, 30, 29) et non plus l'ardoise
+     froide (15, 23, 42) : une ombre bleutée sur un papier chaud se lit comme
+     un voile gris-bleu sous chaque carte, pas comme de la profondeur. */
   --elevation-flat:
-    0 1px 2px 0 rgba(15, 23, 42, 0.04),
-    0 0 0 1px rgba(15, 23, 42, 0.04);
+    0 1px 2px 0 rgba(32, 30, 29, 0.05),
+    0 0 0 1px rgba(32, 30, 29, 0.05);
   --elevation-raised:
-    0 1px 2px 0 rgba(15, 23, 42, 0.05),
-    0 4px 12px -2px rgba(15, 23, 42, 0.08),
-    0 0 0 1px rgba(15, 23, 42, 0.04);
+    0 1px 2px 0 rgba(32, 30, 29, 0.06),
+    0 4px 12px -2px rgba(32, 30, 29, 0.09),
+    0 0 0 1px rgba(32, 30, 29, 0.05);
   --elevation-overlay:
-    0 4px 6px -2px rgba(15, 23, 42, 0.06),
-    0 16px 32px -8px rgba(15, 23, 42, 0.16),
-    0 0 0 1px rgba(15, 23, 42, 0.06);
+    0 4px 6px -2px rgba(32, 30, 29, 0.07),
+    0 16px 32px -8px rgba(32, 30, 29, 0.18),
+    0 0 0 1px rgba(32, 30, 29, 0.07);
 
   /* ── Mouvement ─────────────────────────────────────────────────────────
      Les durées étaient jusqu'ici écrites à la main dans chaque composant
@@ -63,137 +69,180 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────── */
-/* Palette « Ardoise & Azur »                                                */
+/* Palette AnapathLab (charte v1, août 2026)                                 */
 /*                                                                           */
-/* Remplace la palette Hyper d'origine (périwinkle #727cf5, menthe #0acf97,  */
-/* rose #fa5c7c) : des teintes très saturées, héritées d'un thème Bootstrap  */
-/* de 2019, qui lisaient « template acheté » plutôt que logiciel médical.    */
+/* Remplace « Ardoise & Azur » (azur #2e4bd8 sur ardoises froides). La charte */
+/* pose deux encres et un papier :                                           */
 /*                                                                           */
-/* Principe de construction — les accents partagent une même luminosité et   */
-/* une même chroma, seule la teinte change. C'est ce qui les fait cohabiter  */
-/* sans qu'aucun ne crie plus fort que les autres dans un tableau dense :    */
+/*   Cyan profond #006786 · Cyan #38a6cf · Magenta #d6006c                   */
+/*   Encre #201e1d · Papier #f3f2f2                                          */
 /*                                                                           */
-/*   azur 226° · émeraude 162° · ciel 200° · ambre 38° · rose 348°           */
+/* ## Où tombent les deux cyans                                              */
 /*                                                                           */
-/* Les neutres sont des ardoises froides (bleutées), accordées à l'azur —    */
-/* un gris neutre à côté d'un primaire bleu paraît sale par contraste.       */
+/* Ils sont séparés de deux crans, pas d'un : #38a6cf en 400, #006786 en 600.*/
+/* Ce n'est pas un arrondi. Le blanc sur #38a6cf ne donne que 2,79:1 — sous  */
+/* le seuil AA (4,5) et même sous celui des composants (3,0). Le cyan clair  */
+/* ne peut donc pas porter de texte : il tient le tracé, le noyau du logo,   */
+/* les grands aplats. Les boutons pleins et les liens prennent #006786, à    */
+/* 6,39:1 sur blanc.                                                         */
 /*                                                                           */
-/* Le remap des échelles Tailwind est conservé : les 84 pages écrivent       */
-/* `bg-blue-600` / `text-gray-600` et héritent de la nouvelle palette sans   */
-/* être modifiées.                                                           */
+/* ## Comment les gammes sont construites                                    */
+/*                                                                           */
+/* Interpolation en OKLab entre les ancres de la charte, à teinte constante. */
+/* La clarté suit le profil de Tailwind : c'est ce qui garantit qu'un        */
+/* `text-gray-500` écrit il y a un an garde le contraste qu'il avait. Deux   */
+/* corrections ont été nécessaires — à clarté OKLab égale, un neutre chaud    */
+/* renvoie plus de luminance qu'un neutre bleuté et perd du contraste, si    */
+/* bien que `gray-500` (284 usages) tombait à 4,26:1. Il est assombri jusqu'à */
+/* 4,64:1, et `gray-400` jusqu'à 3,05:1.                                     */
+/*                                                                           */
+/* Dix-huit contrôles de contraste ont été passés sur ces gammes, dont les   */
+/* paires de pastilles `bg-X-50 text-X-700` — c'est la paire qui doit tenir, */
+/* pas la couleur isolée.                                                    */
+/*                                                                           */
+/*   python3 scripts/derive_ramps.py                                         */
+/*                                                                           */
+/* Régénérer par ce script plutôt que retoucher une valeur à la main : une   */
+/* graduation corrigée isolément rompt la régularité du profil de clarté, et */
+/* c'est ce profil qui tient les seuils.                                     */
+/*                                                                           */
+/* Le remap des échelles Tailwind est conservé : les 447 occurrences de      */
+/* `blue-*` réparties sur une centaine de fichiers héritent d'ici, sans      */
+/* qu'aucune ne soit modifiée.                                               */
 /* ──────────────────────────────────────────────────────────────────────── */
 @theme {
-  /* Primaire — Azur (226°). Les échelles blue, indigo, violet et purple y
-     pointent, pour que les pages qui les utilisaient restent dans le système. */
-  --color-blue-50: #eef3ff;
-  --color-blue-100: #dbe5ff;
-  --color-blue-200: #bccfff;
-  --color-blue-300: #93aeff;
-  --color-blue-400: #6285fa;
-  --color-blue-500: #3f63ec;
-  --color-blue-600: #2e4bd8;
-  --color-blue-700: #2439b0;
-  --color-blue-800: #1f318c;
-  --color-blue-900: #1b2b70;
-  --color-indigo-50: #eef3ff;
-  --color-indigo-100: #dbe5ff;
-  --color-indigo-500: #3f63ec;
-  --color-indigo-600: #2e4bd8;
-  --color-indigo-700: #2439b0;
-  --color-violet-50: #f1f0ff;
-  --color-violet-600: #5b4fd6;
-  --color-purple-50: #f1f0ff;
-  --color-purple-100: #e4e1ff;
-  --color-purple-600: #5b4fd6;
-  --color-purple-700: #4a3fb5;
+  /* Primaire — Cyan de la charte. Les échelles blue, indigo, cyan et sky y
+     pointent : sous un primaire déjà cyan, garder un rôle « info » bleu ciel
+     distinct créait deux bleus voisins que rien ne distinguait. */
+  --color-blue-50: #eef9fe;
+  --color-blue-100: #dbf0f9;
+  --color-blue-200: #b8dff1;
+  --color-blue-300: #86c7e4;
+  --color-blue-400: #38a6cf;  /* « Cyan » de la charte — tracé, jamais de texte */
+  --color-blue-500: #0087b9;  /* anneaux de focus (63 usages) — 4,06:1 */
+  --color-blue-600: #006786;  /* « Cyan profond » — aplats, liens, actif */
+  --color-blue-700: #005774;
+  --color-blue-800: #004963;
+  --color-blue-900: #003c52;
+  --color-indigo-50: #eef9fe;
+  --color-indigo-100: #dbf0f9;
+  --color-indigo-500: #0087b9;
+  --color-indigo-600: #006786;
+  --color-indigo-700: #005774;
 
-  /* Danger — Rose profond (348°) */
-  --color-red-50: #fff1f3;
-  --color-red-100: #ffe0e5;
-  --color-red-200: #ffc5ce;
-  --color-red-300: #ff9baa;
-  --color-red-400: #f9647d;
-  --color-red-500: #ef3e5c;
-  --color-red-600: #dc2848;
-  --color-red-700: #b91c3a;
-  --color-red-800: #971a33;
-  --color-red-900: #7e1a2f;
-  --color-rose-500: #ef3e5c;
-  --color-rose-600: #dc2848;
+  /* Accent secondaire — Prune. Reprend la 5e série de la palette catégorielle,
+     pour que les rares pages en violet/pourpre restent dans le système. */
+  --color-violet-50: #fbf4fd;
+  --color-violet-100: #f7eafa;
+  --color-violet-500: #c480d4;
+  --color-violet-600: #a55eb6;
+  --color-violet-700: #854295;
+  --color-purple-50: #fbf4fd;
+  --color-purple-100: #f7eafa;
+  --color-purple-600: #a55eb6;
+  --color-purple-700: #854295;
 
-  /* Succès — Émeraude (162°) */
-  --color-green-50: #ecfdf5;
-  --color-green-100: #d1fae5;
-  --color-green-200: #a7f3d0;
-  --color-green-300: #6ee7b7;
-  --color-green-500: #10b981;
-  --color-green-600: #059669;
-  --color-green-700: #047857;
-  --color-green-800: #065f46;
-  --color-green-900: #064e3b;
-  --color-emerald-50: #ecfdf5;
-  --color-emerald-500: #10b981;
-  --color-emerald-600: #059669;
-  --color-emerald-700: #047857;
-  --color-teal-500: #10b981;
-  --color-teal-600: #059669;
 
-  /* Info — Ciel (200°) */
-  --color-cyan-50: #ecfaff;
-  --color-cyan-100: #d5f2ff;
-  --color-cyan-500: #0ea5e9;
-  --color-cyan-600: #0284c7;
-  --color-cyan-700: #0369a1;
-  --color-sky-50: #ecfaff;
-  --color-sky-100: #d5f2ff;
-  --color-sky-500: #0ea5e9;
-  --color-sky-600: #0284c7;
-  --color-sky-700: #0369a1;
+  /* ── États ────────────────────────────────────────────────────────────
+     Ancrés sur la palette catégorielle des graphiques (cf. chartColors.ts),
+     et non choisis séparément : un statut « en retard » doit avoir la même
+     couleur dans une pastille de tableau et dans un camembert. Ces trois
+     teintes sont celles que le validateur a retenues avec le cyan.          */
 
-  /* Alerte — Ambre (38°) */
-  --color-yellow-50: #fffbeb;
-  --color-yellow-100: #fef3c7;
-  --color-yellow-200: #fde68a;
-  --color-yellow-300: #fcd34d;
-  --color-yellow-400: #fbbf24;
-  --color-yellow-500: #f59e0b;
-  --color-yellow-600: #d97706;
-  --color-yellow-700: #b45309;
-  --color-yellow-800: #92400e;
-  --color-amber-50: #fffbeb;
-  --color-amber-100: #fef3c7;
-  --color-amber-400: #fbbf24;
-  --color-amber-500: #f59e0b;
-  --color-amber-600: #d97706;
-  --color-amber-700: #b45309;
-  --color-orange-100: #ffedd5;
-  --color-orange-700: #c2410c;
+  /* Danger — Brique. Suppression, erreurs de saisie. Distinct du magenta
+     « critique » ci-dessus, qui dit l'urgence métier et non la faute. */
+  --color-red-50: #fff3f3;
+  --color-red-100: #fee6e5;
+  --color-red-200: #facdcc;
+  --color-red-300: #f2abaa;
+  --color-red-400: #e07d7e;
+  --color-red-500: #c95459;
+  --color-red-600: #ac2f3b;
+  --color-red-700: #941c2c;
+  --color-red-800: #7d1222;
+  --color-red-900: #670718;
+  --color-rose-500: #c95459;
+  --color-rose-600: #ac2f3b;
 
-  /* Menu latéral — ardoises claires sur le fond profond du menu. */
-  --color-sidebar-link: #94a3b8;
-  --color-sidebar-link-hover: #e2e8f0;
+  /* Succès — Vert sauge. Désaturé à dessein : un vert vif à côté d'un cyan
+     profond tire l'œil plus fort que le primaire. */
+  --color-green-50: #f2f8f5;
+  --color-green-100: #e5f1eb;
+  --color-green-200: #cde3d9;
+  --color-green-300: #acd0bf;
+  --color-green-500: #5a9c80;
+  --color-green-600: #3a8366;
+  --color-green-700: #226a4f;
+  --color-green-800: #13543d;
+  --color-green-900: #03402c;
+  --color-emerald-50: #f2f8f5;
+  --color-emerald-500: #5a9c80;
+  --color-emerald-600: #3a8366;
+  --color-emerald-700: #226a4f;
+  --color-teal-500: #5a9c80;
+  --color-teal-600: #3a8366;
 
-  /* Neutres — Ardoise froide, accordée à l'azur. */
-  --color-gray-50: #f8fafc;
-  --color-gray-100: #f1f5f9;
-  --color-gray-200: #e2e8f0;
-  --color-gray-300: #cbd5e1;
-  --color-gray-400: #94a3b8;
-  --color-gray-500: #64748b;
-  --color-gray-600: #475569;
-  --color-gray-700: #334155;
-  --color-gray-800: #1e293b;
-  --color-gray-900: #0f172a;
-  --color-slate-50: #f8fafc;
-  --color-slate-100: #f1f5f9;
-  --color-slate-200: #e2e8f0;
-  --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8;
-  --color-slate-500: #64748b;
-  --color-slate-600: #475569;
-  --color-slate-700: #334155;
-  --color-slate-800: #1e293b;
-  --color-slate-900: #0f172a;
+  /* Info — aliasé sur le primaire. Le rôle « info » était un bleu ciel
+     (#0284c7) ; sous un primaire cyan il en devenait indiscernable, et le
+     validateur le confondait avec l'émeraude en tritanopie (ΔE 1,6). */
+  --color-cyan-50: #eef9fe;
+  --color-cyan-100: #dbf0f9;
+  --color-cyan-500: #0087b9;
+  --color-cyan-600: #006786;
+  --color-cyan-700: #005774;
+  --color-sky-50: #eef9fe;
+  --color-sky-100: #dbf0f9;
+  --color-sky-500: #0087b9;
+  --color-sky-600: #006786;
+  --color-sky-700: #005774;
+
+  /* Alerte — Ambre brûlé. */
+  --color-yellow-50: #fef5ee;
+  --color-yellow-100: #fbe9dc;
+  --color-yellow-200: #f5d5bc;
+  --color-yellow-300: #eab890;
+  --color-yellow-400: #d89155;
+  --color-yellow-500: #c26e12;
+  --color-yellow-600: #ab5300;
+  --color-yellow-700: #903d00;
+  --color-yellow-800: #762e00;
+  --color-amber-50: #fef5ee;
+  --color-amber-100: #fbe9dc;
+  --color-amber-400: #d89155;
+  --color-amber-500: #c26e12;
+  --color-amber-600: #ab5300;
+  --color-amber-700: #903d00;
+  --color-orange-100: #fbe9dc;
+  --color-orange-700: #903d00;
+
+  /* Menu latéral — teintes claires cyanées sur le fond profond du menu.
+     Le lien au repos tient 5,32:1 sur `.hyper-sidebar`. */
+  --color-sidebar-link: #8fa9b4;
+  --color-sidebar-link-hover: #dbe7ec;
+
+  /* Neutres — Encre chaude de la charte. Les ardoises froides étaient
+     accordées à l'azur ; sous un primaire cyan elles en reprenaient la teinte
+     et le gris cessait de lire comme un gris. */
+  --color-gray-50: #f3f2f2;
+  --color-gray-100: #e9e7e7;
+  --color-gray-200: #d8d5d5;
+  --color-gray-300: #c0baba;
+  --color-gray-400: #999292;
+  --color-gray-500: #777473;
+  --color-gray-600: #625f5d;
+  --color-gray-700: #484544;
+  --color-gray-800: #333130;
+  --color-gray-900: #201e1d;
+  --color-slate-50: #f3f2f2;
+  --color-slate-100: #e9e7e7;
+  --color-slate-200: #d8d5d5;
+  --color-slate-300: #c0baba;
+  --color-slate-400: #999292;
+  --color-slate-500: #777473;
+  --color-slate-600: #625f5d;
+  --color-slate-700: #484544;
+  --color-slate-800: #333130;
+  --color-slate-900: #201e1d;
 
   /* ── Courbes d'accélération ────────────────────────────────────────────
      Tailwind fournit `ease-in/out/in-out`, toutes symétriques. Une interface
@@ -244,14 +293,46 @@
   }
 }
 
+/* ──────────────────────────────────────────────────────────────────────── */
+/* Critique — Magenta de la charte                                           */
+/*                                                                           */
+/* Échelle SÉPARÉE, jamais remappée sur `red-*` : la charte le veut « rare,   */
+/* réservé aux alertes » — résultat critique, délai dépassé. Le rouge garde   */
+/* la suppression et les erreurs de saisie. Les confondre ferait crier chaque */
+/* champ mal rempli, et le magenta ne voudrait plus rien dire.                */
+/*                                                                           */
+/* `static` et non `@theme` : Tailwind v4 élague les jetons qu'aucune classe  */
+/* n'utilise, et aucune ne consomme encore cette gamme. Vérifié dans le CSS   */
+/* compilé — `--color-critical-600` en était absent, si bien qu'un            */
+/* `var(--color-critical-600)` écrit en JavaScript n'aurait rien résolu. Le   */
+/* reste de la palette n'a pas ce besoin : ses graduations sont portées par   */
+/* des classes.                                                              */
+/* ──────────────────────────────────────────────────────────────────────── */
+@theme static {
+  --color-critical-50: #fff1f6;
+  --color-critical-100: #ffe4ec;
+  --color-critical-200: #ffcada;
+  --color-critical-300: #ffa6c2;
+  --color-critical-400: #ff75a2;
+  --color-critical-500: #ef4385;
+  --color-critical-600: #d6006c;
+  --color-critical-700: #b30054;
+  --color-critical-800: #930041;
+  --color-critical-900: #73002e;
+}
+
 /* ── Menu latéral ───────────────────────────────────────────────────────
-   Ardoise profonde (#0f172a) plutôt que le gris-bleu Hyper (#313a46) : plus
-   dense, elle fait ressortir l'azur de l'élément actif. Un liseré interne très
-   discret sépare le menu du contenu sans recourir à une ombre portée, que le
-   fond sombre rendait de toute façon invisible.                            */
+   Encre cyanée (#0d3446) plutôt que l'ardoise froide (#0f172a) qu'appelait
+   l'azur. Trois fonds ont été mesurés contre l'élément actif (`bg-blue-600`) :
+   le bleu 900 de la gamme ne l'en détachait qu'à 1,86:1, la teinte des
+   maquettes à 1,62:1 — l'entrée sélectionnée s'y fondait. Celle-ci donne
+   2,06:1, et laisse le lien au repos à 5,32:1.
+
+   Un liseré interne très discret sépare le menu du contenu sans recourir à une
+   ombre portée, que le fond sombre rendait de toute façon invisible.        */
 .hyper-sidebar {
-  background: #0f172a;
-  border-right: 1px solid rgba(148, 163, 184, 0.12);
+  background: #0d3446;
+  border-right: 1px solid rgba(143, 169, 180, 0.14);
 }
 
 /* ── Barre du haut ──────────────────────────────────────────────────────
@@ -455,7 +536,7 @@ textarea::placeholder {
 }
 /* Firefox : pouce visible seulement quand le curseur survole le menu */
 .select-menu-scroll:hover {
-  scrollbar-color: rgba(100, 116, 139, 0.5) transparent;
+  scrollbar-color: rgba(119, 116, 115, 0.5) transparent;
 }
 .select-menu-scroll::-webkit-scrollbar {
   width: 6px;
@@ -471,10 +552,10 @@ textarea::placeholder {
 }
 /* …visible uniquement au survol du menu */
 .select-menu-scroll:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(100, 116, 139, 0.45);
+  background-color: rgba(119, 116, 115, 0.45);
 }
 .select-menu-scroll:hover::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(100, 116, 139, 0.7);
+  background-color: rgba(119, 116, 115, 0.7);
 }
 
 /* ------------------------------------------------------------------ */
@@ -488,7 +569,7 @@ textarea::placeholder {
 }
 /* Firefox : pouce visible seulement quand le curseur survole la zone */
 *:hover {
-  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+  scrollbar-color: rgba(119, 116, 115, 0.45) transparent;
 }
 *::-webkit-scrollbar {
   width: 8px;
@@ -505,10 +586,10 @@ textarea::placeholder {
 }
 /* …visible uniquement au survol de la zone défilable */
 *:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(100, 116, 139, 0.45);
+  background-color: rgba(119, 116, 115, 0.45);
 }
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(100, 116, 139, 0.7);
+  background-color: rgba(119, 116, 115, 0.7);
 }
 
 /* ------------------------------------------------------------------ */
@@ -551,7 +632,7 @@ textarea::placeholder {
     scrollbar-color: transparent transparent;
   }
   .native-select::picker(select):hover {
-    scrollbar-color: rgba(100, 116, 139, 0.5) transparent;
+    scrollbar-color: rgba(119, 116, 115, 0.5) transparent;
   }
 
   /* Chaque option — libellé aligné à gauche */
@@ -775,7 +856,7 @@ textarea::placeholder {
   color: #fff;
   background-color: var(--color-green-700);
   border-color: var(--color-green-700);
-  box-shadow: 0 4px 10px -2px rgba(5, 150, 105, 0.35);
+  box-shadow: 0 4px 10px -2px rgba(58, 131, 102, 0.35);
 }
 .hyper-btn:disabled {
   opacity: 0.55;
