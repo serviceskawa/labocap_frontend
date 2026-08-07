@@ -7,6 +7,7 @@ import Link from "next/link";
 
 import { cashboxApi, type CashboxDailyResponseDto } from "@/lib/api/cashbox";
 import { isPlaceholder, DEFAULT_APP_NAME } from "@/hooks/useBranding";
+import { DocumentHeader } from "@/components/ui/DocumentHeader";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
@@ -107,17 +108,16 @@ function RecapPrint({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm print:border-0 print:shadow-none">
-      {/* Logo du laboratoire en tête du reçu (calque print.blade). */}
-      {logoSrc ? (
-        <div className="mb-4 flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logoSrc} alt={appName} className="h-16 w-auto object-contain" />
-        </div>
-      ) : null}
-      <h1 className="mb-6 text-center text-lg font-bold text-gray-900">
+      {/* En-tête du document. Le logo n'était affiché que s'il était configuré,
+          et rien du tout sinon — or aucun logo n'est renseigné en production :
+          la feuille sortait de l'imprimante sans mentionner le laboratoire
+          nulle part. Le nom est désormais toujours porté. */}
+      <DocumentHeader logoSrc={logoSrc} name={appName} className="mb-6" />
+
+      <h2 className="mb-6 text-center text-[.9375rem] font-semibold text-gray-800">
         {daily.code} — {formatDateTime(daily.createdAt)}
         {daily.updatedAt ? ` → ${formatDateTime(daily.updatedAt)}` : ""}
-      </h1>
+      </h2>
 
       <table className="w-full border-collapse text-sm">
         <thead>

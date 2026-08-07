@@ -399,34 +399,36 @@ export default function CashboxTicketsPage() {
                 ) : (
                   <>
                     <TableLengthControl pagination={detailsPagination} />
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
-                          <th className="pb-2 pr-4">#</th>
-                          <th className="pb-2 pr-4">Article</th>
-                          <th className="pb-2 pr-4 text-right">Prix</th>
-                          <th className="pb-2 pr-4 text-right">Quantité</th>
-                          <th className="pb-2 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {detailsPagination.pageRows.map((d, i) => (
-                          <tr key={d.id}>
-                            <td className="py-2 pr-4 text-gray-500">
-                              {detailsPagination.offset + i + 1}
-                            </td>
-                            <td className="py-2 pr-4 font-medium">{d.itemName}</td>
-                            <td className="py-2 pr-4 text-right text-gray-600">
-                              {formatAmount(d.unitPrice)}
-                            </td>
-                            <td className="py-2 pr-4 text-right">{d.quantity}</td>
-                            <td className="py-2 text-right font-medium">
-                              {formatAmount(d.lineAmount)}
-                            </td>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
+                            <th className="pb-2 pr-4">#</th>
+                            <th className="pb-2 pr-4">Article</th>
+                            <th className="pb-2 pr-4 text-right">Prix</th>
+                            <th className="pb-2 pr-4 text-right">Quantité</th>
+                            <th className="pb-2 text-right">Total</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {detailsPagination.pageRows.map((d, i) => (
+                            <tr key={d.id}>
+                              <td className="py-2 pr-4 text-gray-500">
+                                {detailsPagination.offset + i + 1}
+                              </td>
+                              <td className="py-2 pr-4 font-medium">{d.itemName}</td>
+                              <td className="py-2 pr-4 text-right text-gray-600">
+                                {formatAmount(d.unitPrice)}
+                              </td>
+                              <td className="py-2 pr-4 text-right">{d.quantity}</td>
+                              <td className="py-2 text-right font-medium">
+                                {formatAmount(d.lineAmount)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                     <TablePaginationFooter pagination={detailsPagination} />
                   </>
                 )}

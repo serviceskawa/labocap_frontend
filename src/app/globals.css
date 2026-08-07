@@ -755,17 +755,82 @@ textarea::placeholder {
    layout dashboard. Ici on s'assure que la page s'étend en pleine hauteur et
    que les couleurs (badges, écarts) sortent fidèlement.
    --------------------------------------------------------------------------- */
+/* Format et marges. Sans règle `@page`, le navigateur applique ses propres
+   marges — différentes d'un navigateur à l'autre et modifiables dans la boîte
+   d'impression, si bien que le même compte rendu ne sortait pas pareil de deux
+   postes. 12 mm latéraux laissent 186 mm de contenu sur A4, ce qui suffit aux
+   sept colonnes de la feuille de caisse. 16 mm en tête et en pied dégagent la
+   zone où la plupart des imprimantes jet d'encre ne posent rien. */
+@page {
+  size: A4;
+  margin: 16mm 12mm;
+}
+
 @media print {
   html,
   body {
     height: auto !important;
     overflow: visible !important;
     background: #ffffff !important;
+    /* 10,5 pt : la taille d'un imprimé administratif. À l'écran le corps est de
+       14,4 px, calibré pour une lecture à 60 cm ; sur papier, tenu à 40 cm, la
+       même valeur gaspille la page et fait déborder les tableaux larges. */
+    font-size: 10.5pt !important;
+    line-height: 1.4 !important;
   }
 
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  /* Une ligne de tableau coupée en deux par un saut de page perd la moitié de
+     ses chiffres en haut d'une feuille et l'autre en bas de la précédente. */
+  tr,
+  img,
+  figure {
+    break-inside: avoid;
+  }
+
+  /* L'en-tête se répète sur chaque page d'un tableau long : sans lui, les
+     colonnes de la deuxième page ne sont plus identifiées. C'est le
+     comportement par défaut de `<thead>`, que certains styles de mise en page
+     annulent — on le réaffirme. */
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  /* Un titre seul en bas de page, son contenu à la suivante. */
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  /* Les tableaux de l'application portent `whitespace-nowrap` sur des colonnes
+     qui, à l'écran, disposent d'un défilement horizontal. Le papier n'en a pas :
+     ce qui dépasse est perdu. On autorise donc le retour à la ligne, et on
+     coupe les chaînes sans espace (codes, identifiants) plutôt que de les
+     laisser pousser la colonne hors de la feuille. */
+  table {
+    width: 100% !important;
+    table-layout: auto;
+  }
+
+  th,
+  td {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+
+  /* Les élévations n'existent pas sur papier — elles sortent en aplats gris
+     sales. Les liserés, eux, restent utiles pour délimiter une grille. */
+  [class*="shadow"] {
+    box-shadow: none !important;
   }
 }
 
