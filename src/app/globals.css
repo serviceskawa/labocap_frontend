@@ -377,6 +377,36 @@
   animation: wizard-fade-in 0.15s linear;
 }
 
+/* ── Curseur des commandes ──────────────────────────────────────────────
+   Un `<button>` conserve le curseur flèche par défaut du navigateur : c'est
+   le comportement du HTML, et Tailwind v4 ne le corrige plus dans sa base
+   (contrairement à ce que beaucoup supposent). Relevé dans ce dépôt : 201
+   boutons, 20 mentions de `cursor-pointer` — presque aucune commande de
+   l'application n'annonçait donc qu'elle se clique.
+
+   Une règle vaut mieux qu'une classe répétée 201 fois, et couvre du même
+   coup tout bouton écrit demain.
+
+   `:disabled` est exclu : une commande neutralisée ne doit pas se présenter
+   comme cliquable. Les écrans qui posent déjà `disabled:cursor-not-allowed`
+   restent prioritaires, leur spécificité étant supérieure.
+
+   `summary` est inclus : un dépliant se clique aussi, et souffre du même
+   défaut d'origine.
+
+   Posée dans `@layer base` et non en règle libre : sa spécificité (0,1,1)
+   dépasserait sinon celle d'un utilitaire `cursor-not-allowed` (0,1,0), et
+   écraserait un curseur voulu — le cas se présente là où la classe vient
+   d'une prop React plutôt que de l'attribut `disabled`. Dans la couche de
+   base, tout utilitaire prime, quelle que soit la spécificité.             */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary {
+    cursor: pointer;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
