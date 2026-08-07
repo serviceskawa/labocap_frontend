@@ -394,69 +394,71 @@ export default function CashboxTicketEditPage({ params }: PageProps) {
 
               {/* Tableau des articles */}
               <TableLengthControl pagination={detailsPagination} />
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
-                    <th className="pb-2 pr-4">#</th>
-                    <th className="pb-2 pr-4">Article</th>
-                    <th className="pb-2 pr-4 text-right">Prix</th>
-                    <th className="pb-2 pr-4 text-right">Quantité</th>
-                    <th className="pb-2 pr-4 text-right">Total</th>
-                    {isEditable && <th className="pb-2 text-right">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {details.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={isEditable ? 6 : 5}
-                        className="py-6 text-center text-sm text-gray-400"
-                      >
-                        Aucun article. Ajoutez-en ci-dessus.
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
+                      <th className="pb-2 pr-4">#</th>
+                      <th className="pb-2 pr-4">Article</th>
+                      <th className="pb-2 pr-4 text-right">Prix</th>
+                      <th className="pb-2 pr-4 text-right">Quantité</th>
+                      <th className="pb-2 pr-4 text-right">Total</th>
+                      {isEditable && <th className="pb-2 text-right">Actions</th>}
                     </tr>
-                  ) : (
-                    detailsPagination.pageRows.map((d, i) => (
-                      <tr key={d.id}>
-                        <td className="py-2 pr-4 text-gray-500">
-                          {detailsPagination.offset + i + 1}
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {details.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={isEditable ? 6 : 5}
+                          className="py-6 text-center text-sm text-gray-400"
+                        >
+                          Aucun article. Ajoutez-en ci-dessus.
                         </td>
-                        <td className="py-2 pr-4 font-medium">{d.itemName}</td>
-                        <td className="py-2 pr-4 text-right text-gray-600">
-                          {formatAmount(d.unitPrice)}
-                        </td>
-                        <td className="py-2 pr-4 text-right">{d.quantity}</td>
-                        <td className="py-2 pr-4 text-right font-medium">
-                          {formatAmount(d.lineAmount)}
-                        </td>
-                        {isEditable && (
-                          <td className="py-2 text-right">
-                            <button
-                              type="button"
-                              onClick={() => setDetailToDelete(d)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-                              title="Supprimer la ligne"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </td>
-                        )}
                       </tr>
-                    ))
-                  )}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-gray-300 font-semibold">
-                    <td colSpan={4} className="py-3 pr-4 text-right text-gray-700">
-                      Total :
-                    </td>
-                    <td className="py-3 pr-4 text-right text-gray-900">
-                      {formatAmount(voucher.amount)}
-                    </td>
-                    {isEditable && <td />}
-                  </tr>
-                </tfoot>
-              </table>
+                    ) : (
+                      detailsPagination.pageRows.map((d, i) => (
+                        <tr key={d.id}>
+                          <td className="py-2 pr-4 text-gray-500">
+                            {detailsPagination.offset + i + 1}
+                          </td>
+                          <td className="py-2 pr-4 font-medium">{d.itemName}</td>
+                          <td className="py-2 pr-4 text-right text-gray-600">
+                            {formatAmount(d.unitPrice)}
+                          </td>
+                          <td className="py-2 pr-4 text-right">{d.quantity}</td>
+                          <td className="py-2 pr-4 text-right font-medium">
+                            {formatAmount(d.lineAmount)}
+                          </td>
+                          {isEditable && (
+                            <td className="py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setDetailToDelete(d)}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                title="Supprimer la ligne"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-300 font-semibold">
+                      <td colSpan={4} className="py-3 pr-4 text-right text-gray-700">
+                        Total :
+                      </td>
+                      <td className="py-3 pr-4 text-right text-gray-900">
+                        {formatAmount(voucher.amount)}
+                      </td>
+                      {isEditable && <td />}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
               <TablePaginationFooter pagination={detailsPagination} />
             </div>
           </>

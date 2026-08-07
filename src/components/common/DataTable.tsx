@@ -68,6 +68,45 @@ export interface DataTableProps<T> {
    * (ex. `WidgetCard` de « Mon espace »), pour éviter des boutons en double.
    */
   hideToolbar?: boolean;
+  /**
+   * Bande rendue à l'intérieur du cadre de la grille, sous la dernière ligne —
+   * une ligne de total, typiquement.
+   *
+   * Elle existe parce que les pages qui en avaient besoin l'ajoutaient APRÈS le
+   * composant, ce qui les obligeait à enfermer l'ensemble dans un second cadre
+   * pour rattacher visuellement le total au tableau. La barre d'outils et la
+   * pagination, qui vivent volontairement hors du cadre, se retrouvaient alors
+   * enfermées avec lui et collées à sa bordure — trois retraits horizontaux
+   * différents sur trois lignes superposées.
+   *
+   * Le total appartient à la grille : il se rend donc dans son cadre.
+   */
+  tableFooter?: React.ReactNode;
+}
+
+/**
+ * Alignement d'une colonne, déclaré via `meta` dans sa définition :
+ *
+ * ```ts
+ * { header: "Montant", id: "total", meta: { align: "right" }, cell: … }
+ * ```
+ *
+ * Une colonne de montants se ferre à droite : c'est ce qui aligne les unités
+ * sous les unités et rend deux nombres comparables d'un coup d'œil. C'est aussi
+ * la seule position où une ligne de total tombe sous la colonne qu'elle totalise
+ * — ferrée à gauche, elle flotte à l'écart de ses propres chiffres.
+ */
+export type ColumnAlign = "left" | "right" | "center";
+
+const alignClasses: Record<ColumnAlign, string> = {
+  left: "text-left",
+  right: "text-right tabular-nums",
+  center: "text-center",
+};
+
+function alignOf(meta: unknown): ColumnAlign {
+  const a = (meta as { align?: ColumnAlign } | undefined)?.align;
+  return a ?? "left";
 }
 
 export function DataTable<T>({
@@ -87,6 +126,7 @@ export function DataTable<T>({
   emptyTitle = "Aucune donnée",
   emptyDescription,
   hideToolbar = false,
+  tableFooter,
 }: DataTableProps<T>) {
   const isServerSide = pageCount !== undefined;
 
@@ -210,7 +250,8 @@ export function DataTable<T>({
                     <th
                       key={header.id}
                       className={cn(
-                        "px-4 py-2.5 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-600",
+                        "px-4 py-2.5 text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-600",
+                        alignClasses[alignOf(header.column.columnDef.meta)],
                         // Filet vertical entre colonnes, sauf après la dernière.
                         "border-r border-gray-200 last:border-r-0",
                         header.column.getCanSort() &&
@@ -292,7 +333,13 @@ export function DataTable<T>({
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="border-r border-gray-100 px-4 py-2.5 align-middle text-[.875rem] text-gray-700 last:border-r-0">
+                        <td
+                          key={cell.id}
+                          className={cn(
+                            "border-r border-gray-100 px-4 py-2.5 align-middle text-[.875rem] text-gray-700 last:border-r-0",
+                            alignClasses[alignOf(cell.column.columnDef.meta)],
+                          )}
+                        >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
@@ -302,6 +349,14 @@ export function DataTable<T>({
               )}
             </tbody>
           </table>
+
+          {/* Pied de grille — dans le cadre, sous la dernière ligne. Le filet
+              supérieur le sépare des données sans le détacher du tableau. */}
+          {tableFooter && (
+            <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
+              {tableFooter}
+            </div>
+          )}
         </div>
 
         {/* Bas : « Afficher page X sur N » (gauche) + pagination « Précédent/Suivant » (droite) */}

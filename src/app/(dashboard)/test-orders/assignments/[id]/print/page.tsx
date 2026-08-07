@@ -11,6 +11,7 @@ import {
 import { formatDate } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
+import { DocumentHeader } from "@/components/ui/DocumentHeader";
 
 // ---------------------------------------------------------------------------
 // Page d'impression
@@ -88,15 +89,13 @@ export default function AssignmentPrintPage() {
           </button>
         </div>
 
-        {/* En-tête labo */}
-        <div className="border-b border-gray-300 pb-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {branchName ?? "Laboratoire"}
-          </h1>
-          {branchAddress && (
-            <p className="mt-1 text-sm text-gray-600">{branchAddress}</p>
-          )}
-        </div>
+        {/* En-tête labo — même composant que la feuille de caisse, pour que
+            deux documents sortis du même laboratoire s'identifient pareil. */}
+        <DocumentHeader
+          name={branchName ?? "Laboratoire"}
+          subtitle={branchAddress || undefined}
+          align="left"
+        />
 
         {/* Titre */}
         <h2 className="text-xl font-bold text-gray-900">

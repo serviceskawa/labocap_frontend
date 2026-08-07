@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { cn } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
 import { invoicesApi, type Invoice } from "@/lib/api/invoices";
 import { Button } from "@/components/ui/Button";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
@@ -195,11 +195,24 @@ export default function InvoicesPage() {
   const columns: ColumnDef<Invoice>[] = [
     {
       // Laravel lit la colonne `date` (saisie à la création), pas `created_at`.
+      //
+      // Elle est vide sur la TOTALITÉ des factures reprises de Laravel — 12 409
+      // sur 12 409 — et la colonne s'affichait donc vierge sur toute la liste.
+      // L'API Java renseigne bien ce champ, mais aucune facture n'a encore été
+      // créée par elle : le repli couvre donc l'intégralité de l'historique.
+      //
+      // `createdAt` est le meilleur substitut disponible : sur ces lignes
+      // reprises, c'est la seule trace de la date d'émission.
       header: "Date",
       accessorKey: "date",
-      cell: ({ row }) => (
-        <span className="text-xs text-gray-500">{row.original.date ?? ""}</span>
-      ),
+      cell: ({ row }) => {
+        const brute = row.original.date ?? row.original.createdAt;
+        return (
+          <span className="text-xs text-gray-500">
+            {brute ? formatDate(brute) : "—"}
+          </span>
+        );
+      },
     },
     {
       header: "Demande",
