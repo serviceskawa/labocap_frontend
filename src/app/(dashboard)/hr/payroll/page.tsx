@@ -16,9 +16,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { RHFSelect } from "@/components/ui/RHFSelect";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { DataTable } from "@/components/common/DataTable";
+import {
+  RowActions,
+  RowActionsProvider,
+} from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
@@ -317,43 +320,40 @@ export default function PayrollPage() {
     {
       header: "Actions",
       id: "actions",
-      cell: ({ row }) => (
-        <PermissionGate permission={PERMISSIONS.MANAGE_PAYROLL}>
-          <button
-            type="button"
-            onClick={() => handleDownloadPdf(row.original)}
-            disabled={pdfLoadingId === row.original.id}
-            title="Voir / télécharger la fiche de paie (PDF)"
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            aria-label="Voir PDF"
-          >
-            {pdfLoadingId === row.original.id ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <FileText className="h-3.5 w-3.5" />
-            )}
-            {pdfLoadingId === row.original.id ? "..." : "PDF"}
-          </button>
-          <button
-            type="button"
-            onClick={() => openEdit(row.original)}
-            title="Modifier"
-            aria-label="Modifier"
-            className="ml-1 inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-amber-50 text-amber-700 transition-colors hover:bg-amber-100"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeleting(row.original)}
-            title="Supprimer"
-            aria-label="Supprimer"
-            className="ml-1 inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-red-50 text-red-700 transition-colors hover:bg-red-100"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </PermissionGate>
-      ),
+      cell: ({ row }) => {
+        const fiche = row.original;
+        if (!can(PERMISSIONS.MANAGE_PAYROLL)) return null;
+
+        const chargement = pdfLoadingId === fiche.id;
+        return (
+          <RowActions
+            actions={[
+              {
+                label: "Voir / télécharger la fiche de paie (PDF)",
+                icon: chargement ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <FileText className="h-3.5 w-3.5" />
+                ),
+                onClick: () => handleDownloadPdf(fiche),
+                disabled: chargement,
+              },
+              {
+                label: "Modifier",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                variant: "edit",
+                onClick: () => openEdit(fiche),
+              },
+              {
+                label: "Supprimer",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                variant: "delete",
+                onClick: () => setDeleting(fiche),
+              },
+            ]}
+          />
+        );
+      },
     },
   ];
 
@@ -429,7 +429,10 @@ export default function PayrollPage() {
 
       {selectedEmployeeId && (
         <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
-          <DataTable columns={columns} data={filtered} isLoading={isLoading} />
+          {/* Trois actions : le tableau replie uniformément. */}
+          <RowActionsProvider collapse>
+            <DataTable columns={columns} data={filtered} isLoading={isLoading} />
+          </RowActionsProvider>
         </div>
       )}
 

@@ -2,20 +2,17 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
-import {
-  Eye,
-  FileText,
-  Check,
-  Trash2,
-  Printer,
-  Loader2,
-} from "lucide-react";
+import { Check, Eye, FileDown, FileText, Loader2, Trash2 } from "lucide-react";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 
 import { DataTable } from "@/components/common/DataTable";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
@@ -91,75 +88,69 @@ function ActionButtons({
   const isValidated =
     order.reportStatus === "VALIDATED" || order.reportStatus === "DELIVERED";
 
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {/* Voir les détails — BLEU */}
-      <Link
-        href={`/test-orders/${order.id}/details`}
-        className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        title="Voir les détails"
-      >
-        <Eye className="h-3.5 w-3.5" />
-      </Link>
+  const actions: RowAction[] = [
+    {
+      label: "Voir les détails",
+      icon: <Eye className="h-3.5 w-3.5" />,
+      href: `/test-orders/${order.id}/details`,
+    },
+  ];
 
-      {/* Compte rendu — JAUNE (voir si existe, sinon créer via détails) */}
-      {can(PERMISSIONS.VIEW_REPORTS) && (
-        <Link
-          href={
-            order.reportId
-              ? `/reports/${order.reportId}`
-              : `/test-orders/${order.id}/details`
-          }
-          className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-600 transition-colors"
-          title="Compte rendu"
-        >
-          <FileText className="h-3.5 w-3.5" />
-        </Link>
-      )}
+  if (can(PERMISSIONS.VIEW_REPORTS)) {
+    actions.push({
+      label: "Compte rendu",
+      icon: <FileText className="h-3.5 w-3.5" />,
+      href: order.reportId
+        ? `/reports/${order.reportId}`
+        : `/test-orders/${order.id}/details`,
+    });
+  }
 
-      {/* Marquer comme retiré — VERT (si validé mais pas encore livré) */}
-      {order.reportStatus === "VALIDATED" &&
-        !order.reportIsDelivered &&
-        can(PERMISSIONS.EDIT_REPORTS) && (
-          <button
-            type="button"
-            onClick={() => deliverMutation.mutate()}
-            disabled={deliverMutation.isPending}
-            className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-            title="Marquer comme retiré"
-          >
-            {deliverMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-          </button>
-        )}
+  if (
+    order.reportStatus === "VALIDATED" &&
+    !order.reportIsDelivered &&
+    can(PERMISSIONS.EDIT_REPORTS)
+  ) {
+    actions.push({
+      label: "Marquer comme retiré",
+      icon: deliverMutation.isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Check className="h-3.5 w-3.5" />
+      ),
+      onClick: () => deliverMutation.mutate(),
+      disabled: deliverMutation.isPending,
+    });
+  }
 
-      {/* Imprimer le compte rendu — GRIS (si validé/livré) */}
-      {order.reportId && isValidated && (
-        <button
-          type="button"
-          onClick={handlePrint}
-          disabled={downloading}
-          className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-gray-600 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
-          title="Imprimer le compte rendu"
-        >
-          {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
-        </button>
-      )}
+  if (order.reportId && isValidated) {
+    actions.push({
+      label: "Imprimer le compte rendu",
+      icon: downloading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <FileDown className="h-3.5 w-3.5" />
+      ),
+      onClick: handlePrint,
+      disabled: downloading,
+      variant: "secondary",
+    });
+  }
 
-      {/* Supprimer — ROUGE (uniquement non validés) */}
-      {order.status !== "VALIDATED" &&
-        order.status !== "DELIVERED" &&
-        can(PERMISSIONS.DELETE_TEST_ORDERS) && (
-          <button
-            type="button"
-            onClick={() => onDelete(order)}
-            className="inline-flex items-center rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-            title="Supprimer"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-    </div>
-  );
+  if (
+    order.status !== "VALIDATED" &&
+    order.status !== "DELIVERED" &&
+    can(PERMISSIONS.DELETE_TEST_ORDERS)
+  ) {
+    actions.push({
+      label: "Supprimer",
+      icon: <Trash2 className="h-3.5 w-3.5" />,
+      onClick: () => onDelete(order),
+      variant: "delete",
+    });
+  }
+
+  return <RowActions actions={actions} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -330,13 +321,6 @@ export default function MySpacePage() {
 
   const buildColumns = (): ColumnDef<TestOrder>[] => [
     {
-      header: "Actions",
-      id: "actions",
-      cell: ({ row }) => (
-        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
-      ),
-    },
-    {
       header: "Date",
       id: "date",
       cell: ({ row }) =>
@@ -396,6 +380,14 @@ export default function MySpacePage() {
         ) : (
           <span className="text-gray-400 text-xs">Non</span>
         ),
+    },
+    // Actions — DERNIÈRE colonne, comme sur les autres écrans.
+    {
+      header: "Actions",
+      id: "actions",
+      cell: ({ row }) => (
+        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
+      ),
     },
   ];
 
@@ -483,21 +475,24 @@ export default function MySpacePage() {
           </NativeSelect>
         </div>
 
-        <DataTable<TestOrder>
-          columns={pendingColumns}
-          data={pendingOrders}
-          isLoading={pendingLoading}
-          hideToolbar
-          pageCount={pendingData?.totalPages ?? 0}
-          pageIndex={pendingPage}
-          pageSize={pendingPageSize}
-          onPageChange={setPendingPage}
-          onPageSizeChange={(size) => {
-            setPendingPageSize(size);
-            setPendingPage(0);
-          }}
-          rowClassName={rowClass}
-        />
+        {/* Cinq actions déclarées : le tableau replie uniformément. */}
+        <RowActionsProvider collapse>
+          <DataTable<TestOrder>
+            columns={pendingColumns}
+            data={pendingOrders}
+            isLoading={pendingLoading}
+            hideToolbar
+            pageCount={pendingData?.totalPages ?? 0}
+            pageIndex={pendingPage}
+            pageSize={pendingPageSize}
+            onPageChange={setPendingPage}
+            onPageSizeChange={(size) => {
+              setPendingPageSize(size);
+              setPendingPage(0);
+            }}
+            rowClassName={rowClass}
+          />
+        </RowActionsProvider>
       </WidgetCard>
 
       {/* =================================================================

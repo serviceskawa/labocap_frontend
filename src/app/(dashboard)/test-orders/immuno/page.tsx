@@ -10,6 +10,11 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { toast } from "sonner";
 import { DataTable } from "@/components/common/DataTable";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
@@ -114,76 +119,68 @@ function ActionButtons({
     }
   };
 
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {/* Voir les détails — BLEU */}
-      <Link
-        href={`/test-orders/${order.id}/details`}
-        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        title="Voir les détails"
-      >
-        <Eye className="h-3.5 w-3.5" />
-      </Link>
+  // Assemblées puis confiées à `RowActions`. Les fonds pleins et saturés
+  // d'origine cèdent aux variantes du système.
+  const actions: RowAction[] = [
+    {
+      label: "Voir les détails",
+      icon: <Eye className="h-3.5 w-3.5" />,
+      href: `/test-orders/${order.id}/details`,
+    },
+  ];
 
-      {/* Modifier — BLEU */}
-      {can(PERMISSIONS.EDIT_TEST_ORDERS) && (
-        <Link
-          href={`/test-orders/${order.id}/edit`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          title="Mettre à jour l'examen"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </Link>
-      )}
+  if (can(PERMISSIONS.EDIT_TEST_ORDERS)) {
+    actions.push({
+      label: "Mettre à jour l'examen",
+      icon: <Pencil className="h-3.5 w-3.5" />,
+      href: `/test-orders/${order.id}/edit`,
+    });
+  }
 
-      {/* Compte rendu — JAUNE */}
-      {order.reportId && can(PERMISSIONS.VIEW_REPORTS) && (
-        <Link
-          href={`/reports/${order.reportId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-600 transition-colors"
-          title="Compte rendu"
-        >
-          <FileText className="h-3.5 w-3.5" />
-        </Link>
-      )}
+  if (order.reportId && can(PERMISSIONS.VIEW_REPORTS)) {
+    actions.push({
+      label: "Compte rendu",
+      icon: <FileText className="h-3.5 w-3.5" />,
+      href: `/reports/${order.reportId}`,
+    });
+  }
 
-      {/* Facture — VERT */}
-      {order.invoiceId ? (
-        <Link
-          href={`/invoices/${order.invoiceId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
-          title="Voir la facture"
-        >
-          <Printer className="h-3.5 w-3.5" />
-        </Link>
-      ) : order.reportStatus === "VALIDATED" ||
-        order.reportStatus === "DELIVERED" ? (
-        <button
-          type="button"
-          onClick={handleCreateInvoice}
-          disabled={creatingInvoice}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-          title="Créer la facture"
-        >
-          {creatingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
-        </button>
-      ) : null}
+  if (order.invoiceId) {
+    actions.push({
+      label: "Voir la facture",
+      icon: <Printer className="h-3.5 w-3.5" />,
+      href: `/invoices/${order.invoiceId}`,
+    });
+  } else if (
+    order.reportStatus === "VALIDATED" ||
+    order.reportStatus === "DELIVERED"
+  ) {
+    actions.push({
+      label: "Créer la facture",
+      icon: creatingInvoice ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Printer className="h-3.5 w-3.5" />
+      ),
+      onClick: handleCreateInvoice,
+      disabled: creatingInvoice,
+    });
+  }
 
-      {/* Supprimer — ROUGE */}
-      {order.status !== "VALIDATED" &&
-        order.status !== "DELIVERED" &&
-        can(PERMISSIONS.DELETE_TEST_ORDERS) && (
-          <button
-            type="button"
-            onClick={() => onDelete(order)}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-            title="Supprimer"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-    </div>
-  );
+  if (
+    order.status !== "VALIDATED" &&
+    order.status !== "DELIVERED" &&
+    can(PERMISSIONS.DELETE_TEST_ORDERS)
+  ) {
+    actions.push({
+      label: "Supprimer",
+      icon: <Trash2 className="h-3.5 w-3.5" />,
+      onClick: () => onDelete(order),
+      variant: "delete",
+    });
+  }
+
+  return <RowActions actions={actions} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -308,14 +305,6 @@ export default function TestOrdersImmunoPage() {
 
   // --- Colonnes (ordre exact index2.blade.php)
   const columns: ColumnDef<TestOrder>[] = [
-    // 1. Actions — PREMIÈRE colonne comme Laravel
-    {
-      header: "Actions",
-      id: "actions",
-      cell: ({ row }) => (
-        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
-      ),
-    },
     // 2. Date
     {
       header: "Date",
@@ -407,6 +396,14 @@ export default function TestOrdersImmunoPage() {
         ) : (
           <span className="text-gray-400 text-xs">—</span>
         ),
+    },
+    // Actions — DERNIÈRE colonne, comme sur les autres écrans.
+    {
+      header: "Actions",
+      id: "actions",
+      cell: ({ row }) => (
+        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
+      ),
     },
   ];
 
@@ -535,17 +532,20 @@ export default function TestOrdersImmunoPage() {
         </div>
 
         {/* Tableau */}
-        <DataTable
-          columns={columns}
-          data={orders}
-          isLoading={isLoading}
-          pageCount={pageCount}
-          pageIndex={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
-          rowClassName={(row) => (row.isUrgent ? "bg-red-50" : "")}
-        />
+        {/* Six actions déclarées : le tableau replie uniformément. */}
+        <RowActionsProvider collapse>
+          <DataTable
+            columns={columns}
+            data={orders}
+            isLoading={isLoading}
+            pageCount={pageCount}
+            pageIndex={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+            rowClassName={(row) => (row.isUrgent ? "bg-red-50" : "")}
+          />
+        </RowActionsProvider>
       </div>
 
       <ConfirmModal

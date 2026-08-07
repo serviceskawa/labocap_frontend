@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -12,7 +12,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTableCard } from "@/components/common/DataTableCard";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { RowActions } from "@/components/common/RowActions";
+import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/Button";
@@ -233,14 +233,26 @@ export default function ExamensPage() {
     {
       header: "Actions",
       id: "actions",
-      cell: ({ row }) => (
-        <RowActions
-          onEdit={() => handleOpenEdit(row.original)}
-          onDelete={() => setDeleteConfirm(row.original)}
-          editPermission={PERMISSIONS.EDIT_TESTS}
-          deletePermission={PERMISSIONS.DELETE_TESTS}
-        />
-      ),
+      cell: ({ row }) => {
+        const actions: RowAction[] = [];
+        if (can(PERMISSIONS.EDIT_TESTS)) {
+          actions.push({
+            label: "Modifier",
+            icon: <Pencil className="h-4 w-4" />,
+            variant: "edit",
+            onClick: () => handleOpenEdit(row.original),
+          });
+        }
+        if (can(PERMISSIONS.DELETE_TESTS)) {
+          actions.push({
+            label: "Supprimer",
+            icon: <Trash2 className="h-4 w-4" />,
+            variant: "delete",
+            onClick: () => setDeleteConfirm(row.original),
+          });
+        }
+        return <RowActions actions={actions} />;
+      },
     },
   ];
 
