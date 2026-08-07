@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
 import { Eye, Pencil, FileText, Trash2, Plus, Printer, Check, FileDown, Download, Loader2 } from "lucide-react";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -18,7 +17,6 @@ import { FormSelect } from "@/components/ui/FormSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { formatCFA, formatDate } from "@/lib/utils";
-import { buildSelectStyles, SELECT_MENU_CLASSNAMES } from "@/components/ui/selectStyles";
 import { testOrdersApi, type TestOrder } from "@/lib/api/testOrders";
 import { reportsApi } from "@/lib/api/reports";
 import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
@@ -36,70 +34,11 @@ interface ContractOption {
   name: string;
 }
 
-// Le dropdown "Affecter à" (et le filtre Docteur) référencent un utilisateur
-// ayant le rôle docteur — même source que `attribuateDoctorId`.
+// Le filtre Docteur référence un utilisateur ayant le rôle docteur — même
+// source que `attribuateDoctorId`.
 interface DoctorOption {
   id: string;
   name: string;
-}
-
-// ---------------------------------------------------------------------------
-// Composant : dropdown "Affecter à" inline dans le tableau
-// ---------------------------------------------------------------------------
-
-type DoctorSelectOption = { value: string; label: string };
-
-function AttribuateSelect({
-  order,
-  doctors,
-}: {
-  order: TestOrder;
-  doctors: DoctorOption[];
-}) {
-  const queryClient = useQueryClient();
-  const [value, setValue] = useState<string>(order.attribuateDoctorId ?? "");
-
-  const mutation = useMutation({
-    mutationFn: (doctorId: string) =>
-      testOrdersApi.assignDoctor(order.id, doctorId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["test-orders"] });
-      toast.success("Médecin affecté");
-    },
-    onError: () => toast.error("Erreur lors de l'affectation"),
-  });
-
-  // Options react-select : dropdown avec champ de recherche intégré.
-  const options: DoctorSelectOption[] = doctors.map((d) => ({
-    value: d.id,
-    label: d.name,
-  }));
-  const selected = options.find((o) => o.value === value) ?? null;
-
-  return (
-    <div className="min-w-[180px]">
-      <Select<DoctorSelectOption, false>
-        options={options}
-        value={selected}
-        onChange={(opt) => {
-          const doctorId = opt?.value ?? "";
-          setValue(doctorId);
-          if (doctorId) mutation.mutate(doctorId);
-        }}
-        isDisabled={mutation.isPending}
-        isSearchable
-        placeholder="Sélectionner un docteur"
-        noOptionsMessage={() => "Aucun docteur"}
-        classNamePrefix="react-select"
-        classNames={SELECT_MENU_CLASSNAMES}
-        styles={buildSelectStyles(false)}
-        menuPortalTarget={
-          typeof document !== "undefined" ? document.body : undefined
-        }
-        menuPosition="fixed"
-      />
-    </div>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -436,22 +375,14 @@ export default function TestOrdersPage() {
           </span>
         ),
     },
-    // 4. Affecter à — dropdown docteur
-    {
-      header: "Affecter à",
-      id: "affecter",
-      cell: ({ row }) => (
-        <AttribuateSelect order={row.original} doctors={doctors} />
-      ),
-    },
-    // 5. Patient
+    // 4. Patient
     {
       header: "Patient",
       id: "patient",
       cell: ({ row }) =>
         `${row.original.patientFirstname} ${row.original.patientLastname}`,
     },
-    // 6. Examens — comme Laravel : titre du type d'examen (en gras) suivi des
+    // 5. Examens — comme Laravel : titre du type d'examen (en gras) suivi des
     // analyses. Le type s'affiche même avant l'ajout d'analyses (juste après la
     // création), pour ne pas laisser la colonne vide.
     {
@@ -480,7 +411,7 @@ export default function TestOrdersPage() {
         );
       },
     },
-    // 7. Contrat
+    // 6. Contrat
     {
       header: "Contrat",
       accessorKey: "contratName",
@@ -505,13 +436,13 @@ export default function TestOrdersPage() {
           <span className="text-xs text-gray-400">Aucun fichier</span>
         ),
     },
-    // 8. Montant
+    // 7. Montant
     {
       header: "Montant",
       id: "amount",
       cell: ({ row }) => formatCFA(row.original.total),
     },
-    // 9. Compte rendu — 4 statuts (aligné sur la page détails) :
+    // 8. Compte rendu — 4 statuts (aligné sur la page détails) :
     // Non renseigné (pas de CR) / En attente (brouillon) / Validé / Livré.
     {
       header: "Compte rendu",
@@ -542,7 +473,7 @@ export default function TestOrdersPage() {
         );
       },
     },
-    // 10. Urgent — badge rouge si urgent
+    // 9. Urgent — badge rouge si urgent
     {
       header: "Urgent",
       id: "urgent",
