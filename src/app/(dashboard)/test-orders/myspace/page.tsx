@@ -93,6 +93,7 @@ function ActionButtons({
       label: "Voir les détails",
       icon: <Eye className="h-3.5 w-3.5" />,
       href: `/test-orders/${order.id}/details`,
+      newTab: true,
     },
   ];
 

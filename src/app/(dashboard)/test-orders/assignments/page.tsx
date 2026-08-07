@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { Eye, Printer, Loader2 } from "lucide-react";
+import {
+  Eye,
+  Loader2,
+  Printer,
+  SquareArrowOutUpRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
@@ -201,19 +206,27 @@ export default function AssignmentsPage() {
             <Link
               href={`/test-orders/assignments/${a.id}`}
               className="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="Voir les détails"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Voir les détails (nouvel onglet)"
+              aria-label="Voir les détails de l'affectation (nouvel onglet)"
             >
               <Eye className="h-3.5 w-3.5" />
               Voir
+              <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3 opacity-70" />
             </Link>
             {a.nbrDetails >= 1 && (
               <Link
                 href={`/test-orders/assignments/${a.id}/print`}
                 className="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-600 transition-colors"
-                title="Imprimer"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Imprimer (nouvel onglet)"
+                aria-label="Imprimer l'affectation (nouvel onglet)"
               >
                 <Printer className="h-3.5 w-3.5" />
                 Imprimer
+                <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3 opacity-70" />
               </Link>
             )}
           </div>

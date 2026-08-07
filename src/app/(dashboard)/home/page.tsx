@@ -6,19 +6,20 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  FileText,
-  Trash2,
-  Printer,
-  Eye,
-  Folder,
-  BarChart2,
-  CalendarIcon,
+  AlertTriangle,
   ArrowRight,
   ArrowUp,
+  BarChart2,
+  CalendarIcon,
+  Eye,
+  FileText,
   FlaskConical,
-  AlertTriangle,
-  TrendingUp,
+  Folder,
+  Printer,
+  SquareArrowOutUpRight,
+  Trash2,
   TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import {
   PieChart,
@@ -226,9 +227,13 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
           <Link
             href={`/test-orders/${report.testOrderId}/details`}
             className={actionChip("report")}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Compte rendu (nouvel onglet)"
           >
             <FileText className="h-3.5 w-3.5" />
             Compte rendu
+            <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3 opacity-70" />
           </Link>
           <IconButton
             variant="delete"
@@ -1159,9 +1164,13 @@ export default function HomePage() {
                                 <Link
                                   href={`/test-orders/${order.id}/details`}
                                   className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`Demande ${order.code} (nouvel onglet)`}
                                 >
                                   <Eye className="h-3.5 w-3.5" />
                                   {order.code}
+                                  <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3 opacity-70" />
                                 </Link>
                               </td>
                               <td className="py-2 px-3 text-gray-700">
@@ -1236,9 +1245,13 @@ export default function HomePage() {
                                 <Link
                                   href={`/test-orders/${order.id}/details`}
                                   className="inline-flex items-center gap-1 text-blue-600 hover:underline"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  aria-label={`Demande ${order.code} (nouvel onglet)`}
                                 >
                                   <Eye className="h-3.5 w-3.5" />
                                   {order.code}
+                                  <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3 opacity-70" />
                                 </Link>
                               </td>
                               <td className="py-2 px-3 text-gray-700">
