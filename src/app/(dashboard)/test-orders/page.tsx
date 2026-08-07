@@ -10,7 +10,11 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { toast } from "sonner";
 import { DataTable } from "@/components/common/DataTable";
-import { RowActions, type RowAction } from "@/components/ui/RowActions";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
@@ -639,22 +643,27 @@ export default function TestOrdersPage() {
         </div>
 
         {/* Tableau */}
-        <DataTable
-          columns={columns}
-          data={orders}
-          isLoading={isLoading}
-          pageCount={pageCount}
-          pageIndex={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
-          rowClassName={(row) => {
-            if (row.isUrgent && !row.reportIsDelivered) return "bg-red-50";
-            if (row.reportIsDelivered) return "bg-green-50";
-            if (row.reportStatus === "VALIDATED") return "bg-yellow-50";
-            return "";
-          }}
-        />
+        {/* Cet écran déclare huit actions : certaines lignes dépassent le
+            seuil, donc TOUTES replient. Une colonne qui alterne deux icônes,
+            un menu, puis une icône déplacerait le même geste à chaque ligne. */}
+        <RowActionsProvider collapse>
+          <DataTable
+            columns={columns}
+            data={orders}
+            isLoading={isLoading}
+            pageCount={pageCount}
+            pageIndex={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+            rowClassName={(row) => {
+              if (row.isUrgent && !row.reportIsDelivered) return "bg-red-50";
+              if (row.reportIsDelivered) return "bg-green-50";
+              if (row.reportStatus === "VALIDATED") return "bg-yellow-50";
+              return "";
+            }}
+          />
+        </RowActionsProvider>
       </div>
 
       <ConfirmModal

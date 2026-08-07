@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { MoreVertical } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 import { IconButton, type IconButtonVariant } from "./IconButton";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +28,40 @@ export interface RowAction {
 const SEUIL_REPLI = 2;
 
 /**
+ * Repli imposé à toutes les lignes d'un tableau.
+ *
+ * Une cellule ne connaît que sa propre ligne : elle ne peut pas savoir qu'une
+ * voisine dépasse le seuil. Le tableau le déclare une fois pour toutes.
+ */
+const RowActionsCollapseContext = createContext(false);
+
+/**
+ * Impose le repli à toutes les colonnes d'actions qu'il enveloppe.
+ *
+ * À poser autour d'un tableau dès qu'une de ses lignes peut dépasser deux
+ * actions — ce que le développeur sait en lisant le jeu d'actions de l'écran,
+ * là où le composant ne verrait qu'une ligne à la fois.
+ *
+ * Le calculer à l'exécution supposerait de compter les actions de toutes les
+ * lignes avant d'en rendre une seule ; les actions dépendant de mutations et de
+ * permissions résolues pendant le rendu, la colonne se réagencerait après
+ * l'affichage — un saut visible à chaque chargement.
+ */
+export function RowActionsProvider({
+  collapse = true,
+  children,
+}: {
+  collapse?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <RowActionsCollapseContext.Provider value={collapse}>
+      {children}
+    </RowActionsCollapseContext.Provider>
+  );
+}
+
+/**
  * Actions d'une ligne de tableau — à plat en deçà de trois, dans un menu au-delà.
  *
  * ## Pourquoi un seuil
@@ -42,18 +76,24 @@ const SEUIL_REPLI = 2;
  * deux actions derrière un clic supplémentaire n'économise aucune largeur
  * notable.
  *
- * ## Le décompte se fait par LIGNE
+ * ## La décision est prise par TABLEAU, pas par ligne
  *
- * La plupart des actions sont conditionnelles — permission, statut de la
- * demande. Un écran peut en déclarer huit et n'en autoriser que deux sur une
- * ligne donnée. Le composant compte ce qu'il reçoit, c'est-à-dire ce qui est
- * réellement permis : une ligne à deux actions les montre, sa voisine à cinq
- * les replie. Compter les actions déclarées par l'écran imposerait un menu à
- * des lignes qui n'ont qu'un bouton.
+ * Les actions sont conditionnelles — permission, statut de la demande — si bien
+ * qu'une ligne peut en autoriser deux là où sa voisine en autorise cinq.
+ * Décider ligne par ligne donnerait une colonne où deux icônes, puis un ⋮, puis
+ * une icône se succèdent : le même geste changerait de place à chaque ligne, et
+ * la colonne perdrait toute régularité.
  *
- * L'appelant construit donc son tableau en filtrant AVANT de le passer.
+ * Dès qu'une ligne du tableau dépasse le seuil, **toutes** replient donc.
+ * Comme un composant ne voit que sa propre ligne, c'est le tableau qui le lui
+ * dit, via {@link RowActionsProvider}.
  *
- * @example
+ * @example Un écran dont certaines lignes dépassent deux actions
+ * <RowActionsProvider collapse>
+ *   <DataTable … />
+ * </RowActionsProvider>
+ *
+ * @example Le contenu d'une cellule, filtré AVANT d'être passé
  * <RowActions
  *   actions={[
  *     { label: "Voir", icon: <Eye className="h-3.5 w-3.5" />, href: `/x/${id}` },
@@ -66,14 +106,24 @@ const SEUIL_REPLI = 2;
  */
 export function RowActions({
   actions,
+  collapse,
   className,
 }: {
   actions: RowAction[];
+  /**
+   * Force le repli quelle que soit la longueur. Sert à l'uniformité d'une
+   * colonne dont d'autres lignes dépassent le seuil. Omis, la valeur vient de
+   * {@link RowActionsProvider}, et à défaut du décompte de cette ligne.
+   */
+  collapse?: boolean;
   className?: string;
 }) {
+  const replieParLeTableau = useContext(RowActionsCollapseContext);
+  const replier = collapse ?? replieParLeTableau;
+
   if (actions.length === 0) return null;
 
-  if (actions.length <= SEUIL_REPLI) {
+  if (!replier && actions.length <= SEUIL_REPLI) {
     return (
       <div className={cn("flex items-center gap-1", className)}>
         {actions.map((a) => (
