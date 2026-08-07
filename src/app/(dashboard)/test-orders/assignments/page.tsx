@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -138,17 +138,42 @@ export default function AssignmentsPage() {
 
   // ---- Mutation : créer une nouvelle affectation ---------------------------
 
+  /**
+   * Onglet réservé à l'ouverture de l'affectation qui va être créée.
+   *
+   * `window.open` n'est autorisé que pendant l'activation par l'utilisateur —
+   * le clic lui-même. Appelé dans le `onSuccess` d'une mutation, il arrive
+   * après la réponse du serveur, hors de cette fenêtre, et les navigateurs le
+   * bloquent comme une fenêtre surgissante.
+   *
+   * On ouvre donc l'onglet À VIDE pendant le clic, et on l'amène à destination
+   * quand l'identifiant est connu. En cas d'échec, il est refermé — laisser un
+   * onglet blanc derrière soi serait pire que de ne pas en ouvrir.
+   */
+  const ongletAffectation = useRef<Window | null>(null);
+
   const createMutation = useMutation({
     mutationFn: (userId: string) => assignmentsApi.create({ userId }),
     onSuccess: (res) => {
       toast.success("Affectation créée avec succès");
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
       const created = res.data;
-      if (created?.id) {
-        router.push(`/test-orders/assignments/${created.id}`);
+      const url = created?.id
+        ? `/test-orders/assignments/${created.id}`
+        : null;
+
+      if (url && ongletAffectation.current && !ongletAffectation.current.closed) {
+        ongletAffectation.current.location.href = url;
+      } else if (url) {
+        // L'onglet a été bloqué ou refermé : on reste sur la navigation en
+        // place plutôt que de laisser l'utilisateur sans rien après sa saisie.
+        router.push(url);
       }
+      ongletAffectation.current = null;
     },
     onError: (err: AxiosError<ApiError>) => {
+      ongletAffectation.current?.close();
+      ongletAffectation.current = null;
       toast.error(
         err.response?.data?.message ?? "Erreur lors de la création"
       );
@@ -161,6 +186,10 @@ export default function AssignmentsPage() {
       toast.error("Veuillez sélectionner un docteur");
       return;
     }
+    // Ouvert ICI, dans le gestionnaire de clic, seul moment où le navigateur
+    // l'autorise. `noopener` : la page ouverte ne doit pas pouvoir manipuler
+    // celle qui l'a ouverte.
+    ongletAffectation.current = window.open("", "_blank", "noopener,noreferrer");
     createMutation.mutate(newUserId);
   };
 

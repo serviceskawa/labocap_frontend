@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Eye, Pencil, FileText, Trash2, Plus, Printer, Check, FileDown, Download, Loader2 } from "lucide-react";
+import { Eye, Pencil, FileText, Trash2, Plus, Printer, Check, FileDown, Loader2 } from "lucide-react";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
@@ -28,7 +28,6 @@ import { reportsApi } from "@/lib/api/reports";
 import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
 import { usersApi } from "@/lib/api/users";
 import apiClient from "@/lib/api/client";
-import { openDocFile } from "@/lib/api/docs";
 import type { PageResponse, ApiError } from "@/types/api";
 
 // ---------------------------------------------------------------------------
@@ -444,25 +443,6 @@ export default function TestOrdersPage() {
       accessorKey: "contratName",
       cell: ({ row }) => row.original.contratName ?? "—",
     },
-    // Pièce jointe — comme Laravel : lien vers le fichier (nouvel onglet), sinon « Aucun fichier ».
-    {
-      header: "Pièce jointe",
-      id: "archive",
-      enableSorting: false,
-      cell: ({ row }) =>
-        row.original.archive ? (
-          <button
-            type="button"
-            onClick={() => openDocFile(row.original.archive!)}
-            className="inline-flex items-center gap-1 text-blue-600 hover:underline"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Voir
-          </button>
-        ) : (
-          <span className="text-xs text-gray-400">Aucun fichier</span>
-        ),
-    },
     // 6. Montant
     {
       header: "Montant",
@@ -499,19 +479,6 @@ export default function TestOrdersPage() {
           </span>
         );
       },
-    },
-    // 8. Urgent — badge rouge si urgent
-    {
-      header: "Urgent",
-      id: "urgent",
-      cell: ({ row }) =>
-        row.original.isUrgent ? (
-          <span className="inline-flex items-center rounded-full bg-red-700 px-2 py-0.5 text-xs font-medium text-white">
-            Urgent
-          </span>
-        ) : (
-          <span className="text-gray-400 text-xs">—</span>
-        ),
     },
     // Actions — DERNIÈRE colonne. Elle était en tête, héritage de Laravel.
     // Une colonne d'actions ouvre la ligne sur des commandes avant d'avoir dit
