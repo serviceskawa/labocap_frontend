@@ -10,6 +10,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { toast } from "sonner";
 import { DataTable } from "@/components/common/DataTable";
+import { RowActions, type RowAction } from "@/components/ui/RowActions";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
@@ -99,111 +100,108 @@ function ActionButtons({
     }
   };
 
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {/* Voir les détails — BLEU */}
-      <Link
-        href={`/test-orders/${order.id}/details`}
-        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        title="Voir les détails"
-      >
-        <Eye className="h-3.5 w-3.5" />
-      </Link>
+  // Les actions sont assemblées puis passées à `RowActions`, qui décide seul de
+  // les poser à plat ou de les replier — le décompte se fait sur ce qui est
+  // RÉELLEMENT permis pour cette ligne, pas sur les huit que l'écran déclare.
+  //
+  // Les fonds pleins et saturés d'origine (bleu, jaune, vert, gris, rouge)
+  // disparaissent : huit pastilles vives par ligne faisaient de la colonne un
+  // damier où la couleur ne signalait plus rien.
+  const actions: RowAction[] = [
+    {
+      label: "Voir les détails",
+      icon: <Eye className="h-3.5 w-3.5" />,
+      href: `/test-orders/${order.id}/details`,
+    },
+  ];
 
-      {/* Modifier — BLEU. Masqué dès que le bon est validé/livré : le backend
-          refuse la mise à jour (« Impossible de modifier un bon d'examen déjà
-          validé »), le bouton ne menait donc qu'à une erreur. Même condition
-          que l'action Supprimer, soumise à la même règle. */}
-      {order.status !== "VALIDATED" &&
-        order.status !== "DELIVERED" &&
-        can(PERMISSIONS.EDIT_TEST_ORDERS) && (
-        <Link
-          href={`/test-orders/${order.id}/edit`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          title="Mettre à jour l'examen"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </Link>
-      )}
+  // Modifier — masqué dès que le bon est validé/livré : le backend refuse la
+  // mise à jour, le bouton ne menait qu'à une erreur. Même règle que Supprimer.
+  const modifiable =
+    order.status !== "VALIDATED" && order.status !== "DELIVERED";
 
-      {/* Compte rendu — JAUNE */}
-      {order.reportId && can(PERMISSIONS.VIEW_REPORTS) && (
-        <Link
-          href={`/reports/${order.reportId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-600 transition-colors"
-          title="Compte rendu"
-        >
-          <FileText className="h-3.5 w-3.5" />
-        </Link>
-      )}
+  if (modifiable && can(PERMISSIONS.EDIT_TEST_ORDERS)) {
+    actions.push({
+      label: "Mettre à jour l'examen",
+      icon: <Pencil className="h-3.5 w-3.5" />,
+      href: `/test-orders/${order.id}/edit`,
+    });
+  }
 
-      {/* Marquer comme retiré — VERT (si validé mais pas encore livré) */}
-      {order.reportStatus === "VALIDATED" &&
-        !order.reportIsDelivered &&
-        can(PERMISSIONS.EDIT_REPORTS) && (
-          <button
-            type="button"
-            onClick={() => deliverMutation.mutate()}
-            disabled={deliverMutation.isPending}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-            title="Marquer comme retiré"
-          >
-            {deliverMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-          </button>
-        )}
+  if (order.reportId && can(PERMISSIONS.VIEW_REPORTS)) {
+    actions.push({
+      label: "Compte rendu",
+      icon: <FileText className="h-3.5 w-3.5" />,
+      href: `/reports/${order.reportId}`,
+    });
+  }
 
-      {/* Imprimer le compte rendu — GRIS (si compte rendu validé/livré) */}
-      {order.reportId &&
-        (order.reportStatus === "VALIDATED" ||
-          order.reportStatus === "DELIVERED") && (
-          <button
-            type="button"
-            onClick={handlePrint}
-            disabled={downloading}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-gray-600 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
-            title="Imprimer le compte rendu"
-          >
-            {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
-          </button>
-        )}
+  if (
+    order.reportStatus === "VALIDATED" &&
+    !order.reportIsDelivered &&
+    can(PERMISSIONS.EDIT_REPORTS)
+  ) {
+    actions.push({
+      label: "Marquer comme retiré",
+      icon: deliverMutation.isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Check className="h-3.5 w-3.5" />
+      ),
+      onClick: () => deliverMutation.mutate(),
+      disabled: deliverMutation.isPending,
+    });
+  }
 
-      {/* Facture — VERT */}
-      {order.invoiceId ? (
-        <Link
-          href={`/invoices/${order.invoiceId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
-          title="Voir la facture"
-        >
-          <Printer className="h-3.5 w-3.5" />
-        </Link>
-      ) : order.reportStatus === "VALIDATED" ||
-        order.reportStatus === "DELIVERED" ? (
-        <button
-          type="button"
-          onClick={handleCreateInvoice}
-          disabled={creatingInvoice}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-          title="Créer la facture"
-        >
-          {creatingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
-        </button>
-      ) : null}
+  if (
+    order.reportId &&
+    (order.reportStatus === "VALIDATED" || order.reportStatus === "DELIVERED")
+  ) {
+    actions.push({
+      label: "Imprimer le compte rendu",
+      icon: downloading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <FileDown className="h-3.5 w-3.5" />
+      ),
+      onClick: handlePrint,
+      disabled: downloading,
+      variant: "secondary",
+    });
+  }
 
-      {/* Supprimer — ROUGE */}
-      {order.status !== "VALIDATED" &&
-        order.status !== "DELIVERED" &&
-        can(PERMISSIONS.DELETE_TEST_ORDERS) && (
-          <button
-            type="button"
-            onClick={() => onDelete(order)}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-            title="Supprimer"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-    </div>
-  );
+  if (order.invoiceId) {
+    actions.push({
+      label: "Voir la facture",
+      icon: <Printer className="h-3.5 w-3.5" />,
+      href: `/invoices/${order.invoiceId}`,
+    });
+  } else if (
+    order.reportStatus === "VALIDATED" ||
+    order.reportStatus === "DELIVERED"
+  ) {
+    actions.push({
+      label: "Créer la facture",
+      icon: creatingInvoice ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Printer className="h-3.5 w-3.5" />
+      ),
+      onClick: handleCreateInvoice,
+      disabled: creatingInvoice,
+    });
+  }
+
+  if (modifiable && can(PERMISSIONS.DELETE_TEST_ORDERS)) {
+    actions.push({
+      label: "Supprimer",
+      icon: <Trash2 className="h-3.5 w-3.5" />,
+      onClick: () => onDelete(order),
+      variant: "delete",
+    });
+  }
+
+  return <RowActions actions={actions} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -350,21 +348,13 @@ export default function TestOrdersPage() {
 
   // --- Colonnes (ordre exact index2.blade.php)
   const columns: ColumnDef<TestOrder>[] = [
-    // 1. Actions — PREMIÈRE colonne comme Laravel
-    {
-      header: "Actions",
-      id: "actions",
-      cell: ({ row }) => (
-        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
-      ),
-    },
-    // 2. Date
+    // 1. Date
     {
       header: "Date",
       accessorKey: "createdAt",
       cell: ({ getValue }) => formatDate(getValue<string>()),
     },
-    // 3. Code — le code du bon, et sous lui la personne à qui il est affecté.
+    // 2. Code — le code du bon, et sous lui la personne à qui il est affecté.
     //
     // Réunis dans une seule colonne plutôt que séparés : le nom ne se lit que
     // rapporté au bon qu'il concerne, et une colonne de plus dans un tableau
@@ -396,14 +386,14 @@ export default function TestOrdersPage() {
         );
       },
     },
-    // 4. Patient
+    // 3. Patient
     {
       header: "Patient",
       id: "patient",
       cell: ({ row }) =>
         `${row.original.patientFirstname} ${row.original.patientLastname}`,
     },
-    // 5. Examens — comme Laravel : titre du type d'examen (en gras) suivi des
+    // 4. Examens — comme Laravel : titre du type d'examen (en gras) suivi des
     // analyses. Le type s'affiche même avant l'ajout d'analyses (juste après la
     // création), pour ne pas laisser la colonne vide.
     {
@@ -432,7 +422,7 @@ export default function TestOrdersPage() {
         );
       },
     },
-    // 6. Contrat
+    // 5. Contrat
     {
       header: "Contrat",
       accessorKey: "contratName",
@@ -457,13 +447,13 @@ export default function TestOrdersPage() {
           <span className="text-xs text-gray-400">Aucun fichier</span>
         ),
     },
-    // 7. Montant
+    // 6. Montant
     {
       header: "Montant",
       id: "amount",
       cell: ({ row }) => formatCFA(row.original.total),
     },
-    // 8. Compte rendu — 4 statuts (aligné sur la page détails) :
+    // 7. Compte rendu — 4 statuts (aligné sur la page détails) :
     // Non renseigné (pas de CR) / En attente (brouillon) / Validé / Livré.
     {
       header: "Compte rendu",
@@ -494,7 +484,7 @@ export default function TestOrdersPage() {
         );
       },
     },
-    // 9. Urgent — badge rouge si urgent
+    // 8. Urgent — badge rouge si urgent
     {
       header: "Urgent",
       id: "urgent",
@@ -506,6 +496,17 @@ export default function TestOrdersPage() {
         ) : (
           <span className="text-gray-400 text-xs">—</span>
         ),
+    },
+    // Actions — DERNIÈRE colonne. Elle était en tête, héritage de Laravel.
+    // Une colonne d'actions ouvre la ligne sur des commandes avant d'avoir dit
+    // de quoi il s'agit : on choisit avant de lire. Elle ferme désormais la
+    // ligne, comme sur les 35 autres écrans de l'application.
+    {
+      header: "Actions",
+      id: "actions",
+      cell: ({ row }) => (
+        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
+      ),
     },
   ];
 
