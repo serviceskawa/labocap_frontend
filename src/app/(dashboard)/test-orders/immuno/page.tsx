@@ -10,6 +10,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { toast } from "sonner";
 import { DataTable } from "@/components/common/DataTable";
+import { CompteurFiltre } from "@/components/ui/CompteurFiltre";
 import {
   RowActions,
   RowActionsProvider,
@@ -263,16 +264,18 @@ export default function TestOrdersImmunoPage() {
         ),
   });
 
-  // Stats globales (Livrer / Valider / Cas urgent) — variantes immuno
-  const { data: statsLivrer } = useQuery({
-    queryKey: ["test-orders-immuno-stats-livrer"],
+  // Compteurs — sur le statut du BON, comme le menu « Status » de cet écran.
+  // Ils restaient à zéro sur « Livré » tant que l'historique migré de Laravel
+  // n'avait pas été repris ; cf. migration V62 côté backend.
+  const { data: statsLivre } = useQuery({
+    queryKey: ["test-orders-immuno-stats-livre"],
     queryFn: () =>
       testOrdersApi
         .findAllImmuno({ page: 0, size: 1, status: "DELIVERED" })
         .then((r) => r.data.totalElements),
   });
-  const { data: statsValider } = useQuery({
-    queryKey: ["test-orders-immuno-stats-valider"],
+  const { data: statsValide } = useQuery({
+    queryKey: ["test-orders-immuno-stats-valide"],
     queryFn: () =>
       testOrdersApi
         .findAllImmuno({ page: 0, size: 1, status: "VALIDATED" })
@@ -285,6 +288,12 @@ export default function TestOrdersImmunoPage() {
         .findAllImmuno({ page: 0, size: 1, isUrgent: true })
         .then((r) => r.data.totalElements),
   });
+
+  /** Applique le statut, ou le retire si le compteur cliqué est déjà actif. */
+  const basculerStatut = (statut: string) => {
+    setStatusFilter(statusFilter === statut ? "" : statut);
+    setPage(0);
+  };
 
   const orders = data?.content ?? [];
   const pageCount = data?.totalPages ?? 0;
@@ -454,10 +463,10 @@ export default function TestOrdersImmunoPage() {
               onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
             >
               <option value="">Tous</option>
-              <option value="VALIDATED">Valider</option>
+              <option value="VALIDATED">Validé</option>
               <option value="PENDING">En attente</option>
-              <option value="DELIVERED">Livrer</option>
-              <option value="CANCELLED">Non Livrer</option>
+              <option value="DELIVERED">Livré</option>
+              <option value="CANCELLED">Annulé</option>
             </NativeSelect>
           </div>
 
@@ -520,17 +529,35 @@ export default function TestOrdersImmunoPage() {
           </div>
         </div>
 
-        {/* Barre de statistiques (Livrer / Valider / Cas urgent) */}
+        {/* Compteurs cliquables. Sur cet écran ils portent sur le statut du
+            BON — c'est aussi ce que filtre le menu « Status » juste au-dessus,
+            contrairement à la liste générale qui, elle, filtre le rapport. Le
+            chiffre correspond donc à ce que la liste montre une fois filtrée. */}
         <div className="mb-4 flex flex-wrap gap-3">
-          <div className="rounded-full bg-green-100 px-4 py-1.5 text-[.9rem] font-medium text-green-800 ring-1 ring-green-300">
-            Livrer : {statsLivrer ?? "…"}
-          </div>
-          <div className="rounded-full bg-yellow-100 px-4 py-1.5 text-[.9rem] font-medium text-yellow-800 ring-1 ring-yellow-300">
-            Valider : {statsValider ?? "…"}
-          </div>
-          <div className="rounded-full bg-red-100 px-4 py-1.5 text-[.9rem] font-medium text-red-800 ring-1 ring-red-300">
-            Cas urgent : {statsUrgent ?? "…"}
-          </div>
+          <CompteurFiltre
+            libelle="Livré"
+            valeur={statsLivre}
+            actif={statusFilter === "DELIVERED"}
+            onClick={() => basculerStatut("DELIVERED")}
+            couleur="green"
+          />
+          <CompteurFiltre
+            libelle="Validé"
+            valeur={statsValide}
+            actif={statusFilter === "VALIDATED"}
+            onClick={() => basculerStatut("VALIDATED")}
+            couleur="yellow"
+          />
+          <CompteurFiltre
+            libelle="Cas urgent"
+            valeur={statsUrgent}
+            actif={urgentFilter === "1"}
+            onClick={() => {
+              setUrgentFilter(urgentFilter === "1" ? "" : "1");
+              setPage(0);
+            }}
+            couleur="red"
+          />
         </div>
 
         {/* Tableau */}
