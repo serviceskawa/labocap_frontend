@@ -187,9 +187,21 @@ export default function AssignmentsPage() {
       return;
     }
     // Ouvert ICI, dans le gestionnaire de clic, seul moment où le navigateur
-    // l'autorise. `noopener` : la page ouverte ne doit pas pouvoir manipuler
-    // celle qui l'a ouverte.
-    ongletAffectation.current = window.open("", "_blank", "noopener,noreferrer");
+    // l'autorise. Même forme que `openDocFile` et l'aperçu des comptes rendus,
+    // qui pratiquent déjà l'ouverture à blanc suivie d'une navigation.
+    //
+    // SANS `noopener` : la spécification impose à `window.open` de renvoyer
+    // `null` dès que cette option est demandée. Une première version la passait
+    // — l'onglet s'ouvrait, restait vide, et la navigation retombait sur le
+    // repli dans l'onglet d'origine.
+    //
+    // Le lien retour est coupé juste après, en annulant `opener` sur la fenêtre
+    // ouverte : on obtient la protection visée sans renoncer à la référence.
+    // Possible parce que la destination est de même origine — sur une page
+    // tierce, y accéder lèverait une erreur.
+    const onglet = window.open("about:blank", "_blank");
+    if (onglet) onglet.opener = null;
+    ongletAffectation.current = onglet;
     createMutation.mutate(newUserId);
   };
 
