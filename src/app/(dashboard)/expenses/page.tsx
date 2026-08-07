@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -48,12 +50,9 @@ function paymentLabel(payment?: string): string {
 }
 
 function formatAmount(amount: number): string {
-  // FCFA n'a pas de sous-unité : on affiche des entiers, jamais de décimales.
-  return (
-    new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(
-      Math.round(amount),
-    ) + " FCFA"
-  );
+  // Le FCFA n'a pas de sous-unité : jamais de décimales. L'unité elle-même
+  // n'est plus affichée à l'écran (cf. formatCFA).
+  return formatCFA(Math.round(amount));
 }
 
 

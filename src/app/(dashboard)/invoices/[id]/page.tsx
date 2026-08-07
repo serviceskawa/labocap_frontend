@@ -372,7 +372,7 @@ export default function InvoiceDetailPage({
             </p>
             <p className="mt-1 text-right">
               <b>Montant TTC : </b>
-              {formatMontant(invoice.total)} FCFA
+              {formatMontant(invoice.total)}
             </p>
           </div>
         </div>

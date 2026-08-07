@@ -24,7 +24,7 @@ import { PermissionGate } from "@/components/common/PermissionGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatDate } from "@/lib/utils";
+import { formatCFA, formatDate } from "@/lib/utils";
 import {
   consultationsApi,
   getConsultationFileUrl,
@@ -513,7 +513,7 @@ export default function ConsultationsPage() {
       accessorKey: "amount",
       cell: ({ row }) =>
         row.original.amount != null
-          ? `${new Intl.NumberFormat("fr-FR").format(row.original.amount)} FCFA`
+          ? formatCFA(row.original.amount)
           : "—",
     },
     {

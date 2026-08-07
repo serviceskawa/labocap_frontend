@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -25,7 +27,7 @@ import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 
 function formatAmount(amount: number): string {
-  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
+  return formatCFA(amount);
 }
 
 const loadInvoiceOptions = (input: string) =>

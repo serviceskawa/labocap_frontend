@@ -31,7 +31,7 @@ import {
 import { prestationsApi } from "@/lib/api/prestations";
 import { patientsApi } from "@/lib/api/patients";
 import type { PageResponse, ApiError } from "@/types/api";
-import { formatDate } from "@/lib/utils";
+import { formatCFA, formatDate } from "@/lib/utils";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
@@ -68,7 +68,7 @@ type OrderFormData = z.infer<typeof orderSchema>;
 
 
 function formatPrice(value: number): string {
-  return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
+  return formatCFA(value);
 }
 
 function StatusBadge({ status }: { status: string }) {

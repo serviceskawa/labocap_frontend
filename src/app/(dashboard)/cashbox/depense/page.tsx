@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -53,9 +55,6 @@ type SupplyFormData = z.infer<typeof supplySchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatFCFA(amount: number): string {
-  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
-}
 
 function formatDateTime(value: string): string {
   if (!value) return "—";
@@ -209,7 +208,7 @@ export default function CashboxDepensePage() {
             className={`font-medium ${isDebit ? "text-red-600" : "text-green-700"}`}
           >
             {isDebit ? "-" : ""}
-            {formatFCFA(row.original.amount)}
+            {formatCFA(row.original.amount)}
           </span>
         );
       },
@@ -287,7 +286,7 @@ export default function CashboxDepensePage() {
             Solde actuel
           </p>
           <p className="mt-1 text-3xl font-bold text-green-700">
-            {formatFCFA(depenseCashbox.balance)}
+            {formatCFA(depenseCashbox.balance)}
           </p>
         </div>
       )}
@@ -478,7 +477,7 @@ export default function CashboxDepensePage() {
               <DetailRow label="Date" value={formatDateTime(detailOp.createdAt)} />
               <DetailRow
                 label="Montant"
-                value={`${detailOp.type === "DEBIT" ? "-" : ""}${formatFCFA(detailOp.amount)}`}
+                value={`${detailOp.type === "DEBIT" ? "-" : ""}${formatCFA(detailOp.amount)}`}
               />
               <DetailRow
                 label="Type"

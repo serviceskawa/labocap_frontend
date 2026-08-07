@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { cn, formatDate } from "@/lib/utils";
+import { cn, formatCFA, formatDate } from "@/lib/utils";
 import { invoicesApi, type Invoice } from "@/lib/api/invoices";
 import { Button } from "@/components/ui/Button";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
@@ -25,9 +25,6 @@ import {
 // Formatage montant FCFA
 // ---------------------------------------------------------------------------
 
-function formatFCFA(amount: number): string {
-  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
-}
 
 // ---------------------------------------------------------------------------
 // Badge statut paiement (Payé vert / En attente orange)
@@ -595,16 +592,16 @@ export default function InvoicesPage() {
                           <tr key={`${m.year}-${m.month}`}>
                             <td className="px-4 py-2.5 text-sm text-gray-700">{m.label}</td>
                             <td className="px-4 py-2.5 text-sm tabular-nums text-gray-700">
-                              {formatFCFA(m.sales)}
+                              {formatCFA(m.sales)}
                             </td>
                             <td className="px-4 py-2.5 text-sm tabular-nums text-gray-700">
-                              {formatFCFA(m.credits)}
+                              {formatCFA(m.credits)}
                             </td>
                             <td className="px-4 py-2.5 text-sm tabular-nums text-gray-700">
-                              {formatFCFA(m.turnover)}
+                              {formatCFA(m.turnover)}
                             </td>
                             <td className="px-4 py-2.5 text-sm tabular-nums text-gray-700">
-                              {formatFCFA(m.collections)}
+                              {formatCFA(m.collections)}
                             </td>
                           </tr>
                         ))}
@@ -623,26 +620,26 @@ export default function InvoicesPage() {
                         </td>
                         <td className="px-4 py-3 align-top text-sm text-gray-800">
                           <div className="font-semibold tabular-nums">
-                            {formatFCFA(report.totalSales)}
+                            {formatCFA(report.totalSales)}
                           </div>
                           {report.byContracts && report.byContracts.length > 0 && (
                             <ul className="mt-1 space-y-0.5 text-xs font-normal text-gray-600">
                               {report.byContracts.map((c, idx) => (
                                 <li key={idx}>
-                                  {c.contractName} : {formatFCFA(c.total)}
+                                  {c.contractName} : {formatCFA(c.total)}
                                 </li>
                               ))}
                             </ul>
                           )}
                         </td>
                         <td className="px-4 py-3 align-top text-sm font-semibold tabular-nums text-gray-800">
-                          {formatFCFA(report.totalCredits)}
+                          {formatCFA(report.totalCredits)}
                         </td>
                         <td className="px-4 py-3 align-top text-sm font-semibold tabular-nums text-gray-800">
-                          {formatFCFA(report.turnover)}
+                          {formatCFA(report.turnover)}
                         </td>
                         <td className="px-4 py-3 align-top text-sm font-semibold tabular-nums text-gray-800">
-                          {formatFCFA(report.collections)}
+                          {formatCFA(report.collections)}
                         </td>
                       </tr>
                     </>

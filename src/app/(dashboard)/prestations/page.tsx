@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -102,7 +104,7 @@ function PrestationForm({ form, categoryOptions }: PrestationFormProps) {
       {/* Prix */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-medium text-gray-700">
-          Prix (FCFA) <span className="text-red-500">*</span>
+          Prix <span className="text-red-500">*</span>
         </label>
         <input
           type="number"
@@ -293,7 +295,7 @@ export default function PrestationsPage() {
       header: "Prix",
       accessorKey: "price",
       cell: ({ row }) =>
-        `${new Intl.NumberFormat("fr-FR").format(row.original.price)} FCFA`,
+        formatCFA(row.original.price),
     },
     {
       header: "Catégorie",

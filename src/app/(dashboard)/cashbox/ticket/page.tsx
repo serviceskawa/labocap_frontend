@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -43,7 +45,7 @@ import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 function formatAmount(v?: number) {
   if (v == null) return "—";
-  return new Intl.NumberFormat("fr-FR").format(v) + " FCFA";
+  return formatCFA(v);
 }
 
 // Badge de statut — réplique exacte de la vue Laravel (en attente / approuve / rejete).

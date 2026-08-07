@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -18,9 +20,6 @@ import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 const readonlyClass = `${inputClass} bg-gray-50 text-gray-600`;
 
-function formatFCFA(v: number) {
-  return new Intl.NumberFormat("fr-FR").format(v) + " FCFA";
-}
 
 // Modes de paiement dans l'ordre Laravel, avec la clé paymentType côté opérations.
 const MODES = [
@@ -233,7 +232,7 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                             {counts[m.key]}
                           </td>
                           <td className="px-3 py-3 text-right text-gray-800">
-                            {formatFCFA(calculated[m.key])}
+                            {formatCFA(calculated[m.key])}
                           </td>
                           <td className="px-3 py-3">
                             <input
@@ -255,7 +254,7 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                               ecart(m.key) !== 0 ? "text-red-600" : "text-green-600"
                             }`}
                           >
-                            {formatFCFA(ecart(m.key))}
+                            {formatCFA(ecart(m.key))}
                           </td>
                         </tr>
                       ))}
@@ -263,17 +262,17 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                         <td className="py-3 pl-4 pr-3 text-gray-800">Total</td>
                         <td />
                         <td className="px-3 py-3 text-right text-gray-800">
-                          {formatFCFA(totalCalculated)}
+                          {formatCFA(totalCalculated)}
                         </td>
                         <td className="px-3 py-3 text-right text-gray-800">
-                          {formatFCFA(totalCounted)}
+                          {formatCFA(totalCounted)}
                         </td>
                         <td
                           className={`py-3 pl-3 pr-4 text-right ${
                             totalEcart !== 0 ? "text-red-600" : "text-green-600"
                           }`}
                         >
-                          {formatFCFA(totalEcart)}
+                          {formatCFA(totalEcart)}
                         </td>
                       </tr>
                     </tbody>
@@ -317,29 +316,29 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                     <tbody className="divide-y divide-gray-100">
                       <tr>
                         <td className="py-3 pl-4 pr-3 font-medium text-gray-700">Espèces</td>
-                        <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(opening)}</td>
-                        <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(calculated.cash)}</td>
-                        <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(opening + calculated.cash)}</td>
-                        <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(countedNum("cash"))}</td>
-                        <td className={`py-3 pl-3 pr-4 text-right font-medium ${ecart("cash") !== 0 ? "text-red-600" : "text-green-600"}`}>{formatFCFA(ecart("cash"))}</td>
+                        <td className="px-3 py-3 text-right text-gray-700">{formatCFA(opening)}</td>
+                        <td className="px-3 py-3 text-right text-gray-700">{formatCFA(calculated.cash)}</td>
+                        <td className="px-3 py-3 text-right text-gray-700">{formatCFA(opening + calculated.cash)}</td>
+                        <td className="px-3 py-3 text-right text-gray-700">{formatCFA(countedNum("cash"))}</td>
+                        <td className={`py-3 pl-3 pr-4 text-right font-medium ${ecart("cash") !== 0 ? "text-red-600" : "text-green-600"}`}>{formatCFA(ecart("cash"))}</td>
                       </tr>
                       {MODES.filter((m) => m.key !== "cash").map((m) => (
                         <tr key={m.key}>
                           <td className="py-3 pl-4 pr-3 font-medium text-gray-700">{m.label}</td>
                           <td className="px-3 py-3 text-right text-gray-400">-</td>
-                          <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(calculated[m.key])}</td>
+                          <td className="px-3 py-3 text-right text-gray-700">{formatCFA(calculated[m.key])}</td>
                           <td className="px-3 py-3 text-right text-gray-400">-</td>
-                          <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(countedNum(m.key))}</td>
-                          <td className={`py-3 pl-3 pr-4 text-right font-medium ${ecart(m.key) !== 0 ? "text-red-600" : "text-green-600"}`}>{formatFCFA(ecart(m.key))}</td>
+                          <td className="px-3 py-3 text-right text-gray-700">{formatCFA(countedNum(m.key))}</td>
+                          <td className={`py-3 pl-3 pr-4 text-right font-medium ${ecart(m.key) !== 0 ? "text-red-600" : "text-green-600"}`}>{formatCFA(ecart(m.key))}</td>
                         </tr>
                       ))}
                       <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
                         <td className="py-3 pl-4 pr-3 text-gray-800">Total</td>
-                        <td className="px-3 py-3 text-right text-gray-800">{formatFCFA(opening)}</td>
-                        <td className="px-3 py-3 text-right text-gray-800">{formatFCFA(totalCalculated)}</td>
-                        <td className="px-3 py-3 text-right text-gray-800">{formatFCFA(opening + calculated.cash)}</td>
-                        <td className="px-3 py-3 text-right text-gray-800">{formatFCFA(totalCounted)}</td>
-                        <td className={`py-3 pl-3 pr-4 text-right ${totalEcart !== 0 ? "text-red-600" : "text-green-600"}`}>{formatFCFA(totalEcart)}</td>
+                        <td className="px-3 py-3 text-right text-gray-800">{formatCFA(opening)}</td>
+                        <td className="px-3 py-3 text-right text-gray-800">{formatCFA(totalCalculated)}</td>
+                        <td className="px-3 py-3 text-right text-gray-800">{formatCFA(opening + calculated.cash)}</td>
+                        <td className="px-3 py-3 text-right text-gray-800">{formatCFA(totalCounted)}</td>
+                        <td className={`py-3 pl-3 pr-4 text-right ${totalEcart !== 0 ? "text-red-600" : "text-green-600"}`}>{formatCFA(totalEcart)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -352,7 +351,7 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                   </label>
                   <input
                     type="text"
-                    value={formatFCFA(closingBalance)}
+                    value={formatCFA(closingBalance)}
                     readOnly
                     className={`${readonlyClass} max-w-xs`}
                   />
