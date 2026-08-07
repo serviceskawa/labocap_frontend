@@ -10,16 +10,19 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Link from "next/link";
 import { Eye, Pencil, Trash2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/common/DataTable";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { PermissionGate } from "@/components/common/PermissionGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RHFCreatableSelect } from "@/components/ui/RHFCreatableSelect";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -516,42 +519,33 @@ export default function PatientsPage() {
       enableSorting: false,
       cell: ({ row }) => {
         const patient = row.original;
-        return (
-          <div className="flex items-center gap-1">
-            {/* Voir — toujours visible */}
-            <Link
-              href={`/patients/${patient.id}`}
-              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="Voir le profil"
-            >
-              <Eye className="h-3.5 w-3.5" />
-            </Link>
+        const actions: RowAction[] = [
+          {
+            label: "Voir le profil",
+            icon: <Eye className="h-3.5 w-3.5" />,
+            href: `/patients/${patient.id}`,
+          },
+        ];
 
-            {/* Modifier */}
-            <PermissionGate permission={PERMISSIONS.EDIT_PATIENTS}>
-              <button
-                type="button"
-                onClick={() => handleOpenEdit(patient)}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                title="Modifier"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            </PermissionGate>
+        if (can(PERMISSIONS.EDIT_PATIENTS)) {
+          actions.push({
+            label: "Modifier",
+            icon: <Pencil className="h-3.5 w-3.5" />,
+            variant: "edit",
+            onClick: () => handleOpenEdit(patient),
+          });
+        }
 
-            {/* Supprimer */}
-            <PermissionGate permission={PERMISSIONS.DELETE_PATIENTS}>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(patient)}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-                title="Supprimer"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </PermissionGate>
-          </div>
-        );
+        if (can(PERMISSIONS.DELETE_PATIENTS)) {
+          actions.push({
+            label: "Supprimer",
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            variant: "delete",
+            onClick: () => setDeleteConfirm(patient),
+          });
+        }
+
+        return <RowActions actions={actions} />;
       },
     },
   ];
@@ -595,19 +589,22 @@ export default function PatientsPage() {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={patients}
-          isLoading={isLoading}
-          pageCount={pageCount}
-          pageIndex={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(0);
-          }}
-        />
+        {/* Jusqu'à trois actions : le tableau replie uniformément. */}
+        <RowActionsProvider collapse>
+          <DataTable
+            columns={columns}
+            data={patients}
+            isLoading={isLoading}
+            pageCount={pageCount}
+            pageIndex={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(0);
+            }}
+          />
+        </RowActionsProvider>
       </div>
 
       {/* ================================================================

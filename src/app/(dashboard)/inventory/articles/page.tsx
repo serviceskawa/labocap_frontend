@@ -14,9 +14,13 @@ import type { UseFormReturn } from "react-hook-form";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { DataTable } from "@/components/common/DataTable";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
@@ -57,10 +61,6 @@ type ArticleFormValues = z.infer<typeof articleSchema>;
 // Helpers
 // ---------------------------------------------------------------------------
 
-
-/** Boutons d'action : carrés pleins colorés, comme les `btn` du thème Laravel. */
-const actionBtn =
-  "inline-flex h-8 w-9 items-center justify-center rounded-md text-white transition-colors";
 
 /** Statut de stock d'un article, au sens des compteurs Laravel. */
 function stockStatus(article: Article): "rupture" | "atteint" | "" {
@@ -312,44 +312,40 @@ export default function ArticlesPage() {
       header: "Actions",
       id: "actions",
       enableSorting: false,
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setDetailArticle(row.original)}
-            className={`${actionBtn} bg-blue-600 hover:bg-blue-700`}
-            aria-label="Détail"
-            title="Détail"
-          >
-            <Eye className="h-4 w-4" />
-          </button>
-          <PermissionGate permission={PERMISSIONS.EDIT_ARTICLES}>
-            <button
-              onClick={() => openEdit(row.original)}
-              className={`${actionBtn} bg-sky-500 hover:bg-sky-600`}
-              aria-label="Modifier"
-              title="Modifier"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-          </PermissionGate>
-          {/* Laravel ne propose la suppression que si le stock est à zéro. */}
-          {row.original.quantity === 0 && (
-            <PermissionGate permission={PERMISSIONS.DELETE_ARTICLES}>
-              <button
-                onClick={() => {
-                  setSelectedArticle(row.original);
-                  setDeleteOpen(true);
-                }}
-                className={`${actionBtn} bg-red-500 hover:bg-red-600`}
-                aria-label="Supprimer"
-                title="Supprimer"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </PermissionGate>
-          )}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const article = row.original;
+        const actions: RowAction[] = [
+          {
+            label: "Détail",
+            icon: <Eye className="h-4 w-4" />,
+            onClick: () => setDetailArticle(article),
+          },
+        ];
+
+        if (can(PERMISSIONS.EDIT_ARTICLES)) {
+          actions.push({
+            label: "Modifier",
+            icon: <Pencil className="h-4 w-4" />,
+            variant: "edit",
+            onClick: () => openEdit(article),
+          });
+        }
+
+        // Laravel ne propose la suppression que si le stock est à zéro.
+        if (article.quantity === 0 && can(PERMISSIONS.DELETE_ARTICLES)) {
+          actions.push({
+            label: "Supprimer",
+            icon: <Trash2 className="h-4 w-4" />,
+            variant: "delete",
+            onClick: () => {
+              setSelectedArticle(article);
+              setDeleteOpen(true);
+            },
+          });
+        }
+
+        return <RowActions actions={actions} />;
+      },
     },
   ];
 
@@ -384,19 +380,22 @@ export default function ArticlesPage() {
         </span>
       </div>
 
-      <DataTable
-        title="Liste des articles"
-        columns={columns}
-        data={filteredArticles}
-        isLoading={isLoading}
-        rowClassName={(a) =>
-          a.quantity === 0
-            ? "bg-red-50"
-            : stockStatus(a) === "atteint"
-              ? "bg-amber-50"
-              : ""
-        }
-      />
+      {/* Jusqu'à trois actions : le tableau replie uniformément. */}
+      <RowActionsProvider collapse>
+        <DataTable
+          title="Liste des articles"
+          columns={columns}
+          data={filteredArticles}
+          isLoading={isLoading}
+          rowClassName={(a) =>
+            a.quantity === 0
+              ? "bg-red-50"
+              : stockStatus(a) === "atteint"
+                ? "bg-amber-50"
+                : ""
+          }
+        />
+      </RowActionsProvider>
 
       {/* ---- Modal création ---- */}
       <CrudModal

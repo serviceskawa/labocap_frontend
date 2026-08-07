@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClickBusy } from "./Button";
 
-type IconButtonVariant =
+export type IconButtonVariant =
   | "default"
   | "edit"
   | "delete"

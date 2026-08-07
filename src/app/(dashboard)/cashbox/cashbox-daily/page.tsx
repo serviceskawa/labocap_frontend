@@ -10,6 +10,7 @@ import type { AxiosError } from "axios";
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DataTable } from "@/components/common/DataTable";
+import { RowActions } from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
@@ -168,29 +169,6 @@ export default function CashboxDailyPage() {
   // Écart, Statut.
   const columns: ColumnDef<CashboxDailyResponseDto>[] = [
     {
-      header: "Actions",
-      id: "actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setDetail(row.original)}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-            title="Voir le récapitulatif"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </button>
-          <Link
-            href={`/cashbox/cashbox-daily/print/${row.original.id}`}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
-            title="Imprimer"
-          >
-            <Printer className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      ),
-    },
-    {
       header: "ID",
       id: "rownum",
       cell: ({ row }) => (
@@ -262,6 +240,28 @@ export default function CashboxDailyPage() {
       header: "Statut",
       accessorKey: "status",
       cell: ({ row }) => statusBadge(row.original.status),
+    },
+    // Actions — DERNIÈRE colonne. Deux actions seulement : elles restent à
+    // plat, le repli n'économiserait aucune largeur.
+    {
+      header: "Actions",
+      id: "actions",
+      cell: ({ row }) => (
+        <RowActions
+          actions={[
+            {
+              label: "Voir le récapitulatif",
+              icon: <Eye className="h-3.5 w-3.5" />,
+              onClick: () => setDetail(row.original),
+            },
+            {
+              label: "Imprimer",
+              icon: <Printer className="h-3.5 w-3.5" />,
+              href: `/cashbox/cashbox-daily/print/${row.original.id}`,
+            },
+          ]}
+        />
+      ),
     },
   ];
 

@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Pencil, Trash2, CheckCircle, XCircle, Eye, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
 import { translateApiError } from "@/lib/api/errorMessages";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -19,12 +18,15 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { RHFSelect } from "@/components/ui/RHFSelect";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { DataTable } from "@/components/common/DataTable";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { IconButton } from "@/components/ui/IconButton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import {
@@ -345,59 +347,62 @@ export default function ContractsPage() {
     {
       header: "Actions",
       id: "actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/contracts/${row.original.id}`}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-500 text-white hover:bg-amber-600 transition-colors"
-          >
-            <Eye className="h-3.5 w-3.5" />
-            Détail
-          </Link>
-          <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
-            <IconButton
-              variant="edit"
-              title="Modifier"
-              aria-label="Modifier"
-              onClick={() => openEdit(row.original)}
-              icon={<Pencil className="h-4 w-4" />}
-            />
-          </PermissionGate>
-          <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
-            {row.original.status === "INACTIF" && (
-              <button
-                onClick={() => activateMutation.mutate(row.original.id)}
-                disabled={activateMutation.isPending}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-                aria-label="Activer"
-              >
-                {activateMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
-                Activer
-              </button>
-            )}
-            {row.original.status === "ACTIF" && (
-              <button
-                onClick={() => closeMutation.mutate(row.original.id)}
-                disabled={closeMutation.isPending}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-gray-600 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
-                aria-label="Clôturer"
-              >
-                {closeMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
-                Clôturer
-              </button>
-            )}
-          </PermissionGate>
-          <PermissionGate permission={PERMISSIONS.DELETE_CONTRACTS}>
-            <IconButton
-              variant="delete"
-              title="Supprimer"
-              aria-label="Supprimer"
-              onClick={() => openDelete(row.original)}
-              icon={<Trash2 className="h-4 w-4" />}
-            />
-          </PermissionGate>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const contrat = row.original;
+        const actions: RowAction[] = [
+          {
+            label: "Détail",
+            icon: <Eye className="h-4 w-4" />,
+            href: `/contracts/${contrat.id}`,
+          },
+        ];
+
+        if (can(PERMISSIONS.EDIT_CONTRACTS)) {
+          actions.push({
+            label: "Modifier",
+            icon: <Pencil className="h-4 w-4" />,
+            variant: "edit",
+            onClick: () => openEdit(contrat),
+          });
+
+          // Activer et Clôturer s'excluent : le statut n'en autorise qu'un.
+          if (contrat.status === "INACTIF") {
+            actions.push({
+              label: "Activer",
+              icon: activateMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4" />
+              ),
+              onClick: () => activateMutation.mutate(contrat.id),
+              disabled: activateMutation.isPending,
+            });
+          } else if (contrat.status === "ACTIF") {
+            actions.push({
+              label: "Clôturer",
+              icon: closeMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              ),
+              onClick: () => closeMutation.mutate(contrat.id),
+              disabled: closeMutation.isPending,
+              variant: "secondary",
+            });
+          }
+        }
+
+        if (can(PERMISSIONS.DELETE_CONTRACTS)) {
+          actions.push({
+            label: "Supprimer",
+            icon: <Trash2 className="h-4 w-4" />,
+            variant: "delete",
+            onClick: () => openDelete(contrat),
+          });
+        }
+
+        return <RowActions actions={actions} />;
+      },
     },
   ];
 
@@ -478,24 +483,27 @@ export default function ContractsPage() {
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
-        <DataTable columns={columns} data={contracts} isLoading={isLoading} />
+        {/* Jusqu'à cinq actions : le tableau replie uniformément. */}
+        <RowActionsProvider collapse>
+          <DataTable columns={columns} data={contracts} isLoading={isLoading} />
+        </RowActionsProvider>
       </div>
 
-      {/* Modal création */}
-      <CrudModal
-        isOpen={createOpen}
-        onClose={() => setCreateOpen(false)}
-        title="Ajouter un nouveau contrat"
-        size="lg"
-        onSubmit={createForm.handleSubmit(onCreateSubmit)}
-        submitLabel="Ajouter un nouveau contrat"
-        isSubmitting={createMutation.isPending}
-      >
-        <ContractForm
-          form={createForm}
-          clientOptions={clientOptions}
-          onClientInputChange={setClientInputValue}
-        />
+        {/* Modal création */}
+        <CrudModal
+          isOpen={createOpen}
+          onClose={() => setCreateOpen(false)}
+          title="Ajouter un nouveau contrat"
+          size="lg"
+          onSubmit={createForm.handleSubmit(onCreateSubmit)}
+          submitLabel="Ajouter un nouveau contrat"
+          isSubmitting={createMutation.isPending}
+        >
+          <ContractForm
+            form={createForm}
+            clientOptions={clientOptions}
+            onClientInputChange={setClientInputValue}
+          />
       </CrudModal>
 
       {/* Modal édition */}
