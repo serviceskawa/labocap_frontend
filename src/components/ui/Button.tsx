@@ -28,14 +28,20 @@ interface ButtonProps
 // d'origine gardait le même fond et diffusait une ombre à 50 % d'opacité, qui
 // bavait sur les surfaces claires sans donner de retour franc au pointeur.
 // `secondary` gagne une vraie hiérarchie : bordure au repos, fond au survol.
+// Les ombres de survol sont teintées du fond du bouton. Elles étaient écrites
+// en hexadécimal converti en rgba, et sont restées sur l'ancienne palette :
+// l'azur #2e4bd8 et le rose #dc2848 d'« Ardoise & Azur », alors que les fonds
+// eux-mêmes suivaient déjà les jetons. Un bouton cyan diffusait donc une ombre
+// bleu-violet. `color-mix` les rattache à la couleur du fond, ce qui règle le
+// problème pour de bon plutôt que jusqu'au prochain changement de palette.
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
     "bg-blue-600 text-white shadow-sm hover:bg-blue-700 " +
-    "hover:shadow-[0_4px_10px_-2px_rgba(46,75,216,0.35)] " +
+    "hover:shadow-[0_4px_10px_-2px_color-mix(in_srgb,var(--color-blue-600)_35%,transparent)] " +
     "focus-visible:ring-blue-500/40",
   danger:
     "bg-red-600 text-white shadow-sm hover:bg-red-700 " +
-    "hover:shadow-[0_4px_10px_-2px_rgba(220,40,72,0.35)] " +
+    "hover:shadow-[0_4px_10px_-2px_color-mix(in_srgb,var(--color-red-600)_35%,transparent)] " +
     "focus-visible:ring-red-500/40",
   secondary:
     "border border-gray-300 bg-white text-gray-700 shadow-sm " +
