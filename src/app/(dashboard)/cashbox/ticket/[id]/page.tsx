@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { use, useState, useEffect } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -32,7 +34,7 @@ import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 function formatAmount(v?: number) {
   if (v == null) return "—";
-  return new Intl.NumberFormat("fr-FR").format(v) + " FCFA";
+  return formatCFA(v);
 }
 
 /**

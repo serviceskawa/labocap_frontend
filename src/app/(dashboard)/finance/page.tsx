@@ -9,16 +9,13 @@ import { DataTable } from "@/components/common/DataTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatDate } from "@/lib/utils";
+import { formatCFA, formatDate } from "@/lib/utils";
 import { invoicesApi, type Invoice, type FinanceStats } from "@/lib/api/invoices";
 
 // ---------------------------------------------------------------------------
-// Formatage montant FCFA
+// Formatage des montants — sans unité, cf. formatCFA
 // ---------------------------------------------------------------------------
 
-function formatFCFA(amount: number): string {
-  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
-}
 
 // ---------------------------------------------------------------------------
 // Skeleton card
@@ -141,7 +138,7 @@ function FinanceDashboardContent() {
       id: "total",
       cell: ({ row }) => (
         <span className="text-sm font-medium text-gray-900">
-          {formatFCFA(row.original.total)}
+          {formatCFA(row.original.total)}
         </span>
       ),
     },
@@ -202,7 +199,7 @@ function FinanceDashboardContent() {
           <>
             <FinanceKpi
               title="Aujourd'hui"
-              value={formatFCFA(stats?.totalToday ?? 0)}
+              value={formatCFA(stats?.totalToday ?? 0)}
               subtitle="Chiffre d'affaires du jour"
               icon={<TrendingUp className="h-5 w-5" />}
               iconBg="bg-blue-50 text-blue-600"
@@ -210,7 +207,7 @@ function FinanceDashboardContent() {
             />
             <FinanceKpi
               title="Ce mois"
-              value={formatFCFA(stats?.totalMonth ?? 0)}
+              value={formatCFA(stats?.totalMonth ?? 0)}
               subtitle="Chiffre d'affaires du mois en cours"
               icon={<Calendar className="h-5 w-5" />}
               iconBg="bg-green-50 text-green-600"
@@ -218,7 +215,7 @@ function FinanceDashboardContent() {
             />
             <FinanceKpi
               title="Mois dernier"
-              value={formatFCFA(stats?.totalLastMonth ?? 0)}
+              value={formatCFA(stats?.totalLastMonth ?? 0)}
               subtitle="Chiffre d'affaires du mois précédent"
               icon={<CalendarDays className="h-5 w-5" />}
               iconBg="bg-purple-50 text-purple-600"

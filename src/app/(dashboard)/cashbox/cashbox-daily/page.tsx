@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -30,14 +32,13 @@ import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatFCFA(amount: number | null | undefined) {
-  if (amount === undefined || amount === null) return "—";
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "XOF",
-    minimumFractionDigits: 0,
-  }).format(amount);
+function formatMontant(amount?: number | null): string {
+  // Conserve la tolérance au nul de la copie locale ; le montant
+  // lui-même passe par le format partagé, sans unité monétaire.
+  if (amount === null || amount === undefined) return "—";
+  return formatCFA(amount);
 }
+
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", {
@@ -194,7 +195,7 @@ export default function CashboxDailyPage() {
     {
       header: "Solde d'ouverture",
       accessorKey: "openingBalance",
-      cell: ({ row }) => formatFCFA(row.original.openingBalance),
+      cell: ({ row }) => formatMontant(row.original.openingBalance),
     },
     {
       header: "Date de fermeture",
@@ -209,7 +210,7 @@ export default function CashboxDailyPage() {
     {
       header: "Solde de fermeture",
       accessorKey: "closingBalance",
-      cell: ({ row }) => formatFCFA(row.original.closingBalance),
+      cell: ({ row }) => formatMontant(row.original.closingBalance),
     },
     {
       header: "Utilisateur",
@@ -231,7 +232,7 @@ export default function CashboxDailyPage() {
           <span
             className={ecart < 0 ? "font-medium text-red-600" : "text-gray-700"}
           >
-            {formatFCFA(ecart)}
+            {formatMontant(ecart)}
           </span>
         );
       },
@@ -456,49 +457,49 @@ function RecapModal({
               <tbody className="divide-y divide-gray-100">
                 <RecapRow
                   label="Espèces"
-                  fond={formatFCFA(opening)}
-                  vente={formatFCFA(cashCalc)}
-                  solde={formatFCFA(soldeEspeces)}
-                  comptage={formatFCFA(daily.cashConfirmation)}
+                  fond={formatMontant(opening)}
+                  vente={formatMontant(cashCalc)}
+                  solde={formatMontant(soldeEspeces)}
+                  comptage={formatMontant(daily.cashConfirmation)}
                   ecart={daily.cashEcart}
                 />
                 <RecapRow
                   label="Mobile Money"
                   fond="-"
-                  vente={formatFCFA(daily.mobileMoneyCalculated)}
+                  vente={formatMontant(daily.mobileMoneyCalculated)}
                   solde="-"
-                  comptage={formatFCFA(daily.moneyMoneyConfirmation)}
+                  comptage={formatMontant(daily.moneyMoneyConfirmation)}
                   ecart={daily.mobileMoneyEcart}
                 />
                 <RecapRow
                   label="Chèque"
                   fond="-"
-                  vente={formatFCFA(daily.chequeCalculated)}
+                  vente={formatMontant(daily.chequeCalculated)}
                   solde="-"
-                  comptage={formatFCFA(daily.chequeConfirmation)}
+                  comptage={formatMontant(daily.chequeConfirmation)}
                   ecart={daily.chequeEcart}
                 />
                 <RecapRow
                   label="Virement"
                   fond="-"
-                  vente={formatFCFA(daily.virementCalculated)}
+                  vente={formatMontant(daily.virementCalculated)}
                   solde="-"
-                  comptage={formatFCFA(daily.virementConfirmation)}
+                  comptage={formatMontant(daily.virementConfirmation)}
                   ecart={daily.virementEcart}
                 />
                 <tr className="border-t-2 border-gray-300 font-semibold">
                   <td className="py-2 pr-4 text-gray-800">Total</td>
                   <td className="py-2 pr-4 text-right text-gray-800">
-                    {formatFCFA(opening)}
+                    {formatMontant(opening)}
                   </td>
                   <td className="py-2 pr-4 text-right text-gray-800">
-                    {formatFCFA(daily.totalCalculated)}
+                    {formatMontant(daily.totalCalculated)}
                   </td>
                   <td className="py-2 pr-4 text-right text-gray-800">
-                    {formatFCFA(soldeEspeces)}
+                    {formatMontant(soldeEspeces)}
                   </td>
                   <td className="py-2 pr-4 text-right text-gray-800">
-                    {formatFCFA(daily.totalConfirmation)}
+                    {formatMontant(daily.totalConfirmation)}
                   </td>
                   <td
                     className={`py-2 text-right ${
@@ -507,7 +508,7 @@ function RecapModal({
                         : "text-green-600"
                     }`}
                   >
-                    {formatFCFA(daily.totalEcart)}
+                    {formatMontant(daily.totalEcart)}
                   </td>
                 </tr>
               </tbody>
@@ -527,7 +528,7 @@ function RecapModal({
           </div>
 
           <p className="mt-6 text-right text-lg font-bold text-gray-900">
-            SOLDE DE FERMETURE : {formatFCFA(daily.closingBalance)}
+            SOLDE DE FERMETURE : {formatMontant(daily.closingBalance)}
           </p>
         </div>
         <div className="flex justify-end border-t border-gray-200 px-6 py-4">
@@ -571,7 +572,7 @@ function RecapRow({
           (ecart ?? 0) !== 0 ? "text-red-600" : "text-green-600"
         }`}
       >
-        {formatFCFA(ecart)}
+        {formatMontant(ecart)}
       </td>
     </tr>
   );

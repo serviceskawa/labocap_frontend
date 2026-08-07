@@ -205,7 +205,7 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
             <div className="grid grid-cols-3 gap-4">
               <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
-                  Total FCFA
+                  Total
                 </p>
                 <p className="mt-2 text-xl font-bold text-blue-600">
                   {formatCFA(profile.totalInvoiced)}

@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -51,7 +53,7 @@ type PayrollFormValues = z.infer<typeof payrollSchema>;
 
 function formatAmount(amount?: number): string {
   if (amount == null) return "—";
-  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
+  return formatCFA(amount);
 }
 
 const MONTHS = [
@@ -564,7 +566,7 @@ function PayrollForm({
         error={errors.year?.message}
       />
 
-      <FormField label="Salaire brut (FCFA)" required error={errors.grossSalary?.message}>
+      <FormField label="Salaire brut" required error={errors.grossSalary?.message}>
         <input
           type="number"
           {...register("grossSalary")}
@@ -574,7 +576,7 @@ function PayrollForm({
         />
       </FormField>
 
-      <FormField label="Déductions (FCFA)" error={errors.deductions?.message}>
+      <FormField label="Déductions" error={errors.deductions?.message}>
         <input
           type="number"
           {...register("deductions")}
