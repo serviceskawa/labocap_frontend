@@ -425,16 +425,25 @@ export default function TestOrderDetailsPage({ params }: Props) {
     {
       header: "Prix",
       id: "price",
+      // Ferré à droite : les unités s'alignent sous les unités, et la ligne de
+      // total tombe sous la colonne qu'elle totalise.
+      meta: { align: "right" as const },
       cell: ({ row }) => formatCFA(row.original.price),
     },
     {
       header: "Remise",
       id: "discount",
+      // Ferré à droite : les unités s'alignent sous les unités, et la ligne de
+      // total tombe sous la colonne qu'elle totalise.
+      meta: { align: "right" as const },
       cell: ({ row }) => formatCFA(row.original.discount),
     },
     {
       header: "Montant",
       id: "total",
+      // Ferré à droite : les unités s'alignent sous les unités, et la ligne de
+      // total tombe sous la colonne qu'elle totalise.
+      meta: { align: "right" as const },
       cell: ({ row }) => formatCFA(row.original.total),
     },
     ...(canEditDetails
@@ -761,22 +770,29 @@ export default function TestOrderDetailsPage({ params }: Props) {
           </div>
         )}
 
-        {/* Tableau examens + footer total */}
-        <div className="overflow-hidden rounded-lg border border-gray-200">
-          <DataTable<TestOrderDetail>
-            columns={detailColumns}
-            data={order.details ?? []}
-          />
+        {/* Tableau examens.
+            Le second cadre qui entourait l'ensemble a été retiré : `DataTable`
+            encadre déjà sa grille, et la barre d'outils comme la pagination
+            vivent volontairement HORS de ce cadre. Les enfermer dans une
+            bordure supplémentaire les collait contre elle, tandis que la ligne
+            de total, elle, gardait son retrait — trois retraits horizontaux
+            différents sur trois lignes superposées. S'y ajoutait un rayon de
+            1rem contenu dans un rayon de 0,5rem, dont les coins débordaient.
 
-          {/* Footer total */}
-          {(order.details?.length ?? 0) > 0 && (
-            <div className="flex justify-end border-t border-gray-200 bg-gray-50 px-4 py-3">
-              <span className="text-sm font-semibold text-gray-800">
-                Total : {formatCFA(detailsTotal)}
-              </span>
-            </div>
-          )}
-        </div>
+            Le total passe par la trappe de pied : il appartient à la grille. */}
+        <DataTable<TestOrderDetail>
+          columns={detailColumns}
+          data={order.details ?? []}
+          tableFooter={
+            (order.details?.length ?? 0) > 0 ? (
+              <div className="flex justify-end">
+                <span className="text-[.9rem] font-semibold text-gray-800">
+                  Total : {formatCFA(detailsTotal)}
+                </span>
+              </div>
+            ) : undefined
+          }
+        />
 
         <ConfirmModal
         isOpen={confirmValidation}
