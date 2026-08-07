@@ -21,7 +21,7 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { FormSelect } from "@/components/ui/FormSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatCFA, formatDate } from "@/lib/utils";
+import { cn, formatCFA, formatDate } from "@/lib/utils";
 import { testOrdersApi, type TestOrder } from "@/lib/api/testOrders";
 import { reportsApi } from "@/lib/api/reports";
 import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
@@ -211,6 +211,64 @@ function ActionButtons({
 }
 
 // ---------------------------------------------------------------------------
+// Compteur cliquable — applique son propre critère à la liste
+// ---------------------------------------------------------------------------
+
+/**
+ * Pastille de comptage qui filtre la liste au clic, et la défiltre au second.
+ *
+ * Ces pastilles n'étaient qu'un affichage : on lisait « 106 cas urgents » sans
+ * pouvoir les atteindre, et il fallait retrouver le même critère dans le menu
+ * des filtres. Le chiffre et le filtre disant la même chose, autant que l'un
+ * mène à l'autre.
+ *
+ * L'état actif se voit au fond plein — un contour seul se confondrait avec le
+ * repos sur une pastille déjà cerclée.
+ */
+function CompteurFiltre({
+  libelle,
+  valeur,
+  actif,
+  onClick,
+  couleur,
+}: {
+  libelle: string;
+  valeur?: number;
+  actif: boolean;
+  onClick: () => void;
+  couleur: "green" | "yellow" | "red";
+}) {
+  const repos = {
+    green: "bg-green-100 text-green-800 ring-green-300 hover:bg-green-200",
+    yellow: "bg-yellow-100 text-yellow-800 ring-yellow-300 hover:bg-yellow-200",
+    red: "bg-red-100 text-red-800 ring-red-300 hover:bg-red-200",
+  }[couleur];
+  const selectionne = {
+    green: "bg-green-600 text-white ring-green-600",
+    yellow: "bg-yellow-600 text-white ring-yellow-600",
+    red: "bg-red-600 text-white ring-red-600",
+  }[couleur];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      // `aria-pressed` : un bouton qui bascule un filtre n'est pas un lien.
+      // Sans lui, un lecteur d'écran annonce l'action mais jamais son état.
+      aria-pressed={actif}
+      className={cn(
+        "rounded-full px-4 py-1.5 text-[.9rem] font-medium ring-1",
+        "transition-colors duration-[var(--duration-fast)] ease-emphasized",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
+        actif ? selectionne : repos,
+      )}
+    >
+      {libelle} : {valeur ?? "…"}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Page principale
 // ---------------------------------------------------------------------------
 
@@ -295,19 +353,21 @@ export default function TestOrdersPage() {
         ),
   });
 
-  // Stats globales (Livrer / Valider / Cas urgent)
-  const { data: statsLivrer } = useQuery({
-    queryKey: ["test-orders-stats-livrer"],
+  // Compteurs — sur le statut du RAPPORT, comme le menu « Status » et la
+  // pastille de la colonne Compte rendu. Ils interrogeaient le statut du BON,
+  // un troisième axe qui affichait « Livrer : 0 » à côté de lignes « Livré ».
+  const { data: statsLivre } = useQuery({
+    queryKey: ["test-orders-stats-livre"],
     queryFn: () =>
       testOrdersApi
-        .findAll({ page: 0, size: 1, status: "DELIVERED" })
+        .findAll({ page: 0, size: 1, reportStatus: "DELIVERED" })
         .then((r) => r.data.totalElements),
   });
-  const { data: statsValider } = useQuery({
-    queryKey: ["test-orders-stats-valider"],
+  const { data: statsValide } = useQuery({
+    queryKey: ["test-orders-stats-valide"],
     queryFn: () =>
       testOrdersApi
-        .findAll({ page: 0, size: 1, status: "VALIDATED" })
+        .findAll({ page: 0, size: 1, reportStatus: "VALIDATED" })
         .then((r) => r.data.totalElements),
   });
   const { data: statsUrgent } = useQuery({
@@ -317,6 +377,12 @@ export default function TestOrdersPage() {
         .findAll({ page: 0, size: 1, isUrgent: true })
         .then((r) => r.data.totalElements),
   });
+
+  /** Applique le statut, ou le retire si le compteur cliqué est déjà actif. */
+  const basculerStatut = (statut: string) => {
+    setStatusFilter(statusFilter === statut ? "" : statut);
+    setPage(0);
+  };
 
   const orders = data?.content ?? [];
   const pageCount = data?.totalPages ?? 0;
@@ -631,17 +697,42 @@ export default function TestOrdersPage() {
           </div>
         </div>
 
-        {/* Barre de statistiques (Livrer / Valider / Cas urgent) */}
+        {/* ── Compteurs, qui filtrent ────────────────────────────────────
+            Ils comptent désormais sur le MÊME critère que le menu « Status »
+            et que la pastille de la colonne Compte rendu : le statut du
+            rapport. Ils interrogeaient jusqu'ici le statut du BON, un troisième
+            axe — d'où « Livrer : 0 » affiché à côté de lignes marquées
+            « Livré ». Le chiffre correspond maintenant toujours à ce que la
+            liste montre une fois le filtre appliqué.
+
+            Les libellés passent à l'indicatif : « Livrer » se lisait comme une
+            consigne — les demandes À livrer — alors qu'il s'agit de celles qui
+            l'ont été. */}
         <div className="mb-4 flex flex-wrap gap-3">
-          <div className="rounded-full bg-green-100 px-4 py-1.5 text-[.9rem] font-medium text-green-800 ring-1 ring-green-300">
-            Livrer : {statsLivrer ?? "…"}
-          </div>
-          <div className="rounded-full bg-yellow-100 px-4 py-1.5 text-[.9rem] font-medium text-yellow-800 ring-1 ring-yellow-300">
-            Valider : {statsValider ?? "…"}
-          </div>
-          <div className="rounded-full bg-red-100 px-4 py-1.5 text-[.9rem] font-medium text-red-800 ring-1 ring-red-300">
-            Cas urgent : {statsUrgent ?? "…"}
-          </div>
+          <CompteurFiltre
+            libelle="Livré"
+            valeur={statsLivre}
+            actif={statusFilter === "DELIVERED"}
+            onClick={() => basculerStatut("DELIVERED")}
+            couleur="green"
+          />
+          <CompteurFiltre
+            libelle="Validé"
+            valeur={statsValide}
+            actif={statusFilter === "VALIDATED"}
+            onClick={() => basculerStatut("VALIDATED")}
+            couleur="yellow"
+          />
+          <CompteurFiltre
+            libelle="Cas urgent"
+            valeur={statsUrgent}
+            actif={urgentFilter === "1"}
+            onClick={() => {
+              setUrgentFilter(urgentFilter === "1" ? "" : "1");
+              setPage(0);
+            }}
+            couleur="red"
+          />
         </div>
 
         {/* Tableau */}
