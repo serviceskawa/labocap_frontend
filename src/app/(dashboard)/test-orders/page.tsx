@@ -364,16 +364,37 @@ export default function TestOrdersPage() {
       accessorKey: "createdAt",
       cell: ({ getValue }) => formatDate(getValue<string>()),
     },
-    // 3. Code
+    // 3. Code — le code du bon, et sous lui la personne à qui il est affecté.
+    //
+    // Réunis dans une seule colonne plutôt que séparés : le nom ne se lit que
+    // rapporté au bon qu'il concerne, et une colonne de plus dans un tableau
+    // déjà large se paie en largeur pour les colonnes voisines.
     {
       header: "Code",
       accessorKey: "code",
-      cell: ({ row }) =>
-        row.original.code ?? (
-          <span className="whitespace-nowrap text-gray-400 italic text-xs">
-            En attente
-          </span>
-        ),
+      cell: ({ row }) => {
+        const affecteA = row.original.assignedUserName?.trim();
+        return (
+          <div className="min-w-0">
+            {row.original.code ?? (
+              <span className="whitespace-nowrap text-gray-400 italic text-xs">
+                En attente
+              </span>
+            )}
+            {/* Rien n'est affiché quand le bon n'est pas affecté : une mention
+                « non affecté » répétée sur la moitié des lignes ferait du bruit
+                là où l'absence se lit d'elle-même. */}
+            {affecteA ? (
+              <div
+                className="mt-0.5 truncate text-xs text-gray-500"
+                title={`Affecté à ${affecteA}`}
+              >
+                {affecteA}
+              </div>
+            ) : null}
+          </div>
+        );
+      },
     },
     // 4. Patient
     {
