@@ -52,6 +52,12 @@ export interface TestOrder {
   typeOrderTitle?: string;
   attribuateDoctorId?: string;
   assignedToUserId?: string;
+  /**
+   * Nom de la personne à qui le bon a été affecté (page Affectations), ou absent
+   * s'il ne l'est pas. Calculé par l'API à partir de la table d'association ;
+   * quand un bon figure dans plusieurs affectations, c'est la plus récente.
+   */
+  assignedUserName?: string;
   option?: boolean;
   details: DetailTestOrderDto[];
   branchId: string;
