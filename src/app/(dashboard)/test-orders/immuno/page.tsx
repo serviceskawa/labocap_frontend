@@ -126,6 +126,7 @@ function ActionButtons({
       label: "Voir les détails",
       icon: <Eye className="h-3.5 w-3.5" />,
       href: `/test-orders/${order.id}/details`,
+      newTab: true,
     },
   ];
 
@@ -134,6 +135,7 @@ function ActionButtons({
       label: "Mettre à jour l'examen",
       icon: <Pencil className="h-3.5 w-3.5" />,
       href: `/test-orders/${order.id}/edit`,
+      newTab: true,
     });
   }
 

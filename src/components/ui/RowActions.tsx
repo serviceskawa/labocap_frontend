@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, SquareArrowOutUpRight } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { createContext, useContext, type ReactNode } from "react";
 import { IconButton, type IconButtonVariant } from "./IconButton";
@@ -19,6 +19,16 @@ export interface RowAction {
   icon: ReactNode;
   /** Navigation. Exclusif avec `onClick`. */
   href?: string;
+  /**
+   * Ouvre dans un nouvel onglet plutôt que dans la page courante.
+   *
+   * Sert les listes qu'on parcourt en travaillant : ouvrir une demande ne doit
+   * pas coûter les filtres, la page et la position de défilement qu'on a mis du
+   * temps à poser. Un repère visuel accompagne le lien, et son nom accessible
+   * annonce l'ouverture — la surprise est le principal reproche fait à cette
+   * pratique.
+   */
+  newTab?: boolean;
   onClick?: () => void;
   variant?: IconButtonVariant;
   disabled?: boolean;
@@ -176,14 +186,21 @@ export function RowActions({
 }
 
 function ActionAPlat({ action }: { action: RowAction }) {
-  const { label, icon, href, onClick, variant = "default", disabled } = action;
+  const { label, icon, href, onClick, variant = "default", disabled, newTab } = action;
 
   if (href && !disabled) {
+    // Le nom accessible porte la mention, faute de place pour un repère visuel
+    // sur un bouton de 28 px : l'infobulle et le lecteur d'écran l'annoncent.
+    const nom = newTab ? `${label} (nouvel onglet)` : label;
     return (
       <Link
         href={href}
-        title={label}
-        aria-label={label}
+        title={nom}
+        aria-label={nom}
+        target={newTab ? "_blank" : undefined}
+        // `noopener` : sans lui, la page ouverte accède à `window.opener` et
+        // peut rediriger l'onglet d'origine.
+        rel={newTab ? "noopener noreferrer" : undefined}
         className={cn(
           "inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-control)]",
           "transition-colors duration-[var(--duration-fast)] ease-emphasized",
@@ -211,7 +228,7 @@ function ActionAPlat({ action }: { action: RowAction }) {
 }
 
 function ActionDansMenu({ action }: { action: RowAction }) {
-  const { label, icon, href, onClick, variant, disabled } = action;
+  const { label, icon, href, onClick, variant, disabled, newTab } = action;
 
   const classes = cn(
     "flex w-full cursor-pointer items-center gap-2.5 rounded-[calc(var(--radius-control)-2px)]",
@@ -229,9 +246,24 @@ function ActionDansMenu({ action }: { action: RowAction }) {
   if (href && !disabled) {
     return (
       <DropdownMenu.Item asChild>
-        <Link href={href} className={classes}>
+        <Link
+          href={href}
+          className={classes}
+          target={newTab ? "_blank" : undefined}
+          rel={newTab ? "noopener noreferrer" : undefined}
+          aria-label={newTab ? `${label} (nouvel onglet)` : undefined}
+        >
           <span className="flex-shrink-0 text-gray-400">{icon}</span>
           {label}
+          {/* Repère de sortie, poussé à droite : le menu a la place de le
+              montrer, contrairement au bouton à plat. `aria-hidden` — la
+              mention est déjà portée par le nom accessible du lien. */}
+          {newTab ? (
+            <SquareArrowOutUpRight
+              aria-hidden="true"
+              className="ml-auto h-3 w-3 flex-shrink-0 text-gray-400"
+            />
+          ) : null}
         </Link>
       </DropdownMenu.Item>
     );

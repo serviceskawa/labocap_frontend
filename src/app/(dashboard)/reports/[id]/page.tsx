@@ -8,7 +8,13 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, Printer, Paperclip, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Paperclip,
+  Printer,
+  SquareArrowOutUpRight,
+} from "lucide-react";
 import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
 import type { AxiosError } from "axios";
 
@@ -631,9 +637,13 @@ export default function ReportDetailPage({
                 Les pièces jointes proviennent de la galerie du bon d&apos;examen.{" "}
                 <Link
                   href={`/test-orders/${report.testOrderId}/details`}
-                  className="font-medium text-blue-600 hover:underline"
+                  className="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Ajouter ou retirer une image (nouvel onglet)"
                 >
                   Ajouter ou retirer une image
+                  <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3 opacity-70" />
                 </Link>
               </p>
             )}

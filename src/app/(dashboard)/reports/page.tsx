@@ -238,7 +238,10 @@ export default function ReportsPage() {
               <Link
                 href={`/test-orders/${r.testOrderId}/details`}
                 className="inline-flex items-center justify-center rounded-md bg-yellow-500 px-2 py-1.5 text-white transition-colors hover:bg-yellow-600"
-                title="Détails"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Détails (nouvel onglet)"
+                aria-label="Détails de la demande (nouvel onglet)"
               >
                 <ClipboardList className="h-4 w-4" />
               </Link>

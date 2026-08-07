@@ -295,7 +295,10 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
                             <Link
                               href={`/test-orders/${order.id}/details`}
                               className="inline-flex items-center justify-center rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"
-                              title="Voir la demande"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Voir la demande (nouvel onglet)"
+                              aria-label="Voir la demande (nouvel onglet)"
                             >
                               <Eye className="h-4 w-4" />
                             </Link>
