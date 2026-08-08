@@ -681,7 +681,10 @@ export function Sidebar() {
           {/* Utilisateurs */}
           {can(PERMISSIONS.VIEW_USERS) && (
             <CollapseItem icon={<UserCheck className="w-5 h-5" />} label="Utilisateurs" collapsed={collapsed}>
-              {can(PERMISSIONS.VIEW_USERS) && <SubItem href="/settings/permissions" label="Permissions" />}
+              {/* La liste des permissions n'est pas exposée au menu : ce sont
+                  307 lignes techniques (« view-appel-by-reports », « edit-tests »)
+                  qu'on n'administre pas une à une. Elles s'attribuent par les
+                  rôles, écran ci-dessous. La route reste accessible en direct. */}
               {can(PERMISSIONS.MANAGE_ROLES) && <SubItem href="/settings/roles" label="Rôles" />}
               {can(PERMISSIONS.VIEW_USERS) && <SubItem href="/settings/users" label="Tous les utilisateurs" />}
             </CollapseItem>
