@@ -13,6 +13,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { LimitedSelect as ReactSelect } from "@/components/ui/LimitedSelect";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTableCard } from "@/components/common/DataTableCard";
 import {
   RowActions,
@@ -259,6 +260,20 @@ export default function UsersPage() {
           </div>
         );
       },
+    },
+    {
+      // L'état existait déjà de bout en bout — `isActive` dans le DTO, dans le
+      // type client, et dans l'action « Activer / Désactiver » — mais aucune
+      // colonne ne le montrait. On pouvait donc basculer un compte sans jamais
+      // voir son état, sinon en devinant depuis le libellé de l'action.
+      header: "Statut",
+      id: "statut",
+      cell: ({ row }) => (
+        <StatusBadge
+          status={row.original.isActive ? "ACTIF" : "INACTIF"}
+          domain="general"
+        />
+      ),
     },
     {
       header: "Actions",
