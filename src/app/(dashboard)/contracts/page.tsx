@@ -349,7 +349,13 @@ export default function ContractsPage() {
       header: "Statut",
       accessorKey: "status",
       cell: ({ row }) => (
-        <StatusBadge status={row.original.status} domain="contract" />
+        // Laravel fait primer la clôture sur le statut
+        // (ContratController.php:103) : 151 contrats sur 202 sont clôturés et
+        // s'affichaient « Actif » chez nous, faute de regarder `is_close`.
+        <StatusBadge
+          status={row.original.isClose ? "CLOTURE" : row.original.status}
+          domain="contract"
+        />
       ),
     },
     {
@@ -365,7 +371,12 @@ export default function ContractsPage() {
           },
         ];
 
-        if (can(PERMISSIONS.EDIT_CONTRACTS)) {
+        // Un contrat clôturé ne se modifie plus, ne se supprime plus et ne se
+        // reclôture pas : Laravel masque ces trois actions dès `is_close = 1`
+        // (contrats/btn_edit_delete.blade.php) et ne laisse que la consultation.
+        const cloture = contrat.isClose === true;
+
+        if (can(PERMISSIONS.EDIT_CONTRACTS) && !cloture) {
           actions.push({
             label: "Modifier",
             icon: <Pencil className="h-4 w-4" />,
@@ -400,7 +411,7 @@ export default function ContractsPage() {
           }
         }
 
-        if (can(PERMISSIONS.DELETE_CONTRACTS)) {
+        if (can(PERMISSIONS.DELETE_CONTRACTS) && !cloture) {
           actions.push({
             label: "Supprimer",
             icon: <Trash2 className="h-4 w-4" />,
