@@ -93,7 +93,13 @@ export default function ExpensesPage() {
 
   // ---- Queries -------------------------------------------------------------
 
-  const params: Record<string, unknown> = { size: 200 };
+  // Pagination servie par le serveur, comme sur les autres listes. Le `size: 200`
+  // d'origine tenait tant que les dépenses restaient sous ce seuil ; il aurait
+  // tronqué la liste en silence à la deux-cent-unième.
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
+  const params: Record<string, unknown> = { page, size: pageSize };
   if (categoryFilter) params.expenseCategorieId = categoryFilter;
   if (paidFilter !== "") params.paid = paidFilter;
 
@@ -447,7 +453,19 @@ export default function ExpensesPage() {
       </div>
 
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <DataTable columns={columns} data={expenses} isLoading={isLoading} />
+        <DataTable
+          columns={columns}
+          data={expenses}
+          isLoading={isLoading}
+          pageCount={data?.totalPages ?? 0}
+          pageIndex={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(0);
+          }}
+        />
       </div>
 
       <ConfirmModal

@@ -150,7 +150,14 @@ export default function ContractsPage() {
 
   // ---- Queries -------------------------------------------------------------
 
-  const params: Record<string, unknown> = {};
+  // Pagination servie par le serveur. Sans `page` ni `size`, l'API applique son
+  // défaut de vingt éléments : le tableau paginait alors ces vingt lignes par
+  // dix et affichait deux pages, laissant 182 contrats sur 202 inaccessibles —
+  // sans erreur ni message, la liste paraissant simplement complète.
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+
+  const params: Record<string, unknown> = { page, size: pageSize };
   if (statusFilter) params.status = statusFilter;
   if (clientSearch) params.clientSearch = clientSearch;
   if (nameSearch) params.search = nameSearch;
@@ -163,6 +170,7 @@ export default function ContractsPage() {
   });
 
   const contracts: Contract[] = data?.content ?? [];
+  const pageCount = data?.totalPages ?? 0;
 
   // Clients pour le React Select (live search)
   const [clientInputValue, setClientInputValue] = useState("");
@@ -485,7 +493,19 @@ export default function ContractsPage() {
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-5">
         {/* Jusqu'à cinq actions : le tableau replie uniformément. */}
         <RowActionsProvider collapse>
-          <DataTable columns={columns} data={contracts} isLoading={isLoading} />
+          <DataTable
+            columns={columns}
+            data={contracts}
+            isLoading={isLoading}
+            pageCount={pageCount}
+            pageIndex={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(0);
+            }}
+          />
         </RowActionsProvider>
       </div>
 
