@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, Children, isValidElement } from "react";
+import {
+  useState, useRef, useEffect, useContext, createContext,
+  Children, isValidElement,
+} from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -137,6 +140,20 @@ function NavItem({ href, icon, label, collapsed, badge = 0 }: NavItemProps) {
   );
 }
 
+/**
+ * Accordéon : un seul menu ouvert à la fois.
+ *
+ * L'état vivait dans chaque `CollapseItem`, initialisé une fois par
+ * `useState(containsActive)`. Deux conséquences : ouvrir un menu puis naviguer
+ * ailleurs laissait le premier ouvert, et une barre à treize sections finissait
+ * dépliée de bout en bout. On remonte donc la décision d'un cran — un seul
+ * libellé ouvert, connu de tous.
+ */
+const MenuOuvertContext = createContext<{
+  ouvert: string | null;
+  setOuvert: (label: string | null) => void;
+}>({ ouvert: null, setOuvert: () => {} });
+
 function CollapseItem({
   icon,
   label,
@@ -159,7 +176,20 @@ function CollapseItem({
     (href) => pathname === href || pathname.startsWith(`${href}/`),
   );
 
-  const [open, setOpen] = useState(containsActive);
+  const { ouvert, setOuvert } = useContext(MenuOuvertContext);
+  const open = ouvert === label;
+
+  // La navigation désigne le menu ouvert : entrer dans une section l'ouvre et
+  // referme les autres. Dépendance sur le seul `pathname` — sinon un menu
+  // contenant la page courante se rouvrirait aussitôt qu'on le referme.
+  useEffect(() => {
+    if (containsActive) setOuvert(label);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  // Le rail replié ouvre son volet au survol : état local, sans rapport avec
+  // l'accordéon, qui ne concerne que la barre déployée.
+  const [survol, setSurvol] = useState(false);
   const [flyoutTop, setFlyoutTop] = useState(0);
   const triggerRef = useRef<HTMLDivElement>(null);
 
@@ -174,9 +204,9 @@ function CollapseItem({
         onMouseEnter={() => {
           const rect = triggerRef.current?.getBoundingClientRect();
           if (rect) setFlyoutTop(rect.top);
-          setOpen(true);
+          setSurvol(true);
         }}
-        onMouseLeave={() => setOpen(false)}
+        onMouseLeave={() => setSurvol(false)}
       >
         <div
           className={`${NAV_BASE} cursor-pointer justify-center ${
@@ -186,7 +216,7 @@ function CollapseItem({
         >
           <span className="flex-shrink-0 w-5 h-5">{icon}</span>
         </div>
-        {open && (
+        {survol && (
           // `pl-1` sert de pont de survol entre l'icône et le panneau.
           <div className="fixed left-16 z-50 pl-1" style={{ top: flyoutTop }}>
             <div className="min-w-[210px] rounded-[var(--radius-surface)] border border-white/10 bg-gray-900 py-2 shadow-[var(--elevation-overlay)]">
@@ -204,7 +234,7 @@ function CollapseItem({
   return (
     <div>
       <button
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => setOuvert(open ? null : label)}
         className={`${NAV_BASE} w-[calc(100%-16px)] gap-3 text-left ${
           containsActive
             ? "font-medium text-white"
@@ -349,6 +379,8 @@ function NavGroup({
 
 export function Sidebar() {
   const { sidebarCollapsed, mobileSidebarOpen, setMobileSidebarOpen } = useUIStore();
+  // Un seul menu ouvert à la fois — voir MenuOuvertContext.
+  const [menuOuvert, setMenuOuvert] = useState<string | null>(null);
   const { can } = usePermissions();
   const { openTimeoffModal } = useUIStore();
   const pathname = usePathname();
@@ -478,6 +510,7 @@ export function Sidebar() {
 
       {/* Scrollable nav */}
       <nav className="sidebar-scroll flex-1 overflow-y-auto py-3 overflow-x-hidden">
+        <MenuOuvertContext.Provider value={{ ouvert: menuOuvert, setOuvert: setMenuOuvert }}>
 
         {/* ══════════════ TABLEAU DE BORD ══════════════ */}
         <NavGroup label="TABLEAU DE BORD" collapsed={collapsed}>
@@ -733,6 +766,7 @@ export function Sidebar() {
           {/* Bottom padding */}
           <div className="h-4" />
         </NavGroup>
+      </MenuOuvertContext.Provider>
       </nav>
     </aside>
     </>
