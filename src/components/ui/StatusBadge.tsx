@@ -3,7 +3,12 @@
 import { Badge, BadgeVariant } from "./Badge";
 
 interface StatusBadgeProps {
-  status: string;
+  /**
+   * Le statut peut être absent : la reprise Laravel a conservé des lignes sans
+   * statut, et le type le disait `string` alors que l'API rend `null`. Un type
+   * qui ment sur la donnée déplace simplement l'erreur à l'exécution.
+   */
+  status: string | null | undefined;
   domain: "invoice" | "report" | "testOrder" | "contract" | "general";
 }
 
@@ -49,9 +54,17 @@ const domainMappings: Record<
 
 function getStatusConfig(
   domain: StatusBadgeProps["domain"],
-  status: string
+  status: string | null | undefined
 ): StatusConfig {
   const mapping = domainMappings[domain];
+
+  // Un statut absent n'est pas une anomalie de code : quatre contrats repris de
+  // Laravel en portent un nul ou vide. Sans ce garde-fou, `status.toLowerCase()`
+  // faisait tomber la page entière — et seulement à partir de la deuxième, les
+  // lignes concernées n'étant pas dans les dix premières.
+  if (status == null || status === "") {
+    return { label: "—", variant: "secondary" };
+  }
 
   // Lookup exact
   if (mapping[status]) return mapping[status];
