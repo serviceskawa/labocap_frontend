@@ -369,10 +369,12 @@ export default function ReportDetailPage({
     );
   }
 
-  // Comme Laravel : le formulaire reste modifiable tant que le compte rendu n'est
-  // pas livré (un CR VALIDATED peut être ré-édité / repassé En attente via le
-  // select). Seul DELIVERED verrouille l'édition.
-  const canEdit = can(PERMISSIONS.EDIT_REPORTS) && report.status !== "DELIVERED";
+  // Comme Laravel : la permission seule décide. La livraison n'y verrouillait
+  // rien — c'était un drapeau `is_delivered` distinct du statut — et un
+  // complément arrive par nature après la remise du résultat. Verrouiller sur
+  // DELIVERED condamnait la case « Complémentaire » au moment précis où elle
+  // sert, et empêchait de corriger un dossier déjà sorti.
+  const canEdit = can(PERMISSIONS.EDIT_REPORTS);
   const patient = patientProfile?.patient;
 
   // ---------------------------------------------------------------------------
