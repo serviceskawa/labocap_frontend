@@ -307,6 +307,23 @@ function SignatureModalInner({
     setRetrieverName(checked ? fullPatientName : "");
   };
 
+  /**
+   * La case « Patient lui-même » est un raccourci de saisie, pas un verrou : le
+   * nom reste modifiable même une fois pré-rempli (un patient se fait souvent
+   * représenter, et le nom de l'état civil n'est pas toujours celui qu'on
+   * inscrit). Dès que la saisie s'écarte du nom du patient, la case se décoche
+   * d'elle-même — elle décrirait sinon un récupérateur qui n'est plus le bon.
+   *
+   * On ne retouche jamais le nom ici : `handleTogglePatient` le vide au
+   * décochage, et l'appeler à cet endroit effacerait la frappe en cours.
+   */
+  const handleNameChange = (value: string) => {
+    setRetrieverName(value);
+    if (usePatientName && value !== fullPatientName) {
+      setUsePatientName(false);
+    }
+  };
+
   const handleClear = () => {
     padRef.current?.clear();
   };
@@ -401,9 +418,8 @@ function SignatureModalInner({
               id="retriever-name"
               type="text"
               value={retrieverName}
-              onChange={(e) => setRetrieverName(e.target.value)}
-              disabled={usePatientName}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50"
+              onChange={(e) => handleNameChange(e.target.value)}
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Saisir le nom du récupérateur"
             />
             <label className="inline-flex items-center gap-2 text-sm text-gray-700">

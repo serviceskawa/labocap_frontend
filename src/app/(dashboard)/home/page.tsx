@@ -58,6 +58,7 @@ import {
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import apiClient from "@/lib/api/client";
 import { reportsApi } from "@/lib/api/reports";
+import { getApiErrorMessageFromBlob } from "@/lib/api/errorMessages";
 import { Button } from "@/components/ui/Button";
 import {
   CHART_CATEGORICAL,
@@ -202,8 +203,13 @@ function ActionButtons({ report, onDeleted }: ActionButtonsProps) {
       const url = URL.createObjectURL(res.data as Blob);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
-      toast.error("Erreur lors de la génération du PDF");
+    } catch (err) {
+      toast.error(
+        await getApiErrorMessageFromBlob(
+          err,
+          "Erreur lors de la génération du PDF",
+        ),
+      );
     } finally {
       setIsPrinting(false);
     }
