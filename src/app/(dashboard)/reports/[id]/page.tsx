@@ -191,6 +191,16 @@ export default function ReportDetailPage({
     label: t.title ?? t.name ?? "—",
   }));
 
+  // --- Modifications survenues après signature
+  // Requête à part de celle du compte rendu : la liste est vide sur l'immense
+  // majorité des dossiers, et la charger avec le reste alourdirait chaque
+  // ouverture pour un cas rare.
+  const { data: modificationsApresSignature } = useQuery({
+    queryKey: ["report-modifications-apres-signature", id],
+    queryFn: () =>
+      reportsApi.findModificationsApresSignature(id).then((r) => r.data),
+  });
+
   // --- Formulaire
   const {
     register,
@@ -292,6 +302,12 @@ export default function ReportDetailPage({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["report", id] });
+      // L'enregistrement vient peut-être d'ajouter une modification après
+      // signature : sans cette invalidation, le bandeau ne la montrerait qu'au
+      // prochain chargement de la page.
+      queryClient.invalidateQueries({
+        queryKey: ["report-modifications-apres-signature", id],
+      });
       toast.success(
         statusValue === "1" ? "Compte rendu validé" : "Compte rendu mis à jour"
       );
@@ -402,6 +418,39 @@ export default function ReportDetailPage({
           Retour à la liste des comptes rendus
         </button>
       </div>
+
+      {/*
+        Mise en exergue des modifications postérieures à la signature.
+        Placé avant le formulaire et non dans un onglet d'historique : celui qui
+        ouvre ce compte rendu doit savoir qu'il a bougé depuis sa signature sans
+        avoir à aller le chercher.
+      */}
+      {modificationsApresSignature && modificationsApresSignature.length > 0 && (
+        <div
+          role="status"
+          className="rounded-lg border border-amber-300 bg-amber-50 p-4"
+        >
+          <p className="text-sm font-semibold text-amber-900">
+            Ce compte rendu a été modifié après sa signature
+            {modificationsApresSignature.length > 1
+              ? ` (${modificationsApresSignature.length} fois)`
+              : ""}
+          </p>
+          <ul className="mt-2 space-y-1">
+            {modificationsApresSignature.map((m, i) => (
+              <li key={i} className="text-sm text-amber-900">
+                <span className="font-semibold">{m.auteur}</span>
+                {" — "}
+                {formatDate(m.date)}
+                <span className="text-amber-800"> · {m.champs}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-amber-800">
+            Les administrateurs ont été avertis de chacune de ces modifications.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* ============================ COLONNE PRINCIPALE ============================ */}

@@ -3,6 +3,22 @@ import type { PageResponse } from "@/types/api";
 
 export type ReportStatus = "DRAFT" | "PENDING_REVIEW" | "VALIDATED" | "DELIVERED";
 
+/**
+ * Une modification apportée au compte rendu après sa signature.
+ *
+ * Un compte rendu signé engage le médecin qui l'a signé ; le modifier ensuite
+ * reste permis — les compléments arrivent après la remise du résultat — mais
+ * l'auteur et la date en sont conservés et mis en évidence.
+ */
+export interface ModificationApresSignature {
+  /** Absent si le compte a depuis été supprimé ; `auteur` reste lisible. */
+  auteurId: string | null;
+  auteur: string;
+  date: string;
+  /** Champs touchés, déjà mis en forme par le serveur. */
+  champs: string;
+}
+
 export interface ReportLog {
   action: string;
   description: string;
@@ -305,6 +321,18 @@ export const reportsApi = {
   /** Associe un modèle (template) au compte-rendu. */
   setTemplate: (id: string, templateId: string) =>
     apiClient.patch(`/reports/${id}/template/${templateId}`),
+
+  /**
+   * Modifications apportées au compte rendu après sa signature.
+   *
+   * Route distincte de l'historique complet, qui mêle impressions et
+   * enregistrements ordinaires : seul ce qui engage la signature d'un médecin
+   * est mis en exergue.
+   */
+  findModificationsApresSignature: (id: string) =>
+    apiClient.get<ModificationApresSignature[]>(
+      `/reports/${id}/modifications-apres-signature`,
+    ),
 
   /**
    * Liste paginée des comptes-rendu pour la page "Tous les comptes rendu".
