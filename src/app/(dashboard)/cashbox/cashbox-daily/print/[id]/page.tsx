@@ -9,6 +9,7 @@ import { cashboxApi, type CashboxDailyResponseDto } from "@/lib/api/cashbox";
 import { isPlaceholder, DEFAULT_APP_NAME } from "@/hooks/useBranding";
 import { formatCFAAvecDevise } from "@/lib/utils";
 import { DocumentHeader } from "@/components/ui/DocumentHeader";
+import { Button } from "@/components/ui/Button";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
@@ -87,14 +88,9 @@ export default function CashboxDailyPrintPage({ params }: PageProps) {
           <ArrowLeft className="h-4 w-4" />
           Retour
         </Link>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600"
-        >
-          <Printer className="h-4 w-4" />
+        <Button onClick={() => window.print()} icon={<Printer className="h-4 w-4" />}>
           Imprimer
-        </button>
+        </Button>
       </div>
 
       <RecapPrint daily={daily} logoSrc={logoSrc} appName={appName} />

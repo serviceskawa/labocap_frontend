@@ -310,7 +310,7 @@ export default function InvoicesPage() {
           className={cn(
             "rounded-full border px-5 py-2 text-sm font-medium transition-colors",
             activeTab === "list"
-              ? "bg-green-100 text-green-700 border-green-300"
+              ? "bg-blue-50 text-blue-700 border-blue-200"
               : "bg-gray-100 text-gray-700 border-transparent hover:bg-gray-200"
           )}
         >
@@ -322,7 +322,7 @@ export default function InvoicesPage() {
           className={cn(
             "rounded-full border px-5 py-2 text-sm font-medium transition-colors",
             activeTab === "reports"
-              ? "bg-green-100 text-green-700 border-green-300"
+              ? "bg-blue-50 text-blue-700 border-blue-200"
               : "bg-gray-100 text-gray-700 border-transparent hover:bg-gray-200"
           )}
         >

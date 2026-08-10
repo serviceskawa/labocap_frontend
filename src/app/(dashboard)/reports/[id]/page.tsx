@@ -8,13 +8,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import {
-  ArrowLeft,
-  Loader2,
-  Paperclip,
-  Printer,
-  SquareArrowOutUpRight,
-} from "lucide-react";
+import { ArrowLeft, Paperclip, Printer, SquareArrowOutUpRight } from "lucide-react";
 import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
 import type { AxiosError } from "axios";
 
@@ -718,17 +712,13 @@ export default function ReportDetailPage({
             {/* Mettre à jour (Laravel : bouton unique qui enregistre + applique le statut) */}
             <PermissionGate permission={PERMISSIONS.EDIT_REPORTS}>
               {canEdit && (
-                <button
-                  type="button"
+                <Button
                   onClick={handleSubmit((data) => updateMutation.mutate(data))}
-                  disabled={updateMutation.isPending}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+                  className="mt-4 w-full"
+                  loading={updateMutation.isPending}
                 >
-                  {updateMutation.isPending && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
                   {updateMutation.isPending ? "Mise à jour..." : "Mettre à jour"}
-                </button>
+                </Button>
               )}
             </PermissionGate>
           </Card>

@@ -23,6 +23,7 @@ import Link from "next/link";
 import type { AxiosError } from "axios";
 
 import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Button } from "@/components/ui/Button";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
@@ -296,7 +297,7 @@ export default function ContractDetailPage({
                   type="button"
                   onClick={() => activateMutation.mutate()}
                   disabled={activateMutation.isPending}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[.9rem] font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[.9rem] font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:opacity-50"
                 >
                   {activateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   Activer
@@ -624,15 +625,14 @@ export default function ContractDetailPage({
         {!isClose && (
           <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
             <div className="px-5 py-4 border-t border-gray-100">
-              <button
-                type="button"
+              <Button
                 onClick={() => saveMutation.mutate()}
-                disabled={details.length === 0 || saveMutation.isPending}
-                className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full"
+                disabled={details.length === 0}
+                loading={saveMutation.isPending}
               >
-                {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Sauvegarder
-              </button>
+              </Button>
             </div>
           </PermissionGate>
         )}

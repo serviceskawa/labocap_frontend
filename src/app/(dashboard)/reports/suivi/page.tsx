@@ -7,6 +7,7 @@ import type { AxiosError } from "axios";
 import { MessageSquare, Phone } from "lucide-react";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
@@ -235,13 +236,9 @@ function DeliveryCell({ row, onOpenSignature, onOpenDetail }: DeliveryCellProps)
 
   if (row.isDelivered) {
     return (
-      <button
-        type="button"
-        onClick={() => onOpenDetail(row)}
-        className="inline-flex items-center rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-green-700"
-      >
+      <Button size="sm" onClick={() => onOpenDetail(row)}>
         Détail
-      </button>
+      </Button>
     );
   }
   return (

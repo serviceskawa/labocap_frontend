@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
+import { Button } from "@/components/ui/Button";
 import { RemoteSelectField } from "@/components/ui/RemoteSelectField";
 import type { SelectOption } from "@/components/ui/FormSelect";
 import {
@@ -19,7 +20,7 @@ import {
 import type { TestOrderOption } from "@/lib/api/optionLoaders";
 import type { AxiosError } from "axios";
 
-import { Loader2 } from "lucide-react";
+
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FormToggle } from "@/components/ui/FormToggle";
 import { NativeSelect } from "@/components/ui/NativeSelect";
@@ -653,14 +654,9 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
             >
               Annuler
             </button>
-            <button
-              type="submit"
-              disabled={updateMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-yellow-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-yellow-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            <Button type="submit" loading={updateMutation.isPending}>
               Mettre à jour
-            </button>
+            </Button>
           </div>
         </form>
       </div>

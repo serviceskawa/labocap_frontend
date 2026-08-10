@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, ClipboardList, Loader2 } from "lucide-react";
+import { Eye, ClipboardList } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/common/DataTable";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -455,16 +456,9 @@ export default function ReportsPage() {
           </div>
 
           <div className="flex items-end">
-            <button
-              type="submit"
-              className="inline-flex w-full items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:opacity-50"
-              disabled={perfQuery.isFetching}
-            >
-              {perfQuery.isFetching && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
+            <Button type="submit" className="w-full" loading={perfQuery.isFetching}>
               Filtrer
-            </button>
+            </Button>
           </div>
         </form>
 

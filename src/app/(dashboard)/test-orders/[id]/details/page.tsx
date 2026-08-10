@@ -4,6 +4,7 @@ import { use, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
+import { Button } from "@/components/ui/Button";
 import { Pencil, Trash2, ImagePlus, Eye, FileText, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
@@ -642,14 +643,13 @@ export default function TestOrderDetailsPage({ params }: Props) {
             onChange={(e) => setFiles(e.target.files)}
             className="text-sm text-gray-600 file:mr-3 file:rounded file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200"
           />
-          <button
+          <Button
             type="submit"
-            disabled={!files || files.length === 0 || uploadMutation.isPending}
-            className="inline-flex items-center gap-1.5 rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+            disabled={!files || files.length === 0}
+            loading={uploadMutation.isPending}
           >
-            {uploadMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             {uploadMutation.isPending ? "Upload..." : "Ajouter"}
-          </button>
+          </Button>
         </form>
 
         {/* Liste images */}
@@ -815,21 +815,16 @@ export default function TestOrderDetailsPage({ params }: Props) {
       {/* Bouton finalisation */}
         {canEditDetails && (
           <div className="mt-4">
-            <button
-              type="button"
+            {/* Le fond cyan n'appartenait à aucune variante du système ; l'état
+                désactivé est géré par le composant, plus besoin d'un gris manuel. */}
+            <Button
               onClick={() => setConfirmValidation(true)}
-              disabled={
-                !order.details?.length || updateStatusMutation.isPending
-              }
-              className={`inline-flex w-full items-center justify-center gap-2 py-3 rounded-lg font-semibold transition-colors ${
-                order.details?.length
-                  ? "bg-cyan-600 text-white hover:bg-cyan-700"
-                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
+              className="w-full py-3 font-semibold"
+              disabled={!order.details?.length}
+              loading={updateStatusMutation.isPending}
             >
-              {updateStatusMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
               {updateStatusMutation.isPending ? "Enregistrement..." : "ENREGISTRER"}
-            </button>
+            </Button>
           </div>
         )}
       </div>
