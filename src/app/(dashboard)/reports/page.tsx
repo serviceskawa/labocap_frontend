@@ -301,6 +301,8 @@ export default function ReportsPage() {
             <label className={labelClass} htmlFor="filter-search">
               Rechercher
             </label>
+            {/* Le champ interroge aussi le texte du compte rendu : sans cette
+                mention, personne ne songe à y chercher un terme de diagnostic. */}
             <input
               id="filter-search"
               type="text"
@@ -309,6 +311,7 @@ export default function ReportsPage() {
                 setSearch(e.target.value);
                 setPage(0);
               }}
+              placeholder="Nom, téléphone, code ou mot du compte rendu…"
               className={inputClass}
             />
           </div>

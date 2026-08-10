@@ -116,22 +116,6 @@ export default function CashboxDailyPage() {
     queryFn: () => cashboxApi.getCashboxes().then((r) => r.data.content),
   });
 
-  // Caisse de vente « principale » — même heuristique que la page vente : parmi les
-  // caisses de type "vente" (doublons possibles hérités de la migration), retenir
-  // celle au solde le plus élevé (la caisse réellement active).
-  const venteCashbox = (cashboxes ?? [])
-    .filter((c) => c.type === "vente")
-    .reduce<CashboxResponseDto | undefined>(
-      (best, c) =>
-        !best || Number(c.balance ?? 0) > Number(best.balance ?? 0) ? c : best,
-      undefined,
-    );
-
-  // Statut = calque exact de Laravel (cashbox_daily/index.blade.php :
-  // `@if ($cashboxtest->statut == 0) Ouvrir @elseif == 1 Fermer`). La source de
-  // vérité est la colonne `statut` de la caisse de vente, pas les sessions.
-  const isOpen = venteCashbox?.statut === 1;
-
   // Session à clôturer — Laravel : CashboxDaily::where('status',1)
   // ->orderBy('updated_at','desc')->first(). Sert de cible au bouton « Fermer ».
   const openSession = sessions
@@ -139,6 +123,23 @@ export default function CashboxDailyPage() {
     .sort((a, b) =>
       (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt),
     )[0];
+
+  // La session ouverte fait foi, et non le `statut` d'une caisse désignée par
+  // heuristique.
+  //
+  // Laravel lisait bien `statut`, mais sur une caisse FIXE (`Cashbox::find(2)`).
+  // La reprise a rendu la caisse choisissable à l'ouverture et remplacé cet
+  // identifiant figé par « la caisse de vente au solde le plus élevé » — la
+  // migration en ayant laissé deux. L'heuristique se sabote elle-même :
+  // l'ouverture soustrait le solde d'ouverture du solde de la caisse, si bien
+  // que la caisse ouverte peut passer derrière sa jumelle et cesser d'être
+  // celle qu'on interroge. Le bouton retombe alors sur « Ouvrir la caisse »
+  // alors qu'une session est ouverte, et plus rien ne permet de la fermer.
+  //
+  // La liste affiche l'état des sessions ; le bouton vise déjà `openSession`.
+  // Fonder l'affichage sur la même source rend les deux cohérents et débloque
+  // les sessions actuellement prisonnières de cet écart.
+  const isOpen = Boolean(openSession);
 
   const openMutation = useMutation({
     mutationFn: () =>
