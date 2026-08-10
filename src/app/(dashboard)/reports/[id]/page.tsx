@@ -332,7 +332,7 @@ export default function ReportDetailPage({
       // il faut le lire pour ne pas afficher un message générique à la place.
       toast.error(
         await getApiErrorMessageFromBlob(
-          err as AxiosError<ApiError>,
+          err,
           "Erreur lors de la génération du PDF",
         ),
       );

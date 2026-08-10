@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 
 import apiClient from "./client";
+import { getApiErrorMessageFromBlob } from "./errorMessages";
 import type { PageResponse } from "@/types/api";
 
 // ---------------------------------------------------------------------------
@@ -257,8 +258,13 @@ export const hrApi = {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-    } catch {
-      toast.error("Échec du téléchargement du fichier");
+    } catch (err) {
+      toast.error(
+        await getApiErrorMessageFromBlob(
+          err,
+          "Échec du téléchargement du fichier",
+        ),
+      );
     }
   },
 };

@@ -73,7 +73,7 @@ export function getApiErrorMessage(
  * PdfReportServiceImpl), et le front l'effaçait avant de l'afficher.
  */
 export async function getApiErrorMessageFromBlob(
-  err: AxiosError<ApiError | Blob> | Error,
+  err: unknown,
   fallback = "Une erreur est survenue"
 ): Promise<string> {
   const data = (err as AxiosError<ApiError | Blob>).response?.data;

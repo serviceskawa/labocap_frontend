@@ -23,6 +23,7 @@ import {
   type InvoiceDetail,
   type InvoicePayment,
 } from "@/lib/api/invoices";
+import { getApiErrorMessageFromBlob } from "@/lib/api/errorMessages";
 import type { ApiError } from "@/types/api";
 
 // ---------------------------------------------------------------------------
@@ -182,8 +183,13 @@ export default function InvoiceDetailPage({
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 10000);
-    } catch {
-      toast.error("Erreur lors de la génération du PDF");
+    } catch (err) {
+      toast.error(
+        await getApiErrorMessageFromBlob(
+          err,
+          "Erreur lors de la génération du PDF",
+        ),
+      );
     }
   });
 

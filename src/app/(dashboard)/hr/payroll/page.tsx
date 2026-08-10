@@ -28,6 +28,7 @@ import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { hrApi, Payroll, PayrollRequest, Employee } from "@/lib/api/hr";
+import { getApiErrorMessageFromBlob } from "@/lib/api/errorMessages";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
@@ -260,8 +261,13 @@ export default function PayrollPage() {
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
-      toast.error("Erreur lors de la génération du PDF");
+    } catch (err) {
+      toast.error(
+        await getApiErrorMessageFromBlob(
+          err,
+          "Erreur lors de la génération du PDF",
+        ),
+      );
     } finally {
       setPdfLoadingId(null);
     }

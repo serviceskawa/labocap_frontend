@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import apiClient from "@/lib/api/client";
+import { getApiErrorMessageFromBlob } from "@/lib/api/errorMessages";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,8 +61,10 @@ export async function downloadDocFile(
     a.click();
     a.remove();
     window.URL.revokeObjectURL(url);
-  } catch {
-    toast.error("Échec du téléchargement du fichier");
+  } catch (err) {
+    toast.error(
+      await getApiErrorMessageFromBlob(err, "Échec du téléchargement du fichier"),
+    );
   }
 }
 
@@ -94,9 +97,11 @@ export async function openDocFile(attachment: string): Promise<void> {
       a.remove();
     }
     setTimeout(() => window.URL.revokeObjectURL(url), 60_000);
-  } catch {
+  } catch (err) {
     if (tab) tab.close();
-    toast.error("Échec de l'ouverture du fichier");
+    toast.error(
+      await getApiErrorMessageFromBlob(err, "Échec de l'ouverture du fichier"),
+    );
   }
 }
 

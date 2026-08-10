@@ -28,6 +28,7 @@ import {
 import { reportsApi } from "@/lib/api/reports";
 import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getApiErrorMessageFromBlob } from "@/lib/api/errorMessages";
 import type { PageResponse, ApiError } from "@/types/api";
 
 // ---------------------------------------------------------------------------
@@ -78,8 +79,13 @@ function ActionButtons({
       const url = URL.createObjectURL(res.data as Blob);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
-      toast.error("Erreur lors de la génération du PDF");
+    } catch (err) {
+      toast.error(
+        await getApiErrorMessageFromBlob(
+          err,
+          "Erreur lors de la génération du PDF",
+        ),
+      );
     } finally {
       setDownloading(false);
     }
