@@ -44,54 +44,6 @@ interface DoctorOption {
 }
 
 // ---------------------------------------------------------------------------
-// Composant : dropdown "Affecter à" inline dans le tableau
-// ---------------------------------------------------------------------------
-
-function AttribuateSelect({
-  order,
-  doctors,
-}: {
-  order: TestOrder;
-  doctors: DoctorOption[];
-}) {
-  const queryClient = useQueryClient();
-  const [value, setValue] = useState<string>(order.attribuateDoctorId ?? "");
-
-  const mutation = useMutation({
-    mutationFn: (doctorId: string) =>
-      testOrdersApi.assignDoctor(order.id, doctorId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["test-orders-immuno"] });
-      toast.success("Médecin affecté");
-    },
-    onError: () => toast.error("Erreur lors de l'affectation"),
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const doctorId = e.target.value;
-    setValue(doctorId);
-    if (doctorId) mutation.mutate(doctorId);
-  };
-
-  return (
-    <NativeSelect
-      value={value}
-      onChange={handleChange}
-      disabled={mutation.isPending}
-      className="min-w-[140px]"
-      selectClassName="text-xs"
-    >
-      <option value="">Sélectionner un docteur</option>
-      {doctors.map((d) => (
-        <option key={d.id} value={d.id}>
-          {d.name}
-        </option>
-      ))}
-    </NativeSelect>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Composant : boutons d'action par ligne
 // ---------------------------------------------------------------------------
 
@@ -107,13 +59,21 @@ function ActionButtons({
   const [creatingInvoice, setCreatingInvoice] = useState(false);
 
   const handleCreateInvoice = async () => {
+    // L'onglet s'ouvre AVANT l'appel : après un `await`, le navigateur a perdu
+    // l'activation transitoire née du clic et bloque `window.open`.
+    const onglet = window.open("", "_blank");
+    if (onglet) onglet.opener = null;
+
     setCreatingInvoice(true);
     try {
       const res = await apiClient.post<{ id: string }>(
         `/invoices/from-order/${order.id}`
       );
-      router.push(`/invoices/${res.data.id}`);
+      const url = `/invoices/${res.data.id}`;
+      if (onglet) onglet.location.href = url;
+      else router.push(url);
     } catch {
+      onglet?.close();
       toast.error("Erreur lors de la création de la facture");
     } finally {
       setCreatingInvoice(false);
@@ -145,6 +105,7 @@ function ActionButtons({
       label: "Compte rendu",
       icon: <FileText className="h-3.5 w-3.5" />,
       href: `/reports/${order.reportId}`,
+      newTab: true,
     });
   }
 
@@ -153,6 +114,7 @@ function ActionButtons({
       label: "Voir la facture",
       icon: <Printer className="h-3.5 w-3.5" />,
       href: `/invoices/${order.invoiceId}`,
+      newTab: true,
     });
   } else if (
     order.reportStatus === "VALIDATED" ||
@@ -322,26 +284,35 @@ export default function TestOrdersImmunoPage() {
       accessorKey: "createdAt",
       cell: ({ getValue }) => formatDate(getValue<string>()),
     },
-    // 3. Code
+    // 3. Code — porte aussi le laborantin affecté, comme sur « Toutes les demandes »
     {
       header: "Code",
       accessorKey: "code",
-      cell: ({ row }) =>
-        row.original.code ?? (
-          <span className="whitespace-nowrap text-gray-400 italic text-xs">
-            En attente
-          </span>
-        ),
+      cell: ({ row }) => {
+        const affecteA = row.original.assignedUserName?.trim();
+        return (
+          <div className="min-w-0">
+            {row.original.code ?? (
+              <span className="whitespace-nowrap text-gray-400 italic text-xs">
+                En attente
+              </span>
+            )}
+            {/* Rien n'est affiché quand le bon n'est pas affecté : une mention
+                « non affecté » répétée sur la moitié des lignes ferait du bruit
+                là où l'absence se lit d'elle-même. */}
+            {affecteA ? (
+              <div
+                className="mt-0.5 truncate text-xs text-gray-500"
+                title={`Affecté à ${affecteA}`}
+              >
+                {affecteA}
+              </div>
+            ) : null}
+          </div>
+        );
+      },
     },
-    // 4. Affecter à — dropdown docteur
-    {
-      header: "Affecter à",
-      id: "affecter",
-      cell: ({ row }) => (
-        <AttribuateSelect order={row.original} doctors={doctors} />
-      ),
-    },
-    // 5. Patient
+    // 4. Patient
     {
       header: "Patient",
       id: "patient",
@@ -394,19 +365,6 @@ export default function TestOrdersImmunoPage() {
           </span>
         );
       },
-    },
-    // 10. Urgent — badge rouge si urgent
-    {
-      header: "Urgent",
-      id: "urgent",
-      cell: ({ row }) =>
-        row.original.isUrgent ? (
-          <span className="inline-flex items-center rounded-full bg-red-700 px-2 py-0.5 text-xs font-medium text-white">
-            Urgent
-          </span>
-        ) : (
-          <span className="text-gray-400 text-xs">—</span>
-        ),
     },
     // Actions — DERNIÈRE colonne, comme sur les autres écrans.
     {
