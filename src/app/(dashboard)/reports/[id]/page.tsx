@@ -147,14 +147,20 @@ export default function ReportDetailPage({
   });
 
   // --- Utilisateurs (signataires / relecteur)
+  // Les signataires viennent d'une route dédiée : `/users` exige `edit-users`,
+  // qu'aucun médecin n'a — la liste revenait vide en 403 silencieux, et le champ
+  // s'affichait sans aucune option.
   const { data: usersData } = useQuery({
-    queryKey: ["users-for-report"],
-    queryFn: () => usersApi.findAll({ size: 200 }).then((r) => r.data.content),
+    queryKey: ["signataires"],
+    queryFn: () => usersApi.findSignataires().then((r) => r.data),
     staleTime: 5 * 60_000,
   });
+  // Les comptes désactivés restent proposés — trois des cinq docteurs le sont et
+  // ont signé 9 278 comptes rendus ; les masquer viderait le champ sur tous ces
+  // dossiers. La mention rend l'état visible plutôt que la personne invisible.
   const userOptions = (usersData ?? []).map((u) => ({
     value: u.id,
-    label: `${u.lastname} ${u.firstname}`.trim(),
+    label: u.actif ? u.nom : `${u.nom} (inactif)`,
   }));
 
   // --- Tags
