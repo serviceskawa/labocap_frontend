@@ -31,6 +31,7 @@ import { reportsApi, type ReportDetail } from "@/lib/api/reports";
 import { reportTemplatesApi } from "@/lib/api/reportTemplates";
 import { titleReportsApi } from "@/lib/api/reportSettings";
 import { usersApi } from "@/lib/api/users";
+import { getApiErrorMessageFromBlob } from "@/lib/api/errorMessages";
 import { tagsApi } from "@/lib/api/tags";
 import { patientsApi } from "@/lib/api/patients";
 import { testOrdersApi, type ImageDto } from "@/lib/api/testOrders";
@@ -324,9 +325,17 @@ export default function ReportDetailPage({
       const url = URL.createObjectURL(blob);
       if (tab) tab.location.href = url;
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
+    } catch (err) {
       if (tab) tab.close();
-      toast.error("Erreur lors de la génération du PDF");
+      // Le backend renvoie la cause exacte dans un 422, mais le corps d'erreur
+      // arrive en Blob (conséquence du `responseType: "blob"` de la requête) :
+      // il faut le lire pour ne pas afficher un message générique à la place.
+      toast.error(
+        await getApiErrorMessageFromBlob(
+          err as AxiosError<ApiError>,
+          "Erreur lors de la génération du PDF",
+        ),
+      );
     }
   };
 
