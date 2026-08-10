@@ -154,8 +154,18 @@ export function proxy(request: NextRequest) {
 
 /**
  * Exclut les internes Next.js et les fichiers statiques du proxy :
- * _next (build/HMR), favicon, et tout chemin contenant une extension de fichier.
+ * tout `_next`, favicon, et tout chemin contenant une extension de fichier.
+ *
+ * `_next` en entier, et non ses seuls sous-chemins `static` et `image` : le
+ * rechargement à chaud ouvre une WebSocket sur `/_next/webpack-hmr`, que le
+ * motif précédent laissait passer par le proxy. Celui-ci répondait en HTTP là
+ * où le navigateur attendait une poignée de main, d'où « cannot parse
+ * response » et un rechargement à chaud muet en développement.
+ *
+ * Aucun effet en production : `_next` n'y sert que des ressources compilées,
+ * qui n'ont rien à faire du proxy — le commentaire d'origine l'annonçait déjà,
+ * seul le motif ne le faisait pas.
  */
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
+  matcher: ["/((?!_next|favicon.ico|.*\\..*).*)"],
 };
