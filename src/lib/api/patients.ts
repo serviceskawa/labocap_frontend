@@ -62,7 +62,12 @@ export interface PatientRequest {
   age?: number;
   yearOrMonth?: boolean;
   profession?: string;
-  telephone1: string;
+  /**
+   * Facultatif : le backend ne porte aucune annotation de validation dessus et
+   * la colonne accepte NULL. Le caractère obligatoire n'existait que dans les
+   * formulaires, et le client a demandé sa levée.
+   */
+  telephone1?: string;
   telephone2?: string;
   adresse: string;
   email?: string;
