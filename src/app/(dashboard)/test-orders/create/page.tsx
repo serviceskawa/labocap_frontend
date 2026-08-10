@@ -82,7 +82,9 @@ const quickPatientSchema = z.object({
   genre: z.enum(["M", "F"]).optional(),
   age: z.string().optional(),
   yearOrMonth: z.boolean().optional(),
-  telephone1: z.string().min(1, "Le téléphone est requis"),
+  // Facultatif et sans format imposé, à la demande du client (cf. le formulaire
+  // patient, qui porte la même règle). Ni le backend ni la base ne l'exigeaient.
+  telephone1: z.string().optional(),
   telephone2: z.string().optional(),
   profession: z.string().optional(),
   adresse: z.string().optional(),
@@ -330,7 +332,9 @@ export default function TestOrderCreatePage() {
       lastname: data.lastname,
       genre: data.genre ?? "M",
       langue: "fr",
-      telephone1: data.telephone1,
+      // Champ vide → absent du payload, comme `telephone2` plus bas : on
+      // enregistre l'absence de numéro, pas une chaîne vide.
+      telephone1: data.telephone1 || undefined,
       adresse: data.adresse ?? "",
     };
 
@@ -767,13 +771,11 @@ export default function TestOrderCreatePage() {
           </FormField>
 
           {/* Téléphone 1 */}
-          <FormField
-            label="Téléphone"
-            required
-            error={patientErrors.telephone1?.message}
-          >
+          <FormField label="Téléphone" error={patientErrors.telephone1?.message}>
+            {/* `text` et non `tel` : sur mobile, `tel` ouvre un pavé numérique
+                d'où lettres et « + » ne se saisissent pas. */}
             <input
-              type="tel"
+              type="text"
               {...registerPatient("telephone1")}
               placeholder="+229..."
               className={inputClass}
@@ -786,7 +788,7 @@ export default function TestOrderCreatePage() {
             error={patientErrors.telephone2?.message}
           >
             <input
-              type="tel"
+              type="text"
               {...registerPatient("telephone2")}
               placeholder="Numéro secondaire (optionnel)..."
               className={inputClass}

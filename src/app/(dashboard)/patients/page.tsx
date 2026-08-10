@@ -46,7 +46,11 @@ const patientSchema = z.object({
   age: z.string().min(1, "L'âge est requis"),
   yearOrMonth: z.string().min(1, "L'unité d'âge est requise"),
   profession: z.string().optional(),
-  telephone1: z.string().min(1, "Le contact 1 est requis"),
+  // Facultatif et sans format imposé, à la demande du client : tous les patients
+  // n'ont pas de numéro, et ceux qui en ont l'écrivent librement (indicatif,
+  // second numéro entre parenthèses, mention « fils de… »). Ni le backend ni la
+  // base ne l'exigeaient : la contrainte n'existait qu'ici.
+  telephone1: z.string().optional(),
   telephone2: z.string().optional(),
   adresse: z.string().min(1, "L'adresse est requise"),
 });
@@ -231,11 +235,12 @@ function PatientFormFields({
 
       {/* 10. Téléphone 1 */}
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">
-          Téléphone 1 <span className="text-red-500">*</span>
-        </label>
+        <label className="text-sm font-medium text-gray-700">Téléphone 1</label>
+        {/* `text` et non `tel` : sur mobile, `tel` ouvre un pavé numérique d'où
+            une lettre ou un « + » ne se saisit pas — la valeur les accepterait,
+            mais le clavier les rend inatteignables. */}
         <input
-          type="tel"
+          type="text"
           placeholder="97000000"
           {...register("telephone1")}
           className={fieldInput}
@@ -248,7 +253,7 @@ function PatientFormFields({
       {/* 11. Téléphone 2 */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-medium text-gray-700">Téléphone 2</label>
-        <input type="tel" {...register("telephone2")} className={fieldInput} />
+        <input type="text" {...register("telephone2")} className={fieldInput} />
       </div>
 
       {/* 12. Adresse — pleine largeur (comme Laravel) */}
@@ -437,7 +442,9 @@ export default function PatientsPage() {
       age: Number(formData.age),
       yearOrMonth: formData.yearOrMonth ? formData.yearOrMonth === "true" : undefined,
       profession: formData.profession || undefined,
-      telephone1: formData.telephone1,
+      // Champ vide → absent du payload, comme `telephone2` et les autres
+      // facultatifs : on enregistre l'absence de numéro, pas une chaîne vide.
+      telephone1: formData.telephone1 || undefined,
       telephone2: formData.telephone2 || undefined,
       adresse: formData.adresse,
     };
@@ -456,7 +463,9 @@ export default function PatientsPage() {
       age: Number(formData.age),
       yearOrMonth: formData.yearOrMonth ? formData.yearOrMonth === "true" : undefined,
       profession: formData.profession || undefined,
-      telephone1: formData.telephone1,
+      // Champ vide → absent du payload, comme `telephone2` et les autres
+      // facultatifs : on enregistre l'absence de numéro, pas une chaîne vide.
+      telephone1: formData.telephone1 || undefined,
       telephone2: formData.telephone2 || undefined,
       adresse: formData.adresse,
     };
