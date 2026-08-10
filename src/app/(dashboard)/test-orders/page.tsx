@@ -64,13 +64,27 @@ function ActionButtons({
   const [downloading, setDownloading] = useState(false);
 
   const handleCreateInvoice = async () => {
+    // L'onglet s'ouvre AVANT l'appel : après un `await`, le navigateur a perdu
+    // l'activation transitoire née du clic et bloque `window.open`. C'est le
+    // défaut constaté sur les affectations — l'onglet s'ouvrait vide et la
+    // navigation retombait dans la page courante.
+    const onglet = window.open("", "_blank");
+    // Passer « noopener » en option ferait renvoyer `null` par `window.open`,
+    // par spécification : on coupe le lien vers la page d'origine après coup.
+    if (onglet) onglet.opener = null;
+
     setCreatingInvoice(true);
     try {
       const res = await apiClient.post<{ id: string }>(
         `/invoices/from-order/${order.id}`
       );
-      router.push(`/invoices/${res.data.id}`);
+      const url = `/invoices/${res.data.id}`;
+      // Repli si un bloqueur a refusé l'onglet : mieux vaut naviguer sur place
+      // que laisser l'utilisateur devant une facture créée qu'il ne voit pas.
+      if (onglet) onglet.location.href = url;
+      else router.push(url);
     } catch {
+      onglet?.close();
       toast.error("Erreur lors de la création de la facture");
     } finally {
       setCreatingInvoice(false);
@@ -139,6 +153,7 @@ function ActionButtons({
       label: "Compte rendu",
       icon: <FileText className="h-3.5 w-3.5" />,
       href: `/reports/${order.reportId}`,
+      newTab: true,
     });
   }
 
@@ -181,6 +196,7 @@ function ActionButtons({
       label: "Voir la facture",
       icon: <Printer className="h-3.5 w-3.5" />,
       href: `/invoices/${order.invoiceId}`,
+      newTab: true,
     });
   } else if (
     order.reportStatus === "VALIDATED" ||
