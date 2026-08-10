@@ -13,6 +13,7 @@ import { ArrowLeft, Loader2, Paperclip, Trash2 } from "lucide-react";
 import type { AxiosError } from "axios";
 
 import { ConfirmModal } from "@/components/common/ConfirmModal";
+import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { CreatableSelectField } from "@/components/ui/CreatableSelectField";
 import {
@@ -606,14 +607,14 @@ export default function ExpenseDetailPage({
           </div>
           <TablePaginationFooter pagination={detailsPagination} />
 
-          <button
+          <Button
             type="submit"
-            disabled={lockedWhenDelivered || updateMutation.isPending}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-60"
+            className="mt-5 w-full"
+            disabled={lockedWhenDelivered}
+            loading={updateMutation.isPending}
           >
-            {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             Soumettre
-          </button>
+          </Button>
         </div>
       </form>
 

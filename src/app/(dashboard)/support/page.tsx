@@ -6,12 +6,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Send, Loader2, Ticket as TicketIcon } from "lucide-react";
+import { Send, Ticket as TicketIcon } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 import type { UseFormReturn } from "react-hook-form";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { DataTableCard } from "@/components/common/DataTableCard";
 import { CrudModal } from "@/components/common/CrudModal";
 import { FormField } from "@/components/ui/FormField";
@@ -164,14 +165,13 @@ function TicketDetailPanel({ ticket, currentUserId }: { ticket: Ticket; currentU
               placeholder="Ecrivez un commentaire"
               className="flex-1 rounded-lg border-0 bg-gray-100 px-3 py-2 text-[.9rem] focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
-            <button
+            <Button
               type="submit"
-              disabled={sendMessageMutation.isPending || !messageInput.trim()}
-              className="inline-flex items-center justify-center rounded-lg bg-green-600 px-3 py-2 text-white transition-colors hover:bg-green-700 disabled:opacity-50"
               aria-label="Envoyer"
-            >
-              {sendMessageMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </button>
+              disabled={!messageInput.trim()}
+              loading={sendMessageMutation.isPending}
+              icon={<Send className="h-4 w-4" />}
+            />
           </form>
         ) : (
           <p className="mt-3 border-t border-gray-200 pt-3 text-center text-xs text-gray-400">

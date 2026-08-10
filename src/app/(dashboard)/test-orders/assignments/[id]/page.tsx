@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { Trash2, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { RemoteSelectField } from "@/components/ui/RemoteSelectField";
+import { Button } from "@/components/ui/Button";
 import {
   loadTestOrderOptions,
   type TestOrderOption,
@@ -485,16 +486,9 @@ export default function AssignmentDetailsPage() {
             {/* Bouton Soumettre full-width vert (comme Laravel : btn w-100 btn-success) */}
             {canManage && (
               <div className="mt-4 border-t border-gray-200 pt-4">
-                <button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {updateMutation.isPending && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
+                <Button type="submit" className="w-full py-3" loading={updateMutation.isPending}>
                   {updateMutation.isPending ? "Enregistrement..." : "Soumettre"}
-                </button>
+                </Button>
               </div>
             )}
           </div>

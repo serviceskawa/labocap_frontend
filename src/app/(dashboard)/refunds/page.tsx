@@ -194,7 +194,7 @@ function RefundsContent() {
                 <button
                   onClick={() => approveMutation.mutate(refund.id)}
                   disabled={pending}
-                  className={`${actionBtn} bg-green-600 hover:bg-green-700`}
+                  className={`${actionBtn} bg-blue-600 hover:bg-blue-700`}
                   aria-label="Accepter"
                   title="Accepter"
                 >
@@ -224,7 +224,7 @@ function RefundsContent() {
               can(PERMISSIONS.EDIT_REFUNDS) && (
                 <button
                   onClick={() => setEditing(refund)}
-                  className={`${actionBtn} bg-yellow-500 hover:bg-yellow-600`}
+                  className={`${actionBtn} bg-gray-600 hover:bg-gray-700`}
                   aria-label="Modifier"
                   title="Modifier"
                 >

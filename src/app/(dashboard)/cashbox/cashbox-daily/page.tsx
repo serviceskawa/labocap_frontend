@@ -11,6 +11,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/common/DataTable";
 import { RowActions } from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
@@ -297,14 +298,12 @@ export default function CashboxDailyPage() {
                 </Link>
               </PermissionGate>
             ) : can(PERMISSIONS.CREATE_CASHBOX_DAILIES) ? (
-              <button
-                type="button"
+              <Button
                 onClick={() => setOpenModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                icon={<Plus className="h-4 w-4" />}
               >
-                <Plus className="h-4 w-4" />
                 Ouvrir la caisse
-              </button>
+              </Button>
             ) : undefined
           }
         />

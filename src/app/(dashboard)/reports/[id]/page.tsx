@@ -8,13 +8,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import {
-  ArrowLeft,
-  Loader2,
-  Paperclip,
-  Printer,
-  SquareArrowOutUpRight,
-} from "lucide-react";
+import { ArrowLeft, Paperclip, Printer, SquareArrowOutUpRight } from "lucide-react";
 import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
 import type { AxiosError } from "axios";
 
@@ -153,14 +147,20 @@ export default function ReportDetailPage({
   });
 
   // --- Utilisateurs (signataires / relecteur)
+  // Les signataires viennent d'une route dédiée : `/users` exige `edit-users`,
+  // qu'aucun médecin n'a — la liste revenait vide en 403 silencieux, et le champ
+  // s'affichait sans aucune option.
   const { data: usersData } = useQuery({
-    queryKey: ["users-for-report"],
-    queryFn: () => usersApi.findAll({ size: 200 }).then((r) => r.data.content),
+    queryKey: ["signataires"],
+    queryFn: () => usersApi.findSignataires().then((r) => r.data),
     staleTime: 5 * 60_000,
   });
+  // Les comptes désactivés restent proposés — trois des cinq docteurs le sont et
+  // ont signé 9 278 comptes rendus ; les masquer viderait le champ sur tous ces
+  // dossiers. La mention rend l'état visible plutôt que la personne invisible.
   const userOptions = (usersData ?? []).map((u) => ({
     value: u.id,
-    label: `${u.lastname} ${u.firstname}`.trim(),
+    label: u.actif ? u.nom : `${u.nom} (inactif)`,
   }));
 
   // --- Tags
@@ -718,17 +718,13 @@ export default function ReportDetailPage({
             {/* Mettre à jour (Laravel : bouton unique qui enregistre + applique le statut) */}
             <PermissionGate permission={PERMISSIONS.EDIT_REPORTS}>
               {canEdit && (
-                <button
-                  type="button"
+                <Button
                   onClick={handleSubmit((data) => updateMutation.mutate(data))}
-                  disabled={updateMutation.isPending}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+                  className="mt-4 w-full"
+                  loading={updateMutation.isPending}
                 >
-                  {updateMutation.isPending && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
                   {updateMutation.isPending ? "Mise à jour..." : "Mettre à jour"}
-                </button>
+                </Button>
               )}
             </PermissionGate>
           </Card>

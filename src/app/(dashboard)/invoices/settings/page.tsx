@@ -6,11 +6,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import {
@@ -192,16 +193,9 @@ export default function InvoiceSettingsPage() {
 
               {/* Bouton submit */}
               <div className="flex justify-end pt-3 border-t border-gray-200">
-                <button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                  className="inline-flex items-center rounded-md bg-green-600 px-4 py-1.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
-                >
-                  {updateMutation.isPending && (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  )}
+                <Button type="submit" size="sm" loading={updateMutation.isPending}>
                   {updateMutation.isPending ? "Enregistrement..." : "Mettre à jour"}
-                </button>
+                </Button>
               </div>
             </>
           )}

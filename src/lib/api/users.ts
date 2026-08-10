@@ -115,7 +115,24 @@ interface PageResponse<T> {
   number: number;
 }
 
+export interface Signataire {
+  id: string;
+  nom: string;
+  actif: boolean;
+}
+
 export const usersApi = {
+  /**
+   * Signataires possibles d'un compte rendu — les docteurs.
+   *
+   * Distincte de `findAll`, qui vise `/users` et exige `edit-users` : aucun
+   * médecin ne possède cette permission, si bien que le sélecteur de signataire
+   * recevait un 403 silencieux et s'affichait vide. Cette route-ci s'ouvre sous
+   * `edit-reports`, que tout médecin a, et ne rend que l'identifiant, le nom et
+   * l'état du compte.
+   */
+  findSignataires: () =>
+    apiClient.get<Signataire[]>("/users/signataires"),
   findAll: (params?: Record<string, unknown>) =>
     apiClient.get<{ content: User[]; totalElements: number; totalPages: number }>(
       "/users",

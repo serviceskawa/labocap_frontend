@@ -2,8 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, Loader2 } from "lucide-react";
+import { Download } from "lucide-react";
 import { LimitedSelect as ReactSelect } from "@/components/ui/LimitedSelect";
+import { Button } from "@/components/ui/Button";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 
@@ -618,19 +619,13 @@ export default function SearchPage() {
             </span>
           </div>
 
-          <button
-            type="button"
+          <Button
             onClick={exportToExcel}
-            disabled={isExporting}
-            className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+            loading={isExporting}
+            icon={<Download className="h-4 w-4" />}
           >
-            {isExporting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
             {isExporting ? "Export en cours…" : "Exporter Excel"}
-          </button>
+          </Button>
         </div>
 
         <DataTable
