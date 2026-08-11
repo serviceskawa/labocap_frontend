@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { cashboxApi } from "@/lib/api/cashbox";
+import { formatDate } from "@/lib/utils";
 import type { ApiError } from "@/types/api";
 import { Button } from "@/components/ui/Button";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
@@ -59,10 +60,13 @@ export default function CashboxFermeturePage({ params }: PageProps) {
     queryFn: () => cashboxApi.getDaily(id).then((r) => r.data),
   });
 
-  // Montants calculés par mode depuis la dernière ouverture (endpoint dédié).
+  // Montants calculés par mode depuis l'ouverture de LA session qu'on ferme.
+  // Sans cet identifiant, le serveur repart de la dernière session ouverte de
+  // la branche : en fermant celle du jour alors qu'une session plus ancienne
+  // traîne, le total couvrait toute la période écoulée depuis celle-ci.
   const { data: summary } = useQuery({
-    queryKey: ["cashbox-dailies-summary"],
-    queryFn: () => cashboxApi.getDailiesSummary().then((r) => r.data),
+    queryKey: ["cashbox-dailies-summary", id],
+    queryFn: () => cashboxApi.getDailiesSummary(id).then((r) => r.data),
   });
 
   const sessionDate = session?.date ? session.date.slice(0, 10) : undefined;
@@ -201,6 +205,20 @@ export default function CashboxFermeturePage({ params }: PageProps) {
           </div>
         ) : (
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            {/*
+              La période comptée, énoncée. Les montants proposés couvrent tout
+              l'intervalle depuis l'ouverture de cette session — plusieurs jours
+              si elle est restée ouverte. Sans cette mention, un caissier ayant
+              encaissé 876 000 et voyant deux millions doute de son comptage
+              plutôt que de la période.
+            */}
+            {summary?.depuis && (
+              <p className="mb-4 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-900">
+                Montants encaissés depuis l&apos;ouverture de cette caisse, le{" "}
+                <span className="font-semibold">{formatDate(summary.depuis)}</span>.
+              </p>
+            )}
+
             {/* Onglets / étapes */}
             <div className="mb-6 flex items-center gap-2">
               <StepPill active={step === 1} done={step === 2} index={1} label="Comptage" icon={<Calculator className="h-4 w-4" />} />
