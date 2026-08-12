@@ -2,7 +2,7 @@
 
 import { formatCFA } from "@/lib/utils";
 
-import { use, useMemo, useState } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -69,32 +69,20 @@ export default function CashboxFermeturePage({ params }: PageProps) {
     queryFn: () => cashboxApi.getDailiesSummary(id).then((r) => r.data),
   });
 
-  const sessionDate = session?.date ? session.date.slice(0, 10) : undefined;
 
-  // Opérations du jour, pour compter le nombre d'opérations par mode.
-  const { data: operationsData } = useQuery({
-    queryKey: ["cashbox-operations", id, sessionDate],
-    queryFn: () =>
-      cashboxApi
-        .getOperations({
-          cashboxId: session?.cashboxId,
-          date: sessionDate,
-          page: 0,
-          size: 500,
-        })
-        .then((r) => r.data),
-    enabled: !!session?.cashboxId && !!sessionDate,
-  });
 
-  const counts = useMemo(() => {
-    const acc: Record<ModeKey, number> = { cash: 0, mm: 0, cheque: 0, virement: 0 };
-    for (const op of operationsData?.content ?? []) {
-      if (op.type !== "CREDIT") continue;
-      const mode = MODES.find((m) => m.paymentType === op.paymentType);
-      if (mode) acc[mode.key] += 1;
-    }
-    return acc;
-  }, [operationsData]);
+  // Les nombres viennent du résumé, comme les montants.
+  //
+  // Ils étaient auparavant comptés sur les opérations de caisse, filtrées sur
+  // la seule date de la session — deux sources et deux fenêtres différentes de
+  // celles du montant affiché juste à côté. Une caisse ouverte depuis plusieurs
+  // jours montrait « 0 » en face de plusieurs millions.
+  const counts: Record<ModeKey, number> = {
+    cash: summary?.nombreEspeces ?? 0,
+    mm: summary?.nombreMobileMoney ?? 0,
+    cheque: summary?.nombreCheques ?? 0,
+    virement: summary?.nombreVirement ?? 0,
+  };
 
   const calculated: Record<ModeKey, number> = {
     cash: summary?.totalEspeces ?? 0,
