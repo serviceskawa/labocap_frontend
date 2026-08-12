@@ -71,6 +71,8 @@ export interface CashboxDailySummaryDto {
   totalCheques: number;
   totalVirement: number;
   total: number;
+  /** Début de la période comptée — l'ouverture de la session fermée. */
+  depuis: string | null;
 }
 
 export interface CashboxDailyCloseDto {
@@ -207,8 +209,18 @@ export const cashboxApi = {
   getDaily: (id: string) =>
     apiClient.get<CashboxDailyResponseDto>(`/cashbox-dailies/${id}`),
 
-  getDailiesSummary: () =>
-    apiClient.get<CashboxDailySummaryDto>("/cashbox-dailies/summary"),
+  /**
+   * Encaissements à présenter à la fermeture.
+   *
+   * `sessionId` désigne la session que l'on ferme : le total part de son
+   * ouverture. Sans lui, le serveur retombe sur la dernière session ouverte de
+   * la branche — ce qui fausse le total dès qu'une session ancienne traîne,
+   * la période couvrant alors plusieurs jours.
+   */
+  getDailiesSummary: (sessionId?: string) =>
+    apiClient.get<CashboxDailySummaryDto>("/cashbox-dailies/summary", {
+      params: sessionId ? { sessionId } : undefined,
+    }),
 
   openDaily: (data: CashboxDailyOpenDto) =>
     apiClient.post<CashboxDailyResponseDto>("/cashbox-dailies", data),
