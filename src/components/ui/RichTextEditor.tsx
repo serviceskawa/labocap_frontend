@@ -62,19 +62,29 @@ const HEADING_OPTIONS = [
 ];
 
 /**
- * Polices proposées : uniquement celles que le PDF sait honorer.
+ * Polices proposées — toutes se matérialisent dans le PDF.
  *
  * Le format PDF ne garantit que quatorze polices de base. Arial, Times New
- * Roman et Courier New y correspondent — respectivement Helvetica, Times et
- * Courier, aux métriques équivalentes. Georgia, Verdana, Tahoma, Trebuchet MS
- * et Comic Sans MS n'ont aucun équivalent : le compte rendu imprimé les
- * remplaçait par une approximation, sans que le médecin en soit averti.
+ * Roman et Courier New y correspondent exactement (Helvetica, Times, Courier,
+ * mêmes métriques). Les cinq autres n'ont aucun équivalent : le backend
+ * embarque pour elles des substituts libres — Gelasio pour Georgia, DejaVu
+ * Sans pour Verdana, Tahoma et Trebuchet MS, Comic Neue pour Comic Sans MS
+ * (cf. PdfFonts côté serveur).
  *
- * Un menu plus court vaut mieux qu'un menu qui promet ce qu'il ne tient pas.
- * Les rétablir supposerait d'embarquer les fichiers de police dans le PDF —
- * or ces cinq-là appartiennent à Microsoft et ne sont pas redistribuables.
+ * Ces substituts ressemblent aux originales sans les égaler : les polices de
+ * Microsoft ne sont pas redistribuables. Le dessin diffère légèrement, le
+ * genre et l'intention sont respectés.
  */
-const FONT_OPTIONS = ["Arial", "Times New Roman", "Courier New"];
+const FONT_OPTIONS = [
+  "Arial",
+  "Georgia",
+  "Times New Roman",
+  "Courier New",
+  "Verdana",
+  "Tahoma",
+  "Trebuchet MS",
+  "Comic Sans MS",
+];
 
 // Tailles execCommand fontSize (1..7) mappées vers un libellé lisible en px.
 const SIZE_OPTIONS = [
