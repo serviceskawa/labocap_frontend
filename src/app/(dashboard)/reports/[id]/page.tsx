@@ -38,7 +38,6 @@ import { testOrdersApi, type ImageDto } from "@/lib/api/testOrders";
 import { openDocFile } from "@/lib/api/docs";
 import type { ApiError } from "@/types/api";
 import { Button } from "@/components/ui/Button";
-import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema

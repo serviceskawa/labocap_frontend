@@ -19,11 +19,7 @@ import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import {
-  cashboxApi,
-  CashboxDailyResponseDto,
-  CashboxResponseDto,
-} from "@/lib/api/cashbox";
+import { cashboxApi, CashboxDailyResponseDto } from "@/lib/api/cashbox";
 import type { ApiError } from "@/types/api";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
@@ -106,13 +102,6 @@ export default function CashboxDailyPage() {
 
   const sessions: CashboxDailyResponseDto[] = data?.content ?? [];
   const totalPages = data?.totalPages ?? 0;
-
-  // Caisses disponibles — sert à la fois au statut Ouvert/Fermé et au choix de la
-  // caisse dans la modale d'ouverture.
-  const { data: cashboxes } = useQuery<CashboxResponseDto[]>({
-    queryKey: ["cashboxes"],
-    queryFn: () => cashboxApi.getCashboxes().then((r) => r.data.content),
-  });
 
   // Dernière session ouverte, toutes pages confondues.
   //
