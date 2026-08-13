@@ -95,16 +95,28 @@ export default function CashboxFermeturePage({ params }: PageProps) {
 
   // ---- Calculs ----
   const countedNum = (k: ModeKey) => Number(counted[k]) || 0;
-  const ecart = (k: ModeKey) => calculated[k] - countedNum(k);
+
+  // Écart = compté MOINS calculé, sens du legacy
+  // (cashbox_daily/fermeture.blade.php : `totalConfirmation - totalCalculated`).
+  // Le sens compte doublement : il porte l'information — négatif quand il
+  // manque de l'argent, positif quand il y en a en trop — et le backend
+  // l'ajoute au solde de la caisse à la clôture. Inversé, il déplaçait ce solde
+  // dans le mauvais sens.
+  const ecart = (k: ModeKey) => countedNum(k) - calculated[k];
 
   const totalCalculated =
     calculated.cash + calculated.mm + calculated.cheque + calculated.virement;
   const totalCounted =
     countedNum("cash") + countedNum("mm") + countedNum("cheque") + countedNum("virement");
-  const totalEcart = totalCalculated - totalCounted;
+  const totalEcart = totalCounted - totalCalculated;
 
-  // Solde de fermeture = fond initial + espèces comptées (argent physique en caisse).
-  const closingBalance = opening + countedNum("cash");
+  // Solde de fermeture = fond initial + total compté, TOUS MODES CONFONDUS
+  // (legacy : `close_balance = open_money + totalConfirmation`).
+  //
+  // Ne retenir que les espèces laissait la colonne à zéro dès qu'une journée
+  // était encaissée en Mobile Money — le cas courant ici, où l'essentiel des
+  // règlements passe par ce canal.
+  const closingBalance = opening + totalCounted;
 
   const allCountedFilled = MODES.every((m) => counted[m.key] !== "");
 
