@@ -116,29 +116,31 @@ export default function CashboxDailyPage() {
     queryFn: () => cashboxApi.getCashboxes().then((r) => r.data.content),
   });
 
-  // Session à clôturer — Laravel : CashboxDaily::where('status',1)
-  // ->orderBy('updated_at','desc')->first(). Sert de cible au bouton « Fermer ».
-  const openSession = sessions
-    .filter((d) => d.status === 1)
-    .sort((a, b) =>
-      (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt),
-    )[0];
+  // Dernière session ouverte, toutes pages confondues.
+  //
+  // Requête à part, sans filtre de date ni pagination : le bouton d'en-tête est
+  // global, il ne peut pas dépendre de la page qu'on regarde. Chercher dans
+  // `sessions` reviendrait à ignorer les sessions des pages suivantes, ou à
+  // changer de cible dès qu'on filtre par date.
+  const { data: derniereData } = useQuery({
+    queryKey: ["cashbox-dailies-derniere"],
+    queryFn: () => cashboxApi.getDailies({ page: 0, size: 1 }).then((r) => r.data),
+  });
+  const derniereSession = derniereData?.content?.[0];
 
-  // La session ouverte fait foi, et non le `statut` d'une caisse désignée par
-  // heuristique.
+  // Le bouton « Fermer » ne vise QUE la dernière session, et seulement si elle
+  // est ouverte.
   //
-  // Laravel lisait bien `statut`, mais sur une caisse FIXE (`Cashbox::find(2)`).
-  // La reprise a rendu la caisse choisissable à l'ouverture et remplacé cet
-  // identifiant figé par « la caisse de vente au solde le plus élevé » — la
-  // migration en ayant laissé deux. L'heuristique se sabote elle-même :
-  // l'ouverture soustrait le solde d'ouverture du solde de la caisse, si bien
-  // que la caisse ouverte peut passer derrière sa jumelle et cesser d'être
-  // celle qu'on interroge. Le bouton retombe alors sur « Ouvrir la caisse »
-  // alors qu'une session est ouverte, et plus rien ne permet de la fermer.
+  // Il visait auparavant la session ouverte la plus récemment modifiée. Avec 24
+  // sessions jamais fermées, dont certaines de 2024, cela conduisait à fermer un
+  // dossier vieux de plusieurs jours en croyant clôturer la journée — la
+  // fermeture proposait alors des montants couvrant toute cette période.
   //
-  // La liste affiche l'état des sessions ; le bouton vise déjà `openSession`.
-  // Fonder l'affichage sur la même source rend les deux cohérents et débloque
-  // les sessions actuellement prisonnières de cet écart.
+  // Si la dernière session est déjà close, il n'y a rien à fermer : le bouton
+  // laisse la place à « Ouvrir la caisse ». Les anciennes sessions restées
+  // ouvertes se ferment depuis leur propre ligne, délibérément, et non par
+  // mégarde depuis l'en-tête.
+  const openSession = derniereSession?.status === 1 ? derniereSession : undefined;
   const isOpen = Boolean(openSession);
 
   const openMutation = useMutation({
@@ -262,6 +264,21 @@ export default function CashboxDailyPage() {
               icon: <Printer className="h-3.5 w-3.5" />,
               href: `/cashbox/cashbox-daily/print/${row.original.id}`,
             },
+            // Fermeture depuis la ligne, réservée aux sessions ouvertes.
+            //
+            // Le bouton d'en-tête ne vise plus que la dernière session : sans
+            // cette action, les sessions anciennes restées ouvertes n'auraient
+            // plus aucun moyen d'être clôturées. Ici le geste est délibéré —
+            // on ferme la ligne qu'on regarde, pas celle que l'écran a choisie.
+            ...(row.original.status === 1 && can(PERMISSIONS.EDIT_CASHBOX_DAILIES)
+              ? [
+                  {
+                    label: "Fermer cette caisse",
+                    icon: <Lock className="h-3.5 w-3.5" />,
+                    href: `/cashbox/cashbox-daily/fermeture/${row.original.id}`,
+                  },
+                ]
+              : []),
           ]}
         />
       ),
