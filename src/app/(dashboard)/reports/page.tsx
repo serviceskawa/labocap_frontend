@@ -19,6 +19,7 @@ import {
   type ReportPerformance,
 } from "@/lib/api/reports";
 import { usersApi, type User } from "@/lib/api/users";
+import { AstuceDecouverte } from "@/components/ui/AstuceDecouverte";
 import { ApercuCompteRendu } from "./ApercuCompteRendu";
 import type { PageResponse } from "@/types/api";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
@@ -372,6 +373,18 @@ export default function ReportsPage() {
             />
           </div>
         </div>
+
+        {/*
+          Astuce de découverte, au-dessus du tableau et non ailleurs : elle doit
+          se lire juste avant le geste qu'elle décrit. Elle disparaît dès qu'elle
+          a été lue, et ne revient plus pour cet utilisateur.
+        */}
+        <AstuceDecouverte cle="apercu-compte-rendu" titre="Aperçu rapide">
+          Cliquez sur une ligne pour ouvrir un aperçu du compte rendu sur la
+          droite, sans quitter la liste. Vous y verrez les premières lignes de
+          chaque section, et pourrez l&apos;ouvrir en entier si c&apos;est bien
+          celui que vous cherchez.
+        </AstuceDecouverte>
 
         {/* Tableau */}
         <DataTable
