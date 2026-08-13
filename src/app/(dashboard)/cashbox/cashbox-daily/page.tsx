@@ -13,7 +13,7 @@ import type { AxiosError } from "axios";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/common/DataTable";
-import { RowActions } from "@/components/ui/RowActions";
+import { RowActions, RowActionsProvider } from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
@@ -358,19 +358,32 @@ export default function CashboxDailyPage() {
             )}
           </div>
 
-          <DataTable
-            columns={columns}
-            data={sessions}
-            isLoading={isLoading}
-            pageCount={totalPages}
-            pageIndex={pageIndex}
-            pageSize={pageSize}
-            onPageChange={setPageIndex}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPageIndex(0);
-            }}
-          />
+          {/*
+            Actions repliées pour toutes les lignes.
+
+            Une ligne ouverte en porte trois — voir, imprimer, fermer — une ligne
+            close seulement deux. Laissées libres, les premières se replieraient
+            et les secondes s'afficheraient à plat : la colonne changerait de
+            forme d'une ligne à l'autre, et l'icône de fermeture apparaîtrait à
+            la place de l'imprimante selon les lignes. Le repli uniforme donne
+            une colonne stable, où chaque geste se trouve toujours au même
+            endroit.
+          */}
+          <RowActionsProvider collapse>
+            <DataTable
+              columns={columns}
+              data={sessions}
+              isLoading={isLoading}
+              pageCount={totalPages}
+              pageIndex={pageIndex}
+              pageSize={pageSize}
+              onPageChange={setPageIndex}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPageIndex(0);
+              }}
+            />
+          </RowActionsProvider>
         </div>
 
         {/* Modal ouverture de session */}
