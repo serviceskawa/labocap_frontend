@@ -64,10 +64,22 @@ export function SidePanel({
         )}
       />
 
+      {/*
+        `fixed` est voulu : c'est un tiroir, ancré au bord droit de la fenêtre.
+        Il ne défile pas avec le tableau — on garde la liste sous les yeux
+        pendant qu'on lit l'aperçu, et le panneau reste à portée de pouce.
+
+        Fermé, il demeure dans le document pour pouvoir en ressortir en
+        glissant. `inert` le neutralise alors entièrement : ses boutons cessent
+        d'être atteignables au clavier — sans quoi la tabulation traversait des
+        commandes invisibles — et il disparaît de l'arbre d'accessibilité, où il
+        s'annonçait sinon comme une boîte de dialogue en permanence.
+      */}
       <aside
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        inert={!open}
         className={cn(
           "fixed inset-y-0 right-0 z-50 flex w-full max-w-full flex-col bg-white shadow-2xl",
           "lg:w-1/4 lg:min-w-[380px]",
