@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Loader2 } from "lucide-react";
 
 import { SidePanel } from "@/components/ui/SidePanel";
 import { formatDate } from "@/lib/utils";
@@ -104,8 +104,32 @@ export function ApercuCompteRendu({ ligne, onClose }: Props) {
         )
       }
     >
+      {/*
+        Chargement explicite, au centre du panneau.
+
+        Une simple ligne de texte se confondait avec le contenu et n'occupait
+        pas la place : le panneau paraissait vide plutôt qu'en train de se
+        remplir. Le disque tournant est la convention du projet pour une attente
+        en cours (cf. Button), ici agrandi et centré parce qu'il occupe une
+        surface et non un bouton.
+
+        `role="status"` et `aria-live` annoncent l'attente aux lecteurs d'écran,
+        pour qui une icône animée ne dit rien.
+
+        Le libellé n'est pas décoratif : « réduire les animations » fige toute
+        rotation après un tour (globals.css impose `animation-iteration-count: 1`).
+        Le disque s'immobilise alors, et seul le texte continue de dire ce qui se
+        passe.
+      */}
       {isLoading && (
-        <p className="text-sm text-gray-500">Chargement de l&apos;aperçu…</p>
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex flex-col items-center justify-center gap-3 py-16 text-gray-500"
+        >
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <p className="text-sm">Chargement de l&apos;aperçu…</p>
+        </div>
       )}
 
       {!isLoading && detail && (
