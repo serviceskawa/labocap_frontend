@@ -143,11 +143,21 @@ export default function CashboxDailyPage() {
   const openSession = derniereSession?.status === 1 ? derniereSession : undefined;
   const isOpen = Boolean(openSession);
 
+  // Cet écran est celui de la caisse de VENTE — son titre le dit. Proposer la
+  // caisse de dépense n'avait aucun sens et ouvrait la porte à une ouverture sur
+  // la mauvaise, d'autant que les deux portent le même nom en base : « Caisse ».
+  const caissesVente = (cashboxes ?? []).filter((c) => c.type === "vente");
+
+  // Une seule caisse de vente : elle est retenue d'office, il n'y a rien à
+  // choisir. C'est ce que faisait Laravel, qui visait une caisse fixe.
+  const caisseRetenue =
+    cashboxId || (caissesVente.length === 1 ? caissesVente[0].id : "");
+
   const openMutation = useMutation({
     mutationFn: () =>
       cashboxApi.openDaily({
         soldeOuverture: Number(openingBalance) || 0,
-        cashboxId,
+        cashboxId: caisseRetenue,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashbox-dailies"] });
@@ -162,7 +172,7 @@ export default function CashboxDailyPage() {
   });
 
   const handleOpenSubmit = () => {
-    if (!cashboxId) {
+    if (!caisseRetenue) {
       toast.error("Veuillez sélectionner une caisse");
       return;
     }
@@ -401,18 +411,30 @@ export default function CashboxDailyPage() {
             </p>
             <FormField label="Caisse" required>
               <NativeSelect
-                value={cashboxId}
+                value={caisseRetenue}
                 onChange={(e) => setCashboxId(e.target.value)}
+                disabled={caissesVente.length <= 1}
               >
-                <option value="">Sélectionner une caisse…</option>
-                {(cashboxes ?? []).map((c) => (
+                {caissesVente.length !== 1 && (
+                  <option value="">
+                    {caissesVente.length === 0
+                      ? "Aucune caisse de vente configurée"
+                      : "Sélectionner une caisse…"}
+                  </option>
+                )}
+                {caissesVente.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name?.trim() ||
-                      (c.type === "vente"
-                        ? "Caisse de vente"
-                        : c.type === "depense"
-                          ? "Caisse de dépense"
-                          : "Caisse")}
+                    {/*
+                      Le type d'abord, le nom ensuite et seulement s'il ajoute
+                      quelque chose. En base les deux caisses s'appellent
+                      « Caisse » : privilégier ce nom, comme on le faisait,
+                      affichait deux entrées identiques entre lesquelles rien ne
+                      permettait de choisir.
+                    */}
+                    Caisse de vente
+                    {c.name?.trim() && c.name.trim().toLowerCase() !== "caisse"
+                      ? ` — ${c.name.trim()}`
+                      : ""}
                   </option>
                 ))}
               </NativeSelect>
