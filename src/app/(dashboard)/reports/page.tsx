@@ -19,7 +19,7 @@ import {
   type ReportPerformance,
 } from "@/lib/api/reports";
 import { usersApi, type User } from "@/lib/api/users";
-import { AstuceDecouverte } from "@/components/ui/AstuceDecouverte";
+import { GuideProjecteur } from "@/components/ui/GuideProjecteur";
 import { ApercuCompteRendu } from "./ApercuCompteRendu";
 import type { PageResponse } from "@/types/api";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
@@ -374,20 +374,10 @@ export default function ReportsPage() {
           </div>
         </div>
 
-        {/*
-          Astuce de découverte, au-dessus du tableau et non ailleurs : elle doit
-          se lire juste avant le geste qu'elle décrit. Elle disparaît dès qu'elle
-          a été lue, et ne revient plus pour cet utilisateur.
-        */}
-        <AstuceDecouverte cle="apercu-compte-rendu" titre="Aperçu rapide">
-          Cliquez sur une ligne pour ouvrir un aperçu du compte rendu sur la
-          droite, sans quitter la liste. Vous y verrez les premières lignes de
-          chaque section, et pourrez l&apos;ouvrir en entier si c&apos;est bien
-          celui que vous cherchez.
-        </AstuceDecouverte>
 
         {/* Tableau */}
-        <DataTable
+        <div id="tableau-comptes-rendus">
+          <DataTable
           columns={columns}
           data={reports}
           isLoading={listQuery.isLoading}
@@ -399,7 +389,26 @@ export default function ReportsPage() {
             setPageSize(size);
             setPage(0);
           }}
-          onRowClick={setApercu}
+            onRowClick={setApercu}
+          />
+        </div>
+
+        {/*
+          Guide en projecteur : la page s'assombrit et seule la première ligne
+          reste éclairée. Il n'apparaît qu'une fois, et jamais sur un tableau
+          vide — il n'aurait alors rien à désigner.
+
+          Son bouton n'explique pas la fonction : il l'exécute sur cette même
+          ligne. On retient ce qu'on a vu se produire.
+        */}
+        <GuideProjecteur
+          cle="apercu-compte-rendu"
+          cible="#tableau-comptes-rendus tbody tr:first-child"
+          actif={!listQuery.isLoading && reports.length > 0 && !apercu}
+          titre="Aperçu rapide d'un compte rendu"
+          texte="Cliquez sur une ligne pour en lire un extrait dans un panneau latéral, sans quitter la liste."
+          actionLabel="Montrez-moi"
+          onAction={() => setApercu(reports[0])}
         />
 
         <ApercuCompteRendu ligne={apercu} onClose={() => setApercu(null)} />
