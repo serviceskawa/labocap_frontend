@@ -1,14 +1,43 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { Lightbulb, X } from "lucide-react";
 
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-/**
- * Préfixe des clés de mémorisation, pour les distinguer du reste du stockage.
- */
+/** Préfixe des clés de mémorisation, pour les distinguer du reste du stockage. */
 const PREFIXE = "astuce-vue";
+
+/** Émis après écriture : `storage` ne notifie que les AUTRES onglets. */
+const EVENEMENT = "astuce-vue-changee";
+
+function lireVue(cle: string): boolean {
+  try {
+    return window.localStorage.getItem(cle) === "1";
+  } catch {
+    // Stockage indisponible (navigation privée stricte, quota) : l'astuce
+    // s'affiche. Mieux vaut la revoir que d'en être privé.
+    return false;
+  }
+}
+
+function marquerVue(cle: string) {
+  try {
+    window.localStorage.setItem(cle, "1");
+  } catch {
+    // Sans mémoire, l'astuce reparaîtra à la prochaine visite. Sans gravité.
+  }
+  window.dispatchEvent(new Event(EVENEMENT));
+}
+
+function souscrire(rappel: () => void) {
+  window.addEventListener("storage", rappel);
+  window.addEventListener(EVENEMENT, rappel);
+  return () => {
+    window.removeEventListener("storage", rappel);
+    window.removeEventListener(EVENEMENT, rappel);
+  };
+}
 
 /**
  * Astuce de découverte, montrée une fois puis oubliée.
@@ -31,6 +60,15 @@ const PREFIXE = "astuce-vue";
  *
  * Perdre cette information est sans conséquence : au pire l'astuce reparaît une
  * fois. Cela ne justifie ni colonne en base, ni route, ni migration.
+ *
+ * ## Pourquoi `useSyncExternalStore` et non un effet
+ *
+ * Le stockage local est une source extérieure à React, illisible pendant le
+ * rendu serveur. Le lire dans un effet pour appeler `setState` provoque un
+ * rendu en cascade — que la règle `react-hooks/set-state-in-effect` signale à
+ * juste titre. Ce crochet est fait pour cela : il fournit une valeur au serveur
+ * (astuce considérée comme vue, donc rien n'est rendu), une autre au
+ * navigateur, et réagit aux écritures — y compris celles d'un autre onglet.
  */
 export function AstuceDecouverte({
   cle,
@@ -43,33 +81,18 @@ export function AstuceDecouverte({
   children: React.ReactNode;
 }) {
   const { user } = useCurrentUser();
-  // Masquée au premier rendu : le stockage n'est lisible que côté navigateur, et
-  // afficher puis retirer produirait un clignotement à chaque chargement.
-  const [visible, setVisible] = useState(false);
-
   const cleComplete = `${PREFIXE}:${cle}:${user?.id ?? "anonyme"}`;
 
-  useEffect(() => {
-    try {
-      setVisible(window.localStorage.getItem(cleComplete) !== "1");
-    } catch {
-      // Stockage indisponible (navigation privée stricte, quota) : on montre
-      // l'astuce. Mieux vaut la revoir que de priver l'utilisateur de la
-      // découverte.
-      setVisible(true);
-    }
-  }, [cleComplete]);
+  const vue = useSyncExternalStore(
+    souscrire,
+    useCallback(() => lireVue(cleComplete), [cleComplete]),
+    // Au rendu serveur, l'astuce est tenue pour vue : rien n'est émis, et le
+    // navigateur l'affichera après hydratation s'il y a lieu. L'inverse ferait
+    // apparaître puis disparaître le bandeau à chaque chargement.
+    () => true,
+  );
 
-  const masquer = () => {
-    setVisible(false);
-    try {
-      window.localStorage.setItem(cleComplete, "1");
-    } catch {
-      // Sans mémoire, l'astuce reparaîtra à la prochaine visite. Sans gravité.
-    }
-  };
-
-  if (!visible) return null;
+  if (vue) return null;
 
   return (
     <div
@@ -82,7 +105,7 @@ export function AstuceDecouverte({
         <div className="mt-0.5 text-sm text-blue-800">{children}</div>
         <button
           type="button"
-          onClick={masquer}
+          onClick={() => marquerVue(cleComplete)}
           className="mt-2 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
         >
           J&apos;ai compris
@@ -90,7 +113,7 @@ export function AstuceDecouverte({
       </div>
       <button
         type="button"
-        onClick={masquer}
+        onClick={() => marquerVue(cleComplete)}
         aria-label="Masquer cette astuce"
         className="rounded-md p-1 text-blue-400 transition-colors hover:bg-blue-100 hover:text-blue-600"
       >
