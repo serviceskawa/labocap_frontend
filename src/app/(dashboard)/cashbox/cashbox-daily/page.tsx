@@ -17,7 +17,6 @@ import { RowActions, RowActionsProvider } from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
-import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import {
@@ -91,7 +90,6 @@ export default function CashboxDailyPage() {
   const [dateFilter, setDateFilter] = useState("");
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [openingBalance, setOpeningBalance] = useState("");
-  const [cashboxId, setCashboxId] = useState("");
   const [detail, setDetail] = useState<CashboxDailyResponseDto | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -143,21 +141,23 @@ export default function CashboxDailyPage() {
   const openSession = derniereSession?.status === 1 ? derniereSession : undefined;
   const isOpen = Boolean(openSession);
 
-  // Cet écran est celui de la caisse de VENTE — son titre le dit. Proposer la
-  // caisse de dépense n'avait aucun sens et ouvrait la porte à une ouverture sur
-  // la mauvaise, d'autant que les deux portent le même nom en base : « Caisse ».
-  const caissesVente = (cashboxes ?? []).filter((c) => c.type === "vente");
-
-  // Une seule caisse de vente : elle est retenue d'office, il n'y a rien à
-  // choisir. C'est ce que faisait Laravel, qui visait une caisse fixe.
-  const caisseRetenue =
-    cashboxId || (caissesVente.length === 1 ? caissesVente[0].id : "");
-
+  // Aucun choix de caisse à l'ouverture.
+  //
+  // Cet écran est celui de la caisse de VENTE — son titre le dit. Le champ
+  // proposait pourtant les deux caisses, indiscernables puisqu'elles portent le
+  // même nom en base : c'est ainsi que la journée du 10/08 s'est ouverte sur la
+  // caisse de DÉPENSE, 705 000 de recettes rattachés au mauvais compte.
+  //
+  // L'identifiant n'est plus transmis : le backend retient alors la caisse de
+  // vente de la branche (`resolveCashbox`, repli sur le type). C'est le
+  // comportement de Laravel, qui visait une caisse fixe — à ceci près que le
+  // type remplace l'identifiant en dur.
+  //
+  // Un choix impossible protège mieux qu'un choix bien étiqueté.
   const openMutation = useMutation({
     mutationFn: () =>
       cashboxApi.openDaily({
         soldeOuverture: Number(openingBalance) || 0,
-        cashboxId: caisseRetenue,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashbox-dailies"] });
@@ -165,17 +165,15 @@ export default function CashboxDailyPage() {
       toast.success("Caisse ouverte");
       setOpenModalOpen(false);
       setOpeningBalance("");
-      setCashboxId("");
     },
     onError: (e: AxiosError<ApiError>) =>
       toast.error(e.response?.data?.message ?? "Erreur lors de l'ouverture"),
   });
 
   const handleOpenSubmit = () => {
-    if (!caisseRetenue) {
-      toast.error("Veuillez sélectionner une caisse");
-      return;
-    }
+    // Plus rien à valider : la caisse n'est plus un choix, et le fond de caisse
+    // vaut zéro par défaut. Le backend refusera si aucune caisse de vente
+    // n'existe pour la branche, et son message remontera dans le toast d'erreur.
     openMutation.mutate();
   };
 
@@ -409,36 +407,6 @@ export default function CashboxDailyPage() {
             <p className="text-sm text-gray-500">
               Veuillez entrer le montant du fond de caisse.
             </p>
-            <FormField label="Caisse" required>
-              <NativeSelect
-                value={caisseRetenue}
-                onChange={(e) => setCashboxId(e.target.value)}
-                disabled={caissesVente.length <= 1}
-              >
-                {caissesVente.length !== 1 && (
-                  <option value="">
-                    {caissesVente.length === 0
-                      ? "Aucune caisse de vente configurée"
-                      : "Sélectionner une caisse…"}
-                  </option>
-                )}
-                {caissesVente.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {/*
-                      Le type d'abord, le nom ensuite et seulement s'il ajoute
-                      quelque chose. En base les deux caisses s'appellent
-                      « Caisse » : privilégier ce nom, comme on le faisait,
-                      affichait deux entrées identiques entre lesquelles rien ne
-                      permettait de choisir.
-                    */}
-                    Caisse de vente
-                    {c.name?.trim() && c.name.trim().toLowerCase() !== "caisse"
-                      ? ` — ${c.name.trim()}`
-                      : ""}
-                  </option>
-                ))}
-              </NativeSelect>
-            </FormField>
 
             <FormField label="Fond de caisse (Espèces)">
               <input

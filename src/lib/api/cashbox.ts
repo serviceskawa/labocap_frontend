@@ -61,7 +61,13 @@ export interface CashboxDailyResponseDto {
 
 export interface CashboxDailyOpenDto {
   soldeOuverture: number;
-  cashboxId: string;
+  /**
+   * Facultatif, comme côté serveur : omis, le backend retient la caisse de
+   * vente de la branche (`resolveCashbox`). L'écran d'ouverture ne le transmet
+   * plus — laisser choisir la caisse a permis d'ouvrir une journée de vente sur
+   * la caisse de dépense.
+   */
+  cashboxId?: string;
 }
 
 /** Sommes calculées par mode de paiement depuis la dernière ouverture (GET /cashbox-dailies/summary). */
