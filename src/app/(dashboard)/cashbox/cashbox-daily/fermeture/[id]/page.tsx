@@ -110,13 +110,18 @@ export default function CashboxFermeturePage({ params }: PageProps) {
     countedNum("cash") + countedNum("mm") + countedNum("cheque") + countedNum("virement");
   const totalEcart = totalCounted - totalCalculated;
 
-  // Solde de fermeture = fond initial + total compté, TOUS MODES CONFONDUS
-  // (legacy : `close_balance = open_money + totalConfirmation`).
+  // Solde de fermeture = total des factures réglées pendant la vie de la
+  // session, tous modes confondus.
   //
-  // Ne retenir que les espèces laissait la colonne à zéro dès qu'une journée
-  // était encaissée en Mobile Money — le cas courant ici, où l'essentiel des
-  // règlements passe par ce canal.
-  const closingBalance = opening + totalCounted;
+  // Écart assumé avec le legacy, à la demande du client. Laravel enregistrait
+  // `open_money + totalConfirmation`, donc ce que le CAISSIER avait compté. La
+  // colonne répond désormais à « combien cette caisse a-t-elle encaissé »
+  // plutôt qu'à « combien y avait-il dedans à la fermeture ».
+  //
+  // Conséquence à connaître : le solde ne dépend plus du comptage. Un caissier
+  // qui déclare moins que le calculé verra tout de même le montant calculé dans
+  // cette colonne — c'est l'écart, enregistré à côté, qui porte la différence.
+  const closingBalance = totalCalculated;
 
   const allCountedFilled = MODES.every((m) => counted[m.key] !== "");
 
