@@ -71,6 +71,11 @@ export interface CashboxDailySummaryDto {
   totalCheques: number;
   totalVirement: number;
   total: number;
+  /** Nombres de règlements, sur exactement les mêmes critères que les montants. */
+  nombreEspeces: number;
+  nombreMobileMoney: number;
+  nombreCheques: number;
+  nombreVirement: number;
   /** Début de la période comptée — l'ouverture de la session fermée. */
   depuis: string | null;
 }

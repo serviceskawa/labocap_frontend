@@ -2,7 +2,7 @@
 
 import { formatCFA } from "@/lib/utils";
 
-import { use, useMemo, useState } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -69,32 +69,20 @@ export default function CashboxFermeturePage({ params }: PageProps) {
     queryFn: () => cashboxApi.getDailiesSummary(id).then((r) => r.data),
   });
 
-  const sessionDate = session?.date ? session.date.slice(0, 10) : undefined;
 
-  // Opérations du jour, pour compter le nombre d'opérations par mode.
-  const { data: operationsData } = useQuery({
-    queryKey: ["cashbox-operations", id, sessionDate],
-    queryFn: () =>
-      cashboxApi
-        .getOperations({
-          cashboxId: session?.cashboxId,
-          date: sessionDate,
-          page: 0,
-          size: 500,
-        })
-        .then((r) => r.data),
-    enabled: !!session?.cashboxId && !!sessionDate,
-  });
 
-  const counts = useMemo(() => {
-    const acc: Record<ModeKey, number> = { cash: 0, mm: 0, cheque: 0, virement: 0 };
-    for (const op of operationsData?.content ?? []) {
-      if (op.type !== "CREDIT") continue;
-      const mode = MODES.find((m) => m.paymentType === op.paymentType);
-      if (mode) acc[mode.key] += 1;
-    }
-    return acc;
-  }, [operationsData]);
+  // Les nombres viennent du résumé, comme les montants.
+  //
+  // Ils étaient auparavant comptés sur les opérations de caisse, filtrées sur
+  // la seule date de la session — deux sources et deux fenêtres différentes de
+  // celles du montant affiché juste à côté. Une caisse ouverte depuis plusieurs
+  // jours montrait « 0 » en face de plusieurs millions.
+  const counts: Record<ModeKey, number> = {
+    cash: summary?.nombreEspeces ?? 0,
+    mm: summary?.nombreMobileMoney ?? 0,
+    cheque: summary?.nombreCheques ?? 0,
+    virement: summary?.nombreVirement ?? 0,
+  };
 
   const calculated: Record<ModeKey, number> = {
     cash: summary?.totalEspeces ?? 0,
@@ -107,16 +95,28 @@ export default function CashboxFermeturePage({ params }: PageProps) {
 
   // ---- Calculs ----
   const countedNum = (k: ModeKey) => Number(counted[k]) || 0;
-  const ecart = (k: ModeKey) => calculated[k] - countedNum(k);
+
+  // Écart = compté MOINS calculé, sens du legacy
+  // (cashbox_daily/fermeture.blade.php : `totalConfirmation - totalCalculated`).
+  // Le sens compte doublement : il porte l'information — négatif quand il
+  // manque de l'argent, positif quand il y en a en trop — et le backend
+  // l'ajoute au solde de la caisse à la clôture. Inversé, il déplaçait ce solde
+  // dans le mauvais sens.
+  const ecart = (k: ModeKey) => countedNum(k) - calculated[k];
 
   const totalCalculated =
     calculated.cash + calculated.mm + calculated.cheque + calculated.virement;
   const totalCounted =
     countedNum("cash") + countedNum("mm") + countedNum("cheque") + countedNum("virement");
-  const totalEcart = totalCalculated - totalCounted;
+  const totalEcart = totalCounted - totalCalculated;
 
-  // Solde de fermeture = fond initial + espèces comptées (argent physique en caisse).
-  const closingBalance = opening + countedNum("cash");
+  // Solde de fermeture = fond initial + total compté, TOUS MODES CONFONDUS
+  // (legacy : `close_balance = open_money + totalConfirmation`).
+  //
+  // Ne retenir que les espèces laissait la colonne à zéro dès qu'une journée
+  // était encaissée en Mobile Money — le cas courant ici, où l'essentiel des
+  // règlements passe par ce canal.
+  const closingBalance = opening + totalCounted;
 
   const allCountedFilled = MODES.every((m) => counted[m.key] !== "");
 
