@@ -44,6 +44,14 @@ export interface DataTableProps<T> {
   // Options
   isLoading?: boolean;
   rowClassName?: (row: T) => string;
+  /**
+   * Appelé au clic sur une ligne, hors éléments interactifs (boutons, liens).
+   *
+   * Rend la ligne cliquable et atteignable au clavier. Omis, la ligne reste
+   * inerte : on ne veut pas d'un curseur main sur les tableaux où le clic
+   * n'aurait aucun effet.
+   */
+  onRowClick?: (row: T) => void;
   /** Titre affiché dans la barre d'outils du tableau (optionnel). */
   title?: string;
   /**
@@ -121,6 +129,7 @@ export function DataTable<T>({
   onSearchChange,
   isLoading = false,
   rowClassName,
+  onRowClick,
   title,
   hideToolbarSearch = false,
   emptyTitle = "Aucune donnée",
@@ -327,8 +336,41 @@ export function DataTable<T>({
                   return (
                     <tr
                       key={row.id}
+                      // Ligne cliquable seulement si l'appelant le demande.
+                      //
+                      // Le clic est ignoré lorsqu'il vient d'un élément
+                      // interactif de la ligne — bouton d'actions, lien,
+                      // sélecteur : sans cette garde, ouvrir un menu
+                      // déclencherait aussi l'action de la ligne.
+                      onClick={
+                        onRowClick
+                          ? (e) => {
+                              const cible = e.target as HTMLElement;
+                              if (cible.closest("button, a, input, select, [role='menu']")) {
+                                return;
+                              }
+                              onRowClick(row.original);
+                            }
+                          : undefined
+                      }
+                      // Au clavier, la ligne devient un élément atteignable et
+                      // actionnable ; sans cela l'information ne serait
+                      // accessible qu'à la souris.
+                      tabIndex={onRowClick ? 0 : undefined}
+                      onKeyDown={
+                        onRowClick
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onRowClick(row.original);
+                              }
+                            }
+                          : undefined
+                      }
                       className={cn(
                         "transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40",
+                        onRowClick &&
+                          "cursor-pointer focus:outline-none focus-visible:bg-blue-50/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400",
                         custom
                       )}
                     >

@@ -19,6 +19,7 @@ import {
   type ReportPerformance,
 } from "@/lib/api/reports";
 import { usersApi, type User } from "@/lib/api/users";
+import { ApercuCompteRendu } from "./ApercuCompteRendu";
 import type { PageResponse } from "@/types/api";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
@@ -74,6 +75,9 @@ export default function ReportsPage() {
   const [dateEnd, setDateEnd] = useState<string>("");
 
   // --- État : pagination
+  // Ligne dont l'aperçu est ouvert. `null` = panneau fermé.
+  const [apercu, setApercu] = useState<ReportListItem | null>(null);
+
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
@@ -382,7 +386,10 @@ export default function ReportsPage() {
             setPageSize(size);
             setPage(0);
           }}
+          onRowClick={setApercu}
         />
+
+        <ApercuCompteRendu ligne={apercu} onClose={() => setApercu(null)} />
       </div>
 
       {/* ===================================================================
