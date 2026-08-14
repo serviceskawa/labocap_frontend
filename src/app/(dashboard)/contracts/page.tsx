@@ -376,7 +376,7 @@ export default function ContractsPage() {
         // (contrats/btn_edit_delete.blade.php) et ne laisse que la consultation.
         const cloture = contrat.isClose === true;
 
-        if (can(PERMISSIONS.EDIT_CONTRACTS) && !cloture) {
+        if (can(PERMISSIONS.EDIT_CONTRATS) && !cloture) {
           actions.push({
             label: "Modifier",
             icon: <Pencil className="h-4 w-4" />,
@@ -411,7 +411,7 @@ export default function ContractsPage() {
           }
         }
 
-        if (can(PERMISSIONS.DELETE_CONTRACTS) && !cloture) {
+        if (can(PERMISSIONS.DELETE_CONTRATS) && !cloture) {
           actions.push({
             label: "Supprimer",
             icon: <Trash2 className="h-4 w-4" />,
@@ -427,7 +427,7 @@ export default function ContractsPage() {
 
   // ---- Guard ---------------------------------------------------------------
 
-  if (!can(PERMISSIONS.VIEW_CONTRACTS)) {
+  if (!can(PERMISSIONS.VIEW_CONTRATS)) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-gray-500">Accès non autorisé</p>
@@ -442,7 +442,7 @@ export default function ContractsPage() {
       <PageHeader
         title="Contrats"
         action={
-          can(PERMISSIONS.CREATE_CONTRACTS) ? (
+          can(PERMISSIONS.CREATE_CONTRATS) ? (
             <button
               onClick={() => {
                 createForm.reset();

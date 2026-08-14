@@ -279,7 +279,7 @@ export default function ContractDetailPage({
             </div>
           </div>
 
-          <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
+          <PermissionGate permission={PERMISSIONS.EDIT_CONTRATS}>
             <div className="flex flex-shrink-0 items-center gap-2">
               {contract.status === "ACTIF" && !isClose && (
                 <button
@@ -429,7 +429,7 @@ export default function ContractDetailPage({
 
       {/* ============ Ajouter des examens (formulaire inline) ============ */}
       {!isClose && (
-        <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
+        <PermissionGate permission={PERMISSIONS.EDIT_CONTRATS}>
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="mb-4 text-base font-semibold text-gray-900">
               Ajouter des examens
@@ -576,7 +576,7 @@ export default function ContractDetailPage({
                       {formatAmount(d.amountAfterRemise)}
                     </td>
                     <td className="px-4 py-3">
-                      <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
+                      <PermissionGate permission={PERMISSIONS.EDIT_CONTRATS}>
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
@@ -623,7 +623,7 @@ export default function ContractDetailPage({
         </div>
 
         {!isClose && (
-          <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
+          <PermissionGate permission={PERMISSIONS.EDIT_CONTRATS}>
             <div className="px-5 py-4 border-t border-gray-100">
               <Button
                 onClick={() => saveMutation.mutate()}
