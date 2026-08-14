@@ -9,6 +9,9 @@ import { useAstuceVue } from "@/lib/astuces";
 /** Marge autour de la zone éclairée, pour qu'elle respire. */
 const HALO = 8;
 
+/** Largeur de la bulle, en pixels — doit suivre le `w-[min(24rem,…)]` du rendu. */
+const LARGEUR_BULLE = 384;
+
 interface Rect {
   top: number;
   left: number;
@@ -66,7 +69,11 @@ export function GuideProjecteur({
   const { vue, marquerVue } = useAstuceVue(cle, user?.id);
   const [zone, setZone] = useState<Rect | null>(null);
 
-  const doitMesurer = actif && !vue;
+  // Tant que l'identité n'est pas connue, la clé de mémorisation retomberait sur
+  // « anonyme » : un guide fermé à cet instant serait retenu sous cette clé, puis
+  // reparaîtrait dès que l'identifiant réel arriverait — la promesse « vu une
+  // fois, jamais plus » ne tenait pas. On attend donc de savoir à qui on parle.
+  const doitMesurer = actif && Boolean(user?.id) && !vue;
 
   // Position de la cible, suivie tant que le guide est affiché : la page peut
   // défiler, la fenêtre changer de taille, le tableau finir de se peindre.
@@ -138,10 +145,17 @@ export function GuideProjecteur({
         }}
       />
 
-      {/* Anneau qui bat, pour que l'œil aille là et nulle part ailleurs. */}
+      {/*
+        Anneau qui bat, pour que l'œil aille là et nulle part ailleurs.
+
+        `animate-pulse` et non `animate-ping` : le second double la taille de
+        l'élément. Sur un rectangle qui fait déjà la largeur du tableau, cela
+        produisait une onde de trois mille pixels débordant l'écran — un éclair,
+        pas une pulsation. Le battement d'opacité reste borné à la zone.
+      */}
       <div
         aria-hidden
-        className="pointer-events-none absolute animate-ping rounded-lg ring-2 ring-blue-300"
+        className="pointer-events-none absolute animate-pulse rounded-lg ring-2 ring-blue-300"
         style={{
           top: zone.top - HALO,
           left: zone.left - HALO,
@@ -155,7 +169,10 @@ export function GuideProjecteur({
         style={{
           top: enBas ? zone.top + zone.height + HALO + 14 : zone.top - HALO - 14,
           transform: enBas ? undefined : "translateY(-100%)",
-          left: Math.max(16, Math.min(zone.left, window.innerWidth - 400)),
+          left: Math.max(
+            16,
+            Math.min(zone.left, window.innerWidth - LARGEUR_BULLE - 16),
+          ),
         }}
       >
         <div className="flex items-start gap-3">
