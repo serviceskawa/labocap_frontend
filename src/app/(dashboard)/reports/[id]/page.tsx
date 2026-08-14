@@ -390,6 +390,12 @@ export default function ReportDetailPage({
   // DELIVERED condamnait la case « Complémentaire » au moment précis où elle
   // sert, et empêchait de corriger un dossier déjà sorti.
   const canEdit = can(PERMISSIONS.EDIT_REPORTS);
+
+  // Valider engage un diagnostic, corriger non : les deux droits sont distincts
+  // depuis que le serveur les sépare. Sans cette lecture, l'écran proposerait
+  // « Terminé » à un agent d'accueil, dont l'enregistrement serait refusé en 403.
+  const canValidate = can(PERMISSIONS.VALIDATE_REPORTS);
+
   const patient = patientProfile?.patient;
 
   // ---------------------------------------------------------------------------
@@ -770,8 +776,22 @@ export default function ReportDetailPage({
                 disabled={!canEdit}
               >
                 <option value="0">En attente de relecture</option>
-                <option value="1">Terminé</option>
+                {/*
+                  « Terminé » n'apparaît qu'à qui peut valider — ou sur un dossier
+                  déjà validé, sinon le sélecteur porterait une valeur sans option
+                  correspondante et le premier enregistrement le ramènerait
+                  silencieusement en attente.
+                */}
+                {(canValidate || statusValue === "1") && (
+                  <option value="1">Terminé</option>
+                )}
               </NativeSelect>
+              {!canValidate && statusValue !== "1" && (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Seul un médecin peut marquer un compte rendu comme terminé.
+                  Vous pouvez le rédiger et le corriger.
+                </p>
+              )}
             </div>
 
             {/* Mettre à jour (Laravel : bouton unique qui enregistre + applique le statut) */}

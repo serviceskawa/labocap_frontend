@@ -28,6 +28,9 @@ export const PERMISSIONS = {
   DELETE_REPORTS: "delete-reports",
   REVIEW_REPORTS: "review-reports",
   VALIDATE_REPORTS: "validate-reports",
+  // Remise au comptoir : signature du récupérateur, appel du patient, livraison.
+  // Distincte de la validation, qui engage un diagnostic.
+  DELIVER_REPORTS: "deliver-reports",
   SIGN_REPORTS: "sign-reports",
 
   // Macroscopy

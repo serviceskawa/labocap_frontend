@@ -165,8 +165,13 @@ function CallCell({ row, onMarkInformed, onNotify }: CallCellProps) {
     row.reportStatus === "VALIDATED" || row.reportStatus === "DELIVERED";
 
   // Appel vocal / SMS OurVoice : nécessite la permission, un CR terminé et un téléphone.
+  //
+  // La permission lue est celle de la remise, non celle de la rédaction : prévenir
+  // un patient que son résultat l'attend relève du guichet, et c'est ce que le
+  // serveur exige désormais sur ces routes. Lire `edit-reports` ici afficherait le
+  // bouton à un rédacteur qui n'a pas le droit de s'en servir.
   const canNotify =
-    can(PERMISSIONS.EDIT_REPORTS) && reportTerminated && !!phone && !!row.reportId;
+    can(PERMISSIONS.DELIVER_REPORTS) && reportTerminated && !!phone && !!row.reportId;
 
   // Un seul bouton : c'est le serveur qui choisit le canal, comme l'action
   // Laravel `callOrSendSms` (SMS si le bon porte l'option, sinon appel vocal et
