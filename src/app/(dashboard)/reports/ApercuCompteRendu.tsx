@@ -69,7 +69,12 @@ interface Props {
  * à la fois.
  */
 export function ApercuCompteRendu({ ligne, onClose }: Props) {
-  const { data: detail, isLoading } = useQuery({
+  const {
+    data: detail,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["report-apercu", ligne?.id],
     queryFn: () => reportsApi.findById(ligne!.id).then((r) => r.data),
     enabled: Boolean(ligne),
@@ -132,7 +137,28 @@ export function ApercuCompteRendu({ ligne, onClose }: Props) {
         </div>
       )}
 
-      {!isLoading && detail && (
+      {/*
+        Sans ce bloc, un appel en échec laissait le panneau entièrement vide :
+        ni disque, ni texte, ni cause. L'utilisateur ne pouvait pas distinguer
+        « le chargement a échoué » de « la fonctionnalité est cassée », et
+        n'avait aucun moyen de réessayer sans refermer puis rouvrir.
+      */}
+      {isError && (
+        <div role="alert" className="py-12 text-center">
+          <p className="text-sm text-gray-700">
+            L&apos;aperçu n&apos;a pas pu être chargé.
+          </p>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="mt-3 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {!isLoading && !isError && detail && (
         <>
           {detail.titleName && (
             <p className="mb-4 text-sm font-medium text-gray-900">

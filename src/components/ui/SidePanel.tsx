@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -24,10 +24,10 @@ interface SidePanelProps {
  * apercevoir, puis revenir, coûte deux navigations et fait perdre sa place dans
  * la liste.</p>
  *
- * <p>Largeur : le quart de l'écran sur grand format, mais jamais moins de
- * 380 px — en deçà, un extrait de compte rendu devient illisible. En dessous de
- * 1024 px il occupe toute la largeur : sur un écran étroit, un quart ne montre
- * rien d'utile.</p>
+ * <p>Largeur : le quart de la fenêtre au-delà de 1024 px, sans descendre sous
+ * 26 rem — en deçà, un extrait de compte rendu devient illisible. Entre 640 et
+ * 1024 px, cette même largeur fixe : un quart de 800 px ne montrerait que
+ * quelques mots par ligne. En dessous, toute la largeur.</p>
  */
 export function SidePanel({
   open,
@@ -37,54 +37,117 @@ export function SidePanel({
   footer,
   children,
 }: SidePanelProps) {
-  // Échap ferme le panneau, et le corps cesse de défiler derrière lui.
+  const panneau = useRef<HTMLElement>(null);
+
+  // `onClose` est presque toujours une lambda écrite dans le JSX du parent, donc
+  // une référence neuve à chaque rendu. En dépendance d'effet, elle rejouait tout
+  // le montage à chaque re-rendu de la page — or celle-ci se re-rend pendant que
+  // le panneau est ouvert, ne serait-ce qu'à l'arrivée du détail. Le focus était
+  // alors ramené de force sur le panneau, et `origine` finissait par désigner le
+  // panneau lui-même : la fermeture ne rendait plus la main à la ligne cliquée.
+  const fermer = useRef(onClose);
+  useEffect(() => {
+    fermer.current = onClose;
+  });
+
   useEffect(() => {
     if (!open) return;
+
+    // Le tableau de bord ne fait pas défiler `body` : il est en `h-screen
+    // overflow-hidden`, et c'est `main` qui porte le défilement. Figer `body`,
+    // comme on le fait d'ordinaire, ne bloquait donc rien — la liste continuait
+    // de défiler derrière le panneau ouvert. On fige le conteneur réel, et
+    // `body` en second pour les écrans qui, eux, défilent normalement.
+    const defilants = [document.querySelector("main"), document.body].filter(
+      (el): el is HTMLElement => el !== null,
+    );
+    const valeursInitiales = defilants.map((el) => el.style.overflow);
+    defilants.forEach((el) => (el.style.overflow = "hidden"));
+
+    // Le focus entre dans le panneau et y reste : `aria-modal` promet qu'il n'y
+    // a rien d'autre à atteindre, or sans piège la tabulation repartait dans la
+    // liste, sous le voile. À la fermeture on rend le focus à la ligne cliquée,
+    // pour ne pas renvoyer l'utilisateur en haut du document.
+    const origine = document.activeElement as HTMLElement | null;
+    panneau.current?.focus();
+
+    const focusables = () =>
+      Array.from(
+        panneau.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+
     const auClavier = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        fermer.current();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const cibles = focusables();
+      if (cibles.length === 0) return;
+      const premier = cibles[0];
+      const dernier = cibles[cibles.length - 1];
+      if (e.shiftKey && document.activeElement === premier) {
+        e.preventDefault();
+        dernier.focus();
+      } else if (!e.shiftKey && document.activeElement === dernier) {
+        e.preventDefault();
+        premier.focus();
+      }
     };
+
     document.addEventListener("keydown", auClavier);
-    const debordementInitial = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", auClavier);
-      document.body.style.overflow = debordementInitial;
+      defilants.forEach((el, i) => (el.style.overflow = valeursInitiales[i]));
+      origine?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
+
+  // Fermé, rien n'est posé dans le document.
+  //
+  // La version précédente laissait le tiroir en place et le repoussait hors
+  // champ par `translate-x-full`. C'était fragile : sous 1024 px il occupe toute
+  // la largeur, si bien que la moindre défaillance de la transformation le
+  // laissait couvrir l'application entière — écran blanc, titre de repli, corps
+  // vide, plus rien de cliquable. Un panneau fermé ne doit pas dépendre d'un
+  // déplacement pour être invisible.
+  //
+  // Le démontage règle du même coup l'accessibilité que `inert` rattrapait :
+  // ni cible de tabulation, ni boîte de dialogue annoncée en permanence.
+  if (!open) return null;
 
   return (
     <>
       {/* Voile : ferme au clic et détache l'œil de la liste, sans la masquer. */}
-      <div
-        aria-hidden={!open}
-        onClick={onClose}
-        className={cn(
-          "fixed inset-0 z-40 bg-gray-900/20 transition-opacity duration-[var(--duration-quick)]",
-          open ? "opacity-100" : "pointer-events-none opacity-0",
-        )}
-      />
+      <div onClick={onClose} className="fixed inset-0 z-40 bg-gray-900/20" />
 
       {/*
         `fixed` est voulu : c'est un tiroir, ancré au bord droit de la fenêtre.
         Il ne défile pas avec le tableau — on garde la liste sous les yeux
         pendant qu'on lit l'aperçu, et le panneau reste à portée de pouce.
-
-        Fermé, il demeure dans le document pour pouvoir en ressortir en
-        glissant. `inert` le neutralise alors entièrement : ses boutons cessent
-        d'être atteignables au clavier — sans quoi la tabulation traversait des
-        commandes invisibles — et il disparaît de l'arbre d'accessibilité, où il
-        s'annonçait sinon comme une boîte de dialogue en permanence.
       */}
       <aside
+        ref={panneau}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        inert={!open}
+        // Reçoit le focus à l'ouverture sans devenir une étape de tabulation.
+        tabIndex={-1}
         className={cn(
-          "fixed inset-y-0 right-0 z-50 flex w-full max-w-full flex-col bg-white shadow-2xl",
-          "lg:w-1/4 lg:min-w-[380px]",
-          "transition-transform duration-[var(--duration-quick)] ease-emphasized",
-          open ? "translate-x-0" : "translate-x-full",
+          "focus:outline-none",
+          "fixed inset-y-0 right-0 z-50 flex flex-col bg-white shadow-2xl",
+          // Largeur en `vw` et non en pourcentage : pour un élément `fixed`, un
+          // pourcentage se résout contre le bloc conteneur — qui cesse d'être la
+          // fenêtre dès qu'un ancêtre porte un `transform`, un `filter` ou un
+          // `will-change`. Le `vw` vise toujours la fenêtre.
+          //
+          // Le quart n'arrive qu'en grand écran. En dessous de 640 px il occupe
+          // toute la largeur ; entre les deux, une largeur fixe confortable — un
+          // quart de 800 px ne montrerait que quelques mots par ligne.
+          "w-full sm:w-[26rem] lg:w-[25vw] lg:min-w-[26rem]",
+          "animate-tiroir",
         )}
       >
         <header className="flex items-start justify-between gap-3 border-b border-gray-200 px-5 py-4">

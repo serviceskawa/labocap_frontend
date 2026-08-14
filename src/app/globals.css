@@ -288,6 +288,22 @@
       background-position: -200% 0;
     }
   }
+
+  /* Tiroir latéral — entrée par la droite.
+     Une animation et non une transition entre deux classes : le tiroir n'existe
+     dans le document que pendant qu'il est ouvert (cf. SidePanel), donc il n'y a
+     pas d'état « fermé » à transitionner. L'animation joue à la pose du nœud.
+     Sous « réduire les animations », la règle plus bas la ramène à 1 ms. */
+  --animate-tiroir: tiroir var(--duration-base) var(--ease-emphasized);
+
+  @keyframes tiroir {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
 }
 
 /* Respect de « réduire les animations » (système d'exploitation). Obligation
