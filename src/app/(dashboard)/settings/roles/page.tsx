@@ -155,7 +155,7 @@ export default function RolesPage() {
       id: "actions",
       cell: ({ row }) => (
         <div className="flex items-center gap-2">
-          <PermissionGate permission={PERMISSIONS.MANAGE_ROLES}>
+          <PermissionGate permission={PERMISSIONS.EDIT_ROLES}>
             <IconButton
               variant="view"
               title="Voir / modifier"
@@ -164,7 +164,7 @@ export default function RolesPage() {
               icon={<Eye className="h-4 w-4" />}
             />
           </PermissionGate>
-          <PermissionGate permission={PERMISSIONS.MANAGE_ROLES}>
+          <PermissionGate permission={PERMISSIONS.EDIT_ROLES}>
             <IconButton
               variant="delete"
               title="Supprimer"
@@ -183,7 +183,7 @@ export default function RolesPage() {
       <PageHeader
         title="Rôles"
         action={
-          can(PERMISSIONS.MANAGE_ROLES) ? (
+          can(PERMISSIONS.EDIT_ROLES) ? (
             <button
               onClick={() => {
                 createForm.reset();
