@@ -1,6 +1,8 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { formatCFA } from "@/lib/utils";
+
+import { use, useState } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -12,15 +14,13 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { cashboxApi } from "@/lib/api/cashbox";
+import { formatDate } from "@/lib/utils";
 import type { ApiError } from "@/types/api";
 import { Button } from "@/components/ui/Button";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 const readonlyClass = `${inputClass} bg-gray-50 text-gray-600`;
 
-function formatFCFA(v: number) {
-  return new Intl.NumberFormat("fr-FR").format(v) + " FCFA";
-}
 
 // Modes de paiement dans l'ordre Laravel, avec la clé paymentType côté opérations.
 const MODES = [
@@ -60,38 +60,29 @@ export default function CashboxFermeturePage({ params }: PageProps) {
     queryFn: () => cashboxApi.getDaily(id).then((r) => r.data),
   });
 
-  // Montants calculés par mode depuis la dernière ouverture (endpoint dédié).
+  // Montants calculés par mode depuis l'ouverture de LA session qu'on ferme.
+  // Sans cet identifiant, le serveur repart de la dernière session ouverte de
+  // la branche : en fermant celle du jour alors qu'une session plus ancienne
+  // traîne, le total couvrait toute la période écoulée depuis celle-ci.
   const { data: summary } = useQuery({
-    queryKey: ["cashbox-dailies-summary"],
-    queryFn: () => cashboxApi.getDailiesSummary().then((r) => r.data),
+    queryKey: ["cashbox-dailies-summary", id],
+    queryFn: () => cashboxApi.getDailiesSummary(id).then((r) => r.data),
   });
 
-  const sessionDate = session?.date ? session.date.slice(0, 10) : undefined;
 
-  // Opérations du jour, pour compter le nombre d'opérations par mode.
-  const { data: operationsData } = useQuery({
-    queryKey: ["cashbox-operations", id, sessionDate],
-    queryFn: () =>
-      cashboxApi
-        .getOperations({
-          cashboxId: session?.cashboxId,
-          date: sessionDate,
-          page: 0,
-          size: 500,
-        })
-        .then((r) => r.data),
-    enabled: !!session?.cashboxId && !!sessionDate,
-  });
 
-  const counts = useMemo(() => {
-    const acc: Record<ModeKey, number> = { cash: 0, mm: 0, cheque: 0, virement: 0 };
-    for (const op of operationsData?.content ?? []) {
-      if (op.type !== "CREDIT") continue;
-      const mode = MODES.find((m) => m.paymentType === op.paymentType);
-      if (mode) acc[mode.key] += 1;
-    }
-    return acc;
-  }, [operationsData]);
+  // Les nombres viennent du résumé, comme les montants.
+  //
+  // Ils étaient auparavant comptés sur les opérations de caisse, filtrées sur
+  // la seule date de la session — deux sources et deux fenêtres différentes de
+  // celles du montant affiché juste à côté. Une caisse ouverte depuis plusieurs
+  // jours montrait « 0 » en face de plusieurs millions.
+  const counts: Record<ModeKey, number> = {
+    cash: summary?.nombreEspeces ?? 0,
+    mm: summary?.nombreMobileMoney ?? 0,
+    cheque: summary?.nombreCheques ?? 0,
+    virement: summary?.nombreVirement ?? 0,
+  };
 
   const calculated: Record<ModeKey, number> = {
     cash: summary?.totalEspeces ?? 0,
@@ -104,16 +95,33 @@ export default function CashboxFermeturePage({ params }: PageProps) {
 
   // ---- Calculs ----
   const countedNum = (k: ModeKey) => Number(counted[k]) || 0;
-  const ecart = (k: ModeKey) => calculated[k] - countedNum(k);
+
+  // Écart = compté MOINS calculé, sens du legacy
+  // (cashbox_daily/fermeture.blade.php : `totalConfirmation - totalCalculated`).
+  // Le sens compte doublement : il porte l'information — négatif quand il
+  // manque de l'argent, positif quand il y en a en trop — et le backend
+  // l'ajoute au solde de la caisse à la clôture. Inversé, il déplaçait ce solde
+  // dans le mauvais sens.
+  const ecart = (k: ModeKey) => countedNum(k) - calculated[k];
 
   const totalCalculated =
     calculated.cash + calculated.mm + calculated.cheque + calculated.virement;
   const totalCounted =
     countedNum("cash") + countedNum("mm") + countedNum("cheque") + countedNum("virement");
-  const totalEcart = totalCalculated - totalCounted;
+  const totalEcart = totalCounted - totalCalculated;
 
-  // Solde de fermeture = fond initial + espèces comptées (argent physique en caisse).
-  const closingBalance = opening + countedNum("cash");
+  // Solde de fermeture = total des factures réglées pendant la vie de la
+  // session, tous modes confondus.
+  //
+  // Écart assumé avec le legacy, à la demande du client. Laravel enregistrait
+  // `open_money + totalConfirmation`, donc ce que le CAISSIER avait compté. La
+  // colonne répond désormais à « combien cette caisse a-t-elle encaissé »
+  // plutôt qu'à « combien y avait-il dedans à la fermeture ».
+  //
+  // Conséquence à connaître : le solde ne dépend plus du comptage. Un caissier
+  // qui déclare moins que le calculé verra tout de même le montant calculé dans
+  // cette colonne — c'est l'écart, enregistré à côté, qui porte la différence.
+  const closingBalance = totalCalculated;
 
   const allCountedFilled = MODES.every((m) => counted[m.key] !== "");
 
@@ -202,6 +210,20 @@ export default function CashboxFermeturePage({ params }: PageProps) {
           </div>
         ) : (
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            {/*
+              La période comptée, énoncée. Les montants proposés couvrent tout
+              l'intervalle depuis l'ouverture de cette session — plusieurs jours
+              si elle est restée ouverte. Sans cette mention, un caissier ayant
+              encaissé 876 000 et voyant deux millions doute de son comptage
+              plutôt que de la période.
+            */}
+            {summary?.depuis && (
+              <p className="mb-4 rounded-lg bg-blue-50 px-4 py-2 text-sm text-blue-900">
+                Montants encaissés depuis l&apos;ouverture de cette caisse, le{" "}
+                <span className="font-semibold">{formatDate(summary.depuis)}</span>.
+              </p>
+            )}
+
             {/* Onglets / étapes */}
             <div className="mb-6 flex items-center gap-2">
               <StepPill active={step === 1} done={step === 2} index={1} label="Comptage" icon={<Calculator className="h-4 w-4" />} />
@@ -233,7 +255,7 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                             {counts[m.key]}
                           </td>
                           <td className="px-3 py-3 text-right text-gray-800">
-                            {formatFCFA(calculated[m.key])}
+                            {formatCFA(calculated[m.key])}
                           </td>
                           <td className="px-3 py-3">
                             <input
@@ -255,7 +277,7 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                               ecart(m.key) !== 0 ? "text-red-600" : "text-green-600"
                             }`}
                           >
-                            {formatFCFA(ecart(m.key))}
+                            {formatCFA(ecart(m.key))}
                           </td>
                         </tr>
                       ))}
@@ -263,17 +285,17 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                         <td className="py-3 pl-4 pr-3 text-gray-800">Total</td>
                         <td />
                         <td className="px-3 py-3 text-right text-gray-800">
-                          {formatFCFA(totalCalculated)}
+                          {formatCFA(totalCalculated)}
                         </td>
                         <td className="px-3 py-3 text-right text-gray-800">
-                          {formatFCFA(totalCounted)}
+                          {formatCFA(totalCounted)}
                         </td>
                         <td
                           className={`py-3 pl-3 pr-4 text-right ${
                             totalEcart !== 0 ? "text-red-600" : "text-green-600"
                           }`}
                         >
-                          {formatFCFA(totalEcart)}
+                          {formatCFA(totalEcart)}
                         </td>
                       </tr>
                     </tbody>
@@ -317,29 +339,29 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                     <tbody className="divide-y divide-gray-100">
                       <tr>
                         <td className="py-3 pl-4 pr-3 font-medium text-gray-700">Espèces</td>
-                        <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(opening)}</td>
-                        <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(calculated.cash)}</td>
-                        <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(opening + calculated.cash)}</td>
-                        <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(countedNum("cash"))}</td>
-                        <td className={`py-3 pl-3 pr-4 text-right font-medium ${ecart("cash") !== 0 ? "text-red-600" : "text-green-600"}`}>{formatFCFA(ecart("cash"))}</td>
+                        <td className="px-3 py-3 text-right text-gray-700">{formatCFA(opening)}</td>
+                        <td className="px-3 py-3 text-right text-gray-700">{formatCFA(calculated.cash)}</td>
+                        <td className="px-3 py-3 text-right text-gray-700">{formatCFA(opening + calculated.cash)}</td>
+                        <td className="px-3 py-3 text-right text-gray-700">{formatCFA(countedNum("cash"))}</td>
+                        <td className={`py-3 pl-3 pr-4 text-right font-medium ${ecart("cash") !== 0 ? "text-red-600" : "text-green-600"}`}>{formatCFA(ecart("cash"))}</td>
                       </tr>
                       {MODES.filter((m) => m.key !== "cash").map((m) => (
                         <tr key={m.key}>
                           <td className="py-3 pl-4 pr-3 font-medium text-gray-700">{m.label}</td>
                           <td className="px-3 py-3 text-right text-gray-400">-</td>
-                          <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(calculated[m.key])}</td>
+                          <td className="px-3 py-3 text-right text-gray-700">{formatCFA(calculated[m.key])}</td>
                           <td className="px-3 py-3 text-right text-gray-400">-</td>
-                          <td className="px-3 py-3 text-right text-gray-700">{formatFCFA(countedNum(m.key))}</td>
-                          <td className={`py-3 pl-3 pr-4 text-right font-medium ${ecart(m.key) !== 0 ? "text-red-600" : "text-green-600"}`}>{formatFCFA(ecart(m.key))}</td>
+                          <td className="px-3 py-3 text-right text-gray-700">{formatCFA(countedNum(m.key))}</td>
+                          <td className={`py-3 pl-3 pr-4 text-right font-medium ${ecart(m.key) !== 0 ? "text-red-600" : "text-green-600"}`}>{formatCFA(ecart(m.key))}</td>
                         </tr>
                       ))}
                       <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
                         <td className="py-3 pl-4 pr-3 text-gray-800">Total</td>
-                        <td className="px-3 py-3 text-right text-gray-800">{formatFCFA(opening)}</td>
-                        <td className="px-3 py-3 text-right text-gray-800">{formatFCFA(totalCalculated)}</td>
-                        <td className="px-3 py-3 text-right text-gray-800">{formatFCFA(opening + calculated.cash)}</td>
-                        <td className="px-3 py-3 text-right text-gray-800">{formatFCFA(totalCounted)}</td>
-                        <td className={`py-3 pl-3 pr-4 text-right ${totalEcart !== 0 ? "text-red-600" : "text-green-600"}`}>{formatFCFA(totalEcart)}</td>
+                        <td className="px-3 py-3 text-right text-gray-800">{formatCFA(opening)}</td>
+                        <td className="px-3 py-3 text-right text-gray-800">{formatCFA(totalCalculated)}</td>
+                        <td className="px-3 py-3 text-right text-gray-800">{formatCFA(opening + calculated.cash)}</td>
+                        <td className="px-3 py-3 text-right text-gray-800">{formatCFA(totalCounted)}</td>
+                        <td className={`py-3 pl-3 pr-4 text-right ${totalEcart !== 0 ? "text-red-600" : "text-green-600"}`}>{formatCFA(totalEcart)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -352,7 +374,7 @@ export default function CashboxFermeturePage({ params }: PageProps) {
                   </label>
                   <input
                     type="text"
-                    value={formatFCFA(closingBalance)}
+                    value={formatCFA(closingBalance)}
                     readOnly
                     className={`${readonlyClass} max-w-xs`}
                   />

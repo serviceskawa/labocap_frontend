@@ -20,6 +20,7 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import { unitesMesureApi, type UniteMesure } from "@/lib/api/examens";
 import type { ApiError } from "@/types/api";
 import { Checkbox } from "@/components/ui/Checkbox";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -52,7 +53,7 @@ function UnitFormFields({ register, errors }: UnitFormFieldsProps) {
         <input
           type="text"
           {...register("name")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className={inputClass}
         />
         {errors.name && (
           <p className="text-xs text-red-500">{errors.name.message}</p>

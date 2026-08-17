@@ -6,19 +6,23 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, Trash2 } from "lucide-react";
+import { Eye, Trash2, UserX, UserCheck } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 import type { UseFormReturn } from "react-hook-form";
 import { LimitedSelect as ReactSelect } from "@/components/ui/LimitedSelect";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTableCard } from "@/components/common/DataTableCard";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
-import { IconButton } from "@/components/ui/IconButton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { usersApi, User, UserRequest } from "@/lib/api/users";
@@ -258,39 +262,62 @@ export default function UsersPage() {
       },
     },
     {
+      // L'état existait déjà de bout en bout — `isActive` dans le DTO, dans le
+      // type client, et dans l'action « Activer / Désactiver » — mais aucune
+      // colonne ne le montrait. On pouvait donc basculer un compte sans jamais
+      // voir son état, sinon en devinant depuis le libellé de l'action.
+      header: "Statut",
+      id: "statut",
+      cell: ({ row }) => (
+        <StatusBadge
+          status={row.original.isActive ? "ACTIF" : "INACTIF"}
+          domain="general"
+        />
+      ),
+    },
+    {
       header: "Actions",
       id: "actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <PermissionGate permission={PERMISSIONS.EDIT_USERS}>
-            <IconButton
-              variant="view"
-              title="Voir / modifier"
-              aria-label="Voir / modifier"
-              onClick={() => openEdit(row.original)}
-              icon={<Eye className="h-4 w-4" />}
-            />
-          </PermissionGate>
-          <PermissionGate permission={PERMISSIONS.DELETE_USERS}>
-            <IconButton
-              variant="delete"
-              title="Supprimer"
-              aria-label="Supprimer"
-              onClick={() => openDelete(row.original)}
-              icon={<Trash2 className="h-4 w-4" />}
-            />
-          </PermissionGate>
-          <PermissionGate permission={PERMISSIONS.EDIT_USERS}>
-            <button
-              type="button"
-              onClick={() => toggleStatusMutation.mutate(row.original.id)}
-              className="rounded-[.15rem] bg-gray-600 px-[.8rem] py-[.28rem] text-[.8125rem] font-normal text-white transition-shadow hover:shadow-[0_2px_6px_0_rgba(108,117,125,0.5)]"
-            >
-              {row.original.isActive ? "Inactif" : "Actif"}
-            </button>
-          </PermissionGate>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const utilisateur = row.original;
+        const actions: RowAction[] = [];
+
+        if (can(PERMISSIONS.EDIT_USERS)) {
+          actions.push({
+            label: "Voir / modifier",
+            icon: <Eye className="h-4 w-4" />,
+            variant: "view",
+            onClick: () => openEdit(utilisateur),
+          });
+        }
+
+        if (can(PERMISSIONS.DELETE_USERS)) {
+          actions.push({
+            label: "Supprimer",
+            icon: <Trash2 className="h-4 w-4" />,
+            variant: "delete",
+            onClick: () => openDelete(utilisateur),
+          });
+        }
+
+        if (can(PERMISSIONS.EDIT_USERS)) {
+          // Le libellé dit l'ÉTAT VISÉ, pas l'état courant : « Désactiver »
+          // pour un compte actif. Un bouton nommé « Inactif » sur un compte
+          // actif se lit comme une étiquette de statut, pas comme une commande.
+          actions.push({
+            label: utilisateur.isActive ? "Désactiver" : "Activer",
+            icon: utilisateur.isActive ? (
+              <UserX className="h-4 w-4" />
+            ) : (
+              <UserCheck className="h-4 w-4" />
+            ),
+            variant: "secondary",
+            onClick: () => toggleStatusMutation.mutate(utilisateur.id),
+          });
+        }
+
+        return <RowActions actions={actions} />;
+      },
     },
   ];
 
@@ -310,7 +337,10 @@ export default function UsersPage() {
         }
       />
 
-      <DataTableCard title="Liste des utilisateurs" columns={columns} data={users} isLoading={isLoading} />
+      {/* Jusqu'à trois actions : le tableau replie uniformément. */}
+      <RowActionsProvider collapse>
+        <DataTableCard title="Liste des utilisateurs" columns={columns} data={users} isLoading={isLoading} />
+      </RowActionsProvider>
 
       {/* ---- Modal création ---- */}
       <CrudModal

@@ -1,10 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { Eye, Printer, Loader2 } from "lucide-react";
+import {
+  Eye,
+  Loader2,
+  Printer,
+  SquareArrowOutUpRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
@@ -133,17 +138,42 @@ export default function AssignmentsPage() {
 
   // ---- Mutation : créer une nouvelle affectation ---------------------------
 
+  /**
+   * Onglet réservé à l'ouverture de l'affectation qui va être créée.
+   *
+   * `window.open` n'est autorisé que pendant l'activation par l'utilisateur —
+   * le clic lui-même. Appelé dans le `onSuccess` d'une mutation, il arrive
+   * après la réponse du serveur, hors de cette fenêtre, et les navigateurs le
+   * bloquent comme une fenêtre surgissante.
+   *
+   * On ouvre donc l'onglet À VIDE pendant le clic, et on l'amène à destination
+   * quand l'identifiant est connu. En cas d'échec, il est refermé — laisser un
+   * onglet blanc derrière soi serait pire que de ne pas en ouvrir.
+   */
+  const ongletAffectation = useRef<Window | null>(null);
+
   const createMutation = useMutation({
     mutationFn: (userId: string) => assignmentsApi.create({ userId }),
     onSuccess: (res) => {
       toast.success("Affectation créée avec succès");
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
       const created = res.data;
-      if (created?.id) {
-        router.push(`/test-orders/assignments/${created.id}`);
+      const url = created?.id
+        ? `/test-orders/assignments/${created.id}`
+        : null;
+
+      if (url && ongletAffectation.current && !ongletAffectation.current.closed) {
+        ongletAffectation.current.location.href = url;
+      } else if (url) {
+        // L'onglet a été bloqué ou refermé : on reste sur la navigation en
+        // place plutôt que de laisser l'utilisateur sans rien après sa saisie.
+        router.push(url);
       }
+      ongletAffectation.current = null;
     },
     onError: (err: AxiosError<ApiError>) => {
+      ongletAffectation.current?.close();
+      ongletAffectation.current = null;
       toast.error(
         err.response?.data?.message ?? "Erreur lors de la création"
       );
@@ -156,6 +186,22 @@ export default function AssignmentsPage() {
       toast.error("Veuillez sélectionner un docteur");
       return;
     }
+    // Ouvert ICI, dans le gestionnaire de clic, seul moment où le navigateur
+    // l'autorise. Même forme que `openDocFile` et l'aperçu des comptes rendus,
+    // qui pratiquent déjà l'ouverture à blanc suivie d'une navigation.
+    //
+    // SANS `noopener` : la spécification impose à `window.open` de renvoyer
+    // `null` dès que cette option est demandée. Une première version la passait
+    // — l'onglet s'ouvrait, restait vide, et la navigation retombait sur le
+    // repli dans l'onglet d'origine.
+    //
+    // Le lien retour est coupé juste après, en annulant `opener` sur la fenêtre
+    // ouverte : on obtient la protection visée sans renoncer à la référence.
+    // Possible parce que la destination est de même origine — sur une page
+    // tierce, y accéder lèverait une erreur.
+    const onglet = window.open("about:blank", "_blank");
+    if (onglet) onglet.opener = null;
+    ongletAffectation.current = onglet;
     createMutation.mutate(newUserId);
   };
 
@@ -201,19 +247,27 @@ export default function AssignmentsPage() {
             <Link
               href={`/test-orders/assignments/${a.id}`}
               className="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="Voir les détails"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Voir les détails (nouvel onglet)"
+              aria-label="Voir les détails de l'affectation (nouvel onglet)"
             >
               <Eye className="h-3.5 w-3.5" />
               Voir
+              <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3 opacity-70" />
             </Link>
             {a.nbrDetails >= 1 && (
               <Link
                 href={`/test-orders/assignments/${a.id}/print`}
                 className="inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-600 transition-colors"
-                title="Imprimer"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Imprimer (nouvel onglet)"
+                aria-label="Imprimer l'affectation (nouvel onglet)"
               >
                 <Printer className="h-3.5 w-3.5" />
                 Imprimer
+                <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3 opacity-70" />
               </Link>
             )}
           </div>

@@ -5,7 +5,7 @@ import { brandingApi } from "@/lib/api/branding";
 import { useAppSettings } from "@/hooks/useAppSettings";
 
 /** Nom affiché quand aucun `app_name` n'est configuré côté Paramètres. */
-export const DEFAULT_APP_NAME = "Labo AnaPath";
+export const DEFAULT_APP_NAME = "AnapathLab";
 
 export interface Branding {
   /** Nom du laboratoire (onglet, alt du logo, repli textuel). */
@@ -32,6 +32,23 @@ export interface Branding {
  * d'authentification (aucun JWT) et pour les utilisateurs sans `view-settings`
  * (un technicien, par exemple), qui ne voyaient jusqu'ici que l'initiale de repli.
  */
+/**
+ * Valeurs sentinelles héritées de l'ancienne application : en production,
+ * `setting_apps.logo` et `logo_white` portent littéralement la chaîne « path »,
+ * gabarit jamais renseigné. Non filtrées, elles passent pour un logo configuré :
+ * l'application demande alors `<img src="path">`, essuie une 404, et ne bascule
+ * sur son repli qu'après l'échec.
+ *
+ * Exporté car tous les écrans ne passent pas par {@link useBranding} — les
+ * documents imprimés lisent `setting_apps` directement.
+ */
+const PLACEHOLDERS = new Set(["path", "null", "undefined", "-", "n/a"]);
+
+export function isPlaceholder(value: string | undefined | null): boolean {
+  const v = value?.trim().toLowerCase() ?? "";
+  return v === "" || PLACEHOLDERS.has(v);
+}
+
 export function useBranding(): Branding {
   const { data: publicBranding } = useQuery({
     queryKey: ["public-branding"],
@@ -45,8 +62,17 @@ export function useBranding(): Branding {
 
   const { data: appSettings } = useAppSettings();
 
-  const pick = (key: string) =>
-    appSettings?.[key]?.trim() || publicBranding?.[key]?.trim() || "";
+  // (filtre partagé, cf. isPlaceholder)
+  // Valeurs sentinelles héritées de l'ancienne application : en production,
+  // `setting_apps.logo` et `logo_white` portent littéralement la chaîne
+  // « path » — un gabarit jamais renseigné. Non filtrées, elles passent pour un
+  // logo configuré : l'application demande alors `<img src="path">` à chaque
+  // affichage, essuie une 404, et ne bascule sur son repli qu'après l'échec.
+  const pick = (key: string) => {
+    const value =
+      appSettings?.[key]?.trim() || publicBranding?.[key]?.trim() || "";
+    return isPlaceholder(value) ? "" : value;
+  };
 
   const logo = pick("logo");
   const logoWhite = pick("logo_white");

@@ -25,10 +25,14 @@ import {
 } from "@/components/common/TablePagination";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { CrudModal } from "@/components/common/CrudModal";
-import { PermissionGate } from "@/components/common/PermissionGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectField } from "@/components/ui/SelectField";
 import { usePermissions } from "@/hooks/usePermissions";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { formatDate } from "@/lib/utils";
 import {
@@ -227,97 +231,69 @@ export default function DocsPage() {
       id: "actions",
       cell: ({ row }) => {
         const doc = row.original;
-        return (
-          <div className="flex items-center gap-1">
-            {/* Voir détail */}
-            <Link
-              href={`/docs/${doc.id}`}
-              className="inline-flex items-center justify-center rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"
-              title="Voir le document"
-            >
-              <Eye className="h-4 w-4" />
-            </Link>
 
-            {/* Télécharger */}
-            <button
-              type="button"
-              onClick={() => downloadDocFile(doc.attachment)}
-              className="inline-flex items-center justify-center rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-green-600 transition-colors"
-              title="Télécharger"
-            >
-              <Download className="h-4 w-4" />
-            </button>
+        // Sept actions : `PermissionGate` cède à `can()`, les conditions devant
+        // être évaluées AVANT de construire la liste — c'est sa longueur qui
+        // décide de l'affichage, et une garde en JSX arriverait trop tard.
+        const actions: RowAction[] = [
+          {
+            label: "Voir le document",
+            icon: <Eye className="h-4 w-4" />,
+            href: `/docs/${doc.id}`,
+          },
+          {
+            label: "Télécharger",
+            icon: <Download className="h-4 w-4" />,
+            onClick: () => downloadDocFile(doc.attachment),
+          },
+          {
+            label: "Historique des versions",
+            icon: <History className="h-4 w-4" />,
+            onClick: () => setHistoryDoc(doc),
+          },
+        ];
 
-            {/* Historique des versions */}
-            <button
-              type="button"
-              onClick={() => setHistoryDoc(doc)}
-              className="inline-flex items-center justify-center rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-purple-600 transition-colors"
-              title="Historique des versions"
-            >
-              <History className="h-4 w-4" />
-            </button>
+        if (can(PERMISSIONS.EDIT_DOCS)) {
+          actions.push(
+            {
+              label: "Modifier le titre",
+              icon: <Pencil className="h-4 w-4" />,
+              onClick: () => {
+                setEditDoc(doc);
+                setEditTitle(doc.title);
+                setEditFile(null);
+              },
+            },
+            {
+              label: "Partager",
+              icon: <Share2 className="h-4 w-4" />,
+              onClick: () => {
+                setShareDoc(doc);
+                setShareRoleId(doc.roleId ?? "");
+              },
+            },
+            {
+              label: "Nouvelle version",
+              icon: <Upload className="h-4 w-4" />,
+              onClick: () => {
+                setNewVersionDoc(doc);
+                setNvTitle("");
+                setNvFile(null);
+              },
+            },
+          );
+        }
 
-            {/* Éditer le titre (calque doc.update) */}
-            <PermissionGate permission={PERMISSIONS.EDIT_DOCS}>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditDoc(doc);
-                  setEditTitle(doc.title);
-                  setEditFile(null);
-                }}
-                className="inline-flex items-center justify-center rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-yellow-600 transition-colors"
-                title="Modifier le titre"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-            </PermissionGate>
+        if (can(PERMISSIONS.DELETE_DOCS)) {
+          actions.push({
+            label: "Supprimer",
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => setDeleteConfirm(doc),
+            variant: "delete",
+          });
+        }
 
-            {/* Partager par rôle */}
-            <PermissionGate permission={PERMISSIONS.EDIT_DOCS}>
-              <button
-                type="button"
-                onClick={() => {
-                  setShareDoc(doc);
-                  setShareRoleId(doc.roleId ?? "");
-                }}
-                className="inline-flex items-center justify-center rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-amber-600 transition-colors"
-                title="Partager"
-              >
-                <Share2 className="h-4 w-4" />
-              </button>
-            </PermissionGate>
-
-            {/* Nouvelle version */}
-            <PermissionGate permission={PERMISSIONS.EDIT_DOCS}>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewVersionDoc(doc);
-                  setNvTitle("");
-                  setNvFile(null);
-                }}
-                className="inline-flex items-center justify-center rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"
-                title="Nouvelle version"
-              >
-                <Upload className="h-4 w-4" />
-              </button>
-            </PermissionGate>
-
-            {/* Supprimer */}
-            <PermissionGate permission={PERMISSIONS.DELETE_DOCS}>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(doc)}
-                className="inline-flex items-center justify-center rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-red-600 transition-colors"
-                title="Supprimer"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </PermissionGate>
-          </div>
-        );
+        return <RowActions actions={actions} />;
       },
     },
   ];
@@ -344,24 +320,27 @@ export default function DocsPage() {
       />
 
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <DataTable
-          columns={columns}
-          data={docs}
-          isLoading={isLoading}
-          pageCount={pageCount}
-          pageIndex={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(0);
-          }}
-          searchValue={search}
-          onSearchChange={(val) => {
-            setSearch(val);
-            setPage(0);
-          }}
-        />
+        {/* Sept actions déclarées : le tableau replie uniformément. */}
+        <RowActionsProvider collapse>
+          <DataTable
+            columns={columns}
+            data={docs}
+            isLoading={isLoading}
+            pageCount={pageCount}
+            pageIndex={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(0);
+            }}
+            searchValue={search}
+            onSearchChange={(val) => {
+              setSearch(val);
+              setPage(0);
+            }}
+          />
+        </RowActionsProvider>
       </div>
 
       {/* Modal: suppression */}

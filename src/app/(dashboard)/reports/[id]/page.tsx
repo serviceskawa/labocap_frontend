@@ -8,7 +8,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ArrowLeft, Printer, Paperclip, Loader2 } from "lucide-react";
+import { ArrowLeft, Paperclip, Printer, SquareArrowOutUpRight } from "lucide-react";
 import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
 import type { AxiosError } from "axios";
 
@@ -31,13 +31,13 @@ import { reportsApi, type ReportDetail } from "@/lib/api/reports";
 import { reportTemplatesApi } from "@/lib/api/reportTemplates";
 import { titleReportsApi } from "@/lib/api/reportSettings";
 import { usersApi } from "@/lib/api/users";
+import { getApiErrorMessageFromBlob } from "@/lib/api/errorMessages";
 import { tagsApi } from "@/lib/api/tags";
 import { patientsApi } from "@/lib/api/patients";
 import { testOrdersApi, type ImageDto } from "@/lib/api/testOrders";
 import { openDocFile } from "@/lib/api/docs";
 import type { ApiError } from "@/types/api";
 import { Button } from "@/components/ui/Button";
-import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -147,14 +147,20 @@ export default function ReportDetailPage({
   });
 
   // --- Utilisateurs (signataires / relecteur)
+  // Les signataires viennent d'une route dédiée : `/users` exige `edit-users`,
+  // qu'aucun médecin n'a — la liste revenait vide en 403 silencieux, et le champ
+  // s'affichait sans aucune option.
   const { data: usersData } = useQuery({
-    queryKey: ["users-for-report"],
-    queryFn: () => usersApi.findAll({ size: 200 }).then((r) => r.data.content),
+    queryKey: ["signataires"],
+    queryFn: () => usersApi.findSignataires().then((r) => r.data),
     staleTime: 5 * 60_000,
   });
+  // Les comptes désactivés restent proposés — trois des cinq docteurs le sont et
+  // ont signé 9 278 comptes rendus ; les masquer viderait le champ sur tous ces
+  // dossiers. La mention rend l'état visible plutôt que la personne invisible.
   const userOptions = (usersData ?? []).map((u) => ({
     value: u.id,
-    label: `${u.lastname} ${u.firstname}`.trim(),
+    label: u.actif ? u.nom : `${u.nom} (inactif)`,
   }));
 
   // --- Tags
@@ -183,6 +189,16 @@ export default function ReportDetailPage({
     value: t.id,
     label: t.title ?? t.name ?? "—",
   }));
+
+  // --- Modifications survenues après signature
+  // Requête à part de celle du compte rendu : la liste est vide sur l'immense
+  // majorité des dossiers, et la charger avec le reste alourdirait chaque
+  // ouverture pour un cas rare.
+  const { data: modificationsApresSignature } = useQuery({
+    queryKey: ["report-modifications-apres-signature", id],
+    queryFn: () =>
+      reportsApi.findModificationsApresSignature(id).then((r) => r.data),
+  });
 
   // --- Formulaire
   const {
@@ -285,6 +301,12 @@ export default function ReportDetailPage({
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["report", id] });
+      // L'enregistrement vient peut-être d'ajouter une modification après
+      // signature : sans cette invalidation, le bandeau ne la montrerait qu'au
+      // prochain chargement de la page.
+      queryClient.invalidateQueries({
+        queryKey: ["report-modifications-apres-signature", id],
+      });
       toast.success(
         statusValue === "1" ? "Compte rendu validé" : "Compte rendu mis à jour"
       );
@@ -318,9 +340,17 @@ export default function ReportDetailPage({
       const url = URL.createObjectURL(blob);
       if (tab) tab.location.href = url;
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
+    } catch (err) {
       if (tab) tab.close();
-      toast.error("Erreur lors de la génération du PDF");
+      // Le backend renvoie la cause exacte dans un 422, mais le corps d'erreur
+      // arrive en Blob (conséquence du `responseType: "blob"` de la requête) :
+      // il faut le lire pour ne pas afficher un message générique à la place.
+      toast.error(
+        await getApiErrorMessageFromBlob(
+          err,
+          "Erreur lors de la génération du PDF",
+        ),
+      );
     }
   };
 
@@ -354,10 +384,18 @@ export default function ReportDetailPage({
     );
   }
 
-  // Comme Laravel : le formulaire reste modifiable tant que le compte rendu n'est
-  // pas livré (un CR VALIDATED peut être ré-édité / repassé En attente via le
-  // select). Seul DELIVERED verrouille l'édition.
-  const canEdit = can(PERMISSIONS.EDIT_REPORTS) && report.status !== "DELIVERED";
+  // Comme Laravel : la permission seule décide. La livraison n'y verrouillait
+  // rien — c'était un drapeau `is_delivered` distinct du statut — et un
+  // complément arrive par nature après la remise du résultat. Verrouiller sur
+  // DELIVERED condamnait la case « Complémentaire » au moment précis où elle
+  // sert, et empêchait de corriger un dossier déjà sorti.
+  const canEdit = can(PERMISSIONS.EDIT_REPORTS);
+
+  // Valider engage un diagnostic, corriger non : les deux droits sont distincts
+  // depuis que le serveur les sépare. Sans cette lecture, l'écran proposerait
+  // « Terminé » à un agent d'accueil, dont l'enregistrement serait refusé en 403.
+  const canValidate = can(PERMISSIONS.VALIDATE_REPORTS);
+
   const patient = patientProfile?.patient;
 
   // ---------------------------------------------------------------------------
@@ -385,6 +423,39 @@ export default function ReportDetailPage({
           Retour à la liste des comptes rendus
         </button>
       </div>
+
+      {/*
+        Mise en exergue des modifications postérieures à la signature.
+        Placé avant le formulaire et non dans un onglet d'historique : celui qui
+        ouvre ce compte rendu doit savoir qu'il a bougé depuis sa signature sans
+        avoir à aller le chercher.
+      */}
+      {modificationsApresSignature && modificationsApresSignature.length > 0 && (
+        <div
+          role="status"
+          className="rounded-lg border border-amber-300 bg-amber-50 p-4"
+        >
+          <p className="text-sm font-semibold text-amber-900">
+            Ce compte rendu a été modifié après sa signature
+            {modificationsApresSignature.length > 1
+              ? ` (${modificationsApresSignature.length} fois)`
+              : ""}
+          </p>
+          <ul className="mt-2 space-y-1">
+            {modificationsApresSignature.map((m, i) => (
+              <li key={i} className="text-sm text-amber-900">
+                <span className="font-semibold">{m.auteur}</span>
+                {" — "}
+                {formatDate(m.date)}
+                <span className="text-amber-800"> · {m.champs}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-amber-800">
+            Les administrateurs ont été avertis de chacune de ces modifications.
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* ============================ COLONNE PRINCIPALE ============================ */}
@@ -631,9 +702,13 @@ export default function ReportDetailPage({
                 Les pièces jointes proviennent de la galerie du bon d&apos;examen.{" "}
                 <Link
                   href={`/test-orders/${report.testOrderId}/details`}
-                  className="font-medium text-blue-600 hover:underline"
+                  className="inline-flex items-center gap-1 font-medium text-blue-600 hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Ajouter ou retirer une image (nouvel onglet)"
                 >
                   Ajouter ou retirer une image
+                  <SquareArrowOutUpRight aria-hidden="true" className="h-3 w-3 opacity-70" />
                 </Link>
               </p>
             )}
@@ -701,24 +776,34 @@ export default function ReportDetailPage({
                 disabled={!canEdit}
               >
                 <option value="0">En attente de relecture</option>
-                <option value="1">Terminé</option>
+                {/*
+                  « Terminé » n'apparaît qu'à qui peut valider — ou sur un dossier
+                  déjà validé, sinon le sélecteur porterait une valeur sans option
+                  correspondante et le premier enregistrement le ramènerait
+                  silencieusement en attente.
+                */}
+                {(canValidate || statusValue === "1") && (
+                  <option value="1">Terminé</option>
+                )}
               </NativeSelect>
+              {!canValidate && statusValue !== "1" && (
+                <p className="mt-1.5 text-xs text-gray-500">
+                  Seul un médecin peut marquer un compte rendu comme terminé.
+                  Vous pouvez le rédiger et le corriger.
+                </p>
+              )}
             </div>
 
             {/* Mettre à jour (Laravel : bouton unique qui enregistre + applique le statut) */}
             <PermissionGate permission={PERMISSIONS.EDIT_REPORTS}>
               {canEdit && (
-                <button
-                  type="button"
+                <Button
                   onClick={handleSubmit((data) => updateMutation.mutate(data))}
-                  disabled={updateMutation.isPending}
-                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+                  className="mt-4 w-full"
+                  loading={updateMutation.isPending}
                 >
-                  {updateMutation.isPending && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
                   {updateMutation.isPending ? "Mise à jour..." : "Mettre à jour"}
-                </button>
+                </Button>
               )}
             </PermissionGate>
           </Card>

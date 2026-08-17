@@ -109,6 +109,18 @@ export interface InvoiceSearchParams {
   [key: string]: unknown;
 }
 
+/** Une ligne du rapport : un mois civil de la période. */
+export interface InvoiceReportMonth {
+  year: number;
+  month: number;
+  /** Libellé prêt à afficher, calculé par l'API — ex. « Mars 2026 ». */
+  label: string;
+  sales: number;
+  credits: number;
+  turnover: number;
+  collections: number;
+}
+
 export interface InvoiceReport {
   period: string;
   totalSales: number;
@@ -116,6 +128,12 @@ export interface InvoiceReport {
   turnover: number;
   collections: number;
   byContracts: { contractName: string; total: number }[];
+  /**
+   * Ventilation mensuelle. Vide sur un rapport mono-mois (appel `year`/`month`),
+   * une ligne par mois civil sur une période — mois sans activité compris, que
+   * l'API rend à zéro plutôt que d'omettre.
+   */
+  months: InvoiceReportMonth[];
 }
 
 export interface InvoiceFindAllParams {
@@ -184,8 +202,19 @@ export const invoicesApi = {
   /** Badge « Factures » : factures non encore réglées. */
   countUnpaid: () => apiClient.get<{ count: number }>("/invoices/count-unpaid"),
 
-  getReports: (year?: number, month?: number) =>
+  /**
+   * Rapport des factures sur une période.
+   *
+   * L'API accepte encore le couple `year`/`month` historique, mais l'écran
+   * n'appelle plus que cette forme : une période d'un mois se demande par ses
+   * deux bornes, et l'API l'annonce d'elle-même « Août 2026 » plutôt que
+   * « 1 août – 31 août 2026 ».
+   *
+   * @param startDate premier jour, inclus, au format `AAAA-MM-JJ`
+   * @param endDate   dernier jour, inclus
+   */
+  getReports: (startDate: string, endDate: string) =>
     apiClient.get<InvoiceReport>("/invoices/reports", {
-      params: { year, month },
+      params: { startDate, endDate },
     }),
 };

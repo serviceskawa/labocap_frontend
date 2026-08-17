@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -21,6 +23,7 @@ import Link from "next/link";
 import type { AxiosError } from "axios";
 
 import { NativeSelect } from "@/components/ui/NativeSelect";
+import { Button } from "@/components/ui/Button";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
@@ -48,7 +51,7 @@ function formatDate(s?: string | null) {
 
 function formatAmount(v?: number | null) {
   if (v == null) return "—";
-  return new Intl.NumberFormat("fr-FR").format(v) + " FCFA";
+  return formatCFA(v);
 }
 
 
@@ -276,7 +279,7 @@ export default function ContractDetailPage({
             </div>
           </div>
 
-          <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
+          <PermissionGate permission={PERMISSIONS.EDIT_CONTRATS}>
             <div className="flex flex-shrink-0 items-center gap-2">
               {contract.status === "ACTIF" && !isClose && (
                 <button
@@ -294,7 +297,7 @@ export default function ContractDetailPage({
                   type="button"
                   onClick={() => activateMutation.mutate()}
                   disabled={activateMutation.isPending}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[.9rem] font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-[.9rem] font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:opacity-50"
                 >
                   {activateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                   Activer
@@ -426,7 +429,7 @@ export default function ContractDetailPage({
 
       {/* ============ Ajouter des examens (formulaire inline) ============ */}
       {!isClose && (
-        <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
+        <PermissionGate permission={PERMISSIONS.EDIT_CONTRATS}>
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="mb-4 text-base font-semibold text-gray-900">
               Ajouter des examens
@@ -573,7 +576,7 @@ export default function ContractDetailPage({
                       {formatAmount(d.amountAfterRemise)}
                     </td>
                     <td className="px-4 py-3">
-                      <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
+                      <PermissionGate permission={PERMISSIONS.EDIT_CONTRATS}>
                         <div className="flex items-center justify-end gap-2">
                           <button
                             type="button"
@@ -620,17 +623,16 @@ export default function ContractDetailPage({
         </div>
 
         {!isClose && (
-          <PermissionGate permission={PERMISSIONS.EDIT_CONTRACTS}>
+          <PermissionGate permission={PERMISSIONS.EDIT_CONTRATS}>
             <div className="px-5 py-4 border-t border-gray-100">
-              <button
-                type="button"
+              <Button
                 onClick={() => saveMutation.mutate()}
-                disabled={details.length === 0 || saveMutation.isPending}
-                className="w-full rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full"
+                disabled={details.length === 0}
+                loading={saveMutation.isPending}
               >
-                {saveMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                 Sauvegarder
-              </button>
+              </Button>
             </div>
           </PermissionGate>
         )}

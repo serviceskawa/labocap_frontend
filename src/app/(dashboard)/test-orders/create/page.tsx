@@ -36,6 +36,7 @@ import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
 import type { ApiError as ApiErrorType } from "@/types/api";
 import apiClient from "@/lib/api/client";
 import { generatePatientCode } from "@/lib/utils";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -81,7 +82,9 @@ const quickPatientSchema = z.object({
   genre: z.enum(["M", "F"]).optional(),
   age: z.string().optional(),
   yearOrMonth: z.boolean().optional(),
-  telephone1: z.string().min(1, "Le téléphone est requis"),
+  // Facultatif et sans format imposé, à la demande du client (cf. le formulaire
+  // patient, qui porte la même règle). Ni le backend ni la base ne l'exigeaient.
+  telephone1: z.string().optional(),
   telephone2: z.string().optional(),
   profession: z.string().optional(),
   adresse: z.string().optional(),
@@ -92,8 +95,6 @@ type QuickPatientFormData = z.infer<typeof quickPatientSchema>;
 // ---------------------------------------------------------------------------
 // Shared input className
 // ---------------------------------------------------------------------------
-const inputCls =
-  "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
 // ---------------------------------------------------------------------------
 // Déduplication des options react-select par libellé
@@ -331,7 +332,9 @@ export default function TestOrderCreatePage() {
       lastname: data.lastname,
       genre: data.genre ?? "M",
       langue: "fr",
-      telephone1: data.telephone1,
+      // Champ vide → absent du payload, comme `telephone2` plus bas : on
+      // enregistre l'absence de numéro, pas une chaîne vide.
+      telephone1: data.telephone1 || undefined,
       adresse: data.adresse ?? "",
     };
 
@@ -444,7 +447,7 @@ export default function TestOrderCreatePage() {
                     type="text"
                     {...register("examenReferenceInput")}
                     placeholder="Référence de l'examen externe..."
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className={inputClass}
                   />
                   {errors.examenReferenceInput && (
                     <p className="text-xs text-red-500">
@@ -596,7 +599,7 @@ export default function TestOrderCreatePage() {
                 type="text"
                 {...register("referenceHopital")}
                 placeholder="Numéro de référence..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClass}
               />
             </div>
 
@@ -608,7 +611,7 @@ export default function TestOrderCreatePage() {
               <input
                 type="date"
                 {...register("prelevementDate")}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className={inputClass}
               />
               {errors.prelevementDate && (
                 <p className="text-xs text-red-500">
@@ -698,7 +701,7 @@ export default function TestOrderCreatePage() {
               type="text"
               {...registerPatient("firstname")}
               placeholder="Prénom du patient..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -712,7 +715,7 @@ export default function TestOrderCreatePage() {
               type="text"
               {...registerPatient("lastname")}
               placeholder="Nom du patient..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -746,7 +749,7 @@ export default function TestOrderCreatePage() {
                 min={0}
                 {...registerPatient("age")}
                 placeholder="Âge..."
-                className={inputCls}
+                className={inputClass}
               />
               <Controller
                 name="yearOrMonth"
@@ -768,16 +771,14 @@ export default function TestOrderCreatePage() {
           </FormField>
 
           {/* Téléphone 1 */}
-          <FormField
-            label="Téléphone"
-            required
-            error={patientErrors.telephone1?.message}
-          >
+          <FormField label="Téléphone" error={patientErrors.telephone1?.message}>
+            {/* `text` et non `tel` : sur mobile, `tel` ouvre un pavé numérique
+                d'où lettres et « + » ne se saisissent pas. */}
             <input
-              type="tel"
+              type="text"
               {...registerPatient("telephone1")}
               placeholder="+229..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -787,10 +788,10 @@ export default function TestOrderCreatePage() {
             error={patientErrors.telephone2?.message}
           >
             <input
-              type="tel"
+              type="text"
               {...registerPatient("telephone2")}
               placeholder="Numéro secondaire (optionnel)..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -803,7 +804,7 @@ export default function TestOrderCreatePage() {
               type="text"
               {...registerPatient("profession")}
               placeholder="Profession..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
 
@@ -817,7 +818,7 @@ export default function TestOrderCreatePage() {
               {...registerPatient("adresse")}
               rows={2}
               placeholder="Adresse du patient..."
-              className={inputCls}
+              className={inputClass}
             />
           </FormField>
         </div>

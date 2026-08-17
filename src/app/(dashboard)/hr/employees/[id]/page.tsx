@@ -905,7 +905,7 @@ export default function EmployeeDetailPage({
         {contratTab === "paie" && (
           <div key="paie" className="wizard-pane grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
-              label="Salaire brute/Mois (FCFA)"
+              label="Salaire brut / mois"
               required
               error={contratForm.formState.errors.salary?.message}
             >

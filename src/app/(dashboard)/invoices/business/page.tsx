@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -18,10 +20,13 @@ import {
   type InvoiceSearchResult,
 } from "@/lib/api/invoices";
 
-function formatFCFA(amount?: number): string {
-  if (amount == null) return "0 FCFA";
-  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
+function formatMontant(amount?: number | null): string {
+  // Conserve la tolérance au nul de la copie locale ; le montant
+  // lui-même passe par le format partagé, sans unité monétaire.
+  if (amount === null || amount === undefined) return "—";
+  return formatCFA(amount);
 }
+
 
 /**
  * Colonnes du tableau « Liste des Factures » — reprise à l'identique du DataTable
@@ -41,13 +46,13 @@ const monthlyColumns: ColumnDef<InvoiceMonthlyStats>[] = [
   {
     header: "Facturés",
     accessorKey: "facturated",
-    cell: ({ row }) => formatFCFA(row.original.facturated),
+    cell: ({ row }) => formatMontant(row.original.facturated),
   },
   {
     header: "Avoirs",
     accessorKey: "credits",
     cell: ({ row }) => (
-      <span className="text-red-600">{formatFCFA(row.original.credits)}</span>
+      <span className="text-red-600">{formatMontant(row.original.credits)}</span>
     ),
   },
   {
@@ -55,7 +60,7 @@ const monthlyColumns: ColumnDef<InvoiceMonthlyStats>[] = [
     accessorKey: "turnover",
     cell: ({ row }) => (
       <span className="font-semibold text-green-700">
-        {formatFCFA(row.original.turnover)}
+        {formatMontant(row.original.turnover)}
       </span>
     ),
   },
@@ -64,7 +69,7 @@ const monthlyColumns: ColumnDef<InvoiceMonthlyStats>[] = [
     accessorKey: "collections",
     cell: ({ row }) => (
       <span className="font-semibold text-blue-700">
-        {formatFCFA(row.original.collections)}
+        {formatMontant(row.original.collections)}
       </span>
     ),
   },
@@ -199,7 +204,7 @@ export default function InvoiceBusinessPage() {
                 Factures
               </p>
               <p className="mt-1 text-2xl font-bold text-red-900">
-                {formatFCFA(searchResult.facture)}
+                {formatMontant(searchResult.facture)}
               </p>
             </div>
             <div className="rounded-lg border border-green-200 bg-green-50 p-4">
@@ -207,7 +212,7 @@ export default function InvoiceBusinessPage() {
                 Chiffres d&apos;affaires
               </p>
               <p className="mt-1 text-2xl font-bold text-green-900">
-                {formatFCFA(searchResult.ca)}
+                {formatMontant(searchResult.ca)}
               </p>
             </div>
             <div className="rounded-lg border border-red-200 bg-red-50 p-4">
@@ -215,7 +220,7 @@ export default function InvoiceBusinessPage() {
                 Avoir
               </p>
               <p className="mt-1 text-2xl font-bold text-red-900">
-                {formatFCFA(searchResult.avoir)}
+                {formatMontant(searchResult.avoir)}
               </p>
             </div>
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -223,7 +228,7 @@ export default function InvoiceBusinessPage() {
                 Encaissement
               </p>
               <p className="mt-1 text-2xl font-bold text-blue-900">
-                {formatFCFA(searchResult.encaissement)}
+                {formatMontant(searchResult.encaissement)}
               </p>
             </div>
           </div>

@@ -11,6 +11,8 @@ import {
 import { formatDate } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
+import { DocumentHeader } from "@/components/ui/DocumentHeader";
+import { Button } from "@/components/ui/Button";
 
 // ---------------------------------------------------------------------------
 // Page d'impression
@@ -78,25 +80,18 @@ export default function AssignmentPrintPage() {
       <div className="mx-auto max-w-4xl space-y-6 bg-white p-8 print:p-0 print:shadow-none">
         {/* Bouton imprimer */}
         <div className="no-print flex items-center justify-end">
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-2 rounded-md bg-yellow-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-yellow-600"
-          >
-            <Printer className="h-4 w-4" />
+          <Button onClick={() => window.print()} icon={<Printer className="h-4 w-4" />}>
             Imprimer
-          </button>
+          </Button>
         </div>
 
-        {/* En-tête labo */}
-        <div className="border-b border-gray-300 pb-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {branchName ?? "Laboratoire"}
-          </h1>
-          {branchAddress && (
-            <p className="mt-1 text-sm text-gray-600">{branchAddress}</p>
-          )}
-        </div>
+        {/* En-tête labo — même composant que la feuille de caisse, pour que
+            deux documents sortis du même laboratoire s'identifient pareil. */}
+        <DocumentHeader
+          name={branchName ?? "Laboratoire"}
+          subtitle={branchAddress || undefined}
+          align="left"
+        />
 
         {/* Titre */}
         <h2 className="text-xl font-bold text-gray-900">

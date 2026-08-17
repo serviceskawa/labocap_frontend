@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { Trash2, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { RemoteSelectField } from "@/components/ui/RemoteSelectField";
+import { Button } from "@/components/ui/Button";
 import {
   loadTestOrderOptions,
   type TestOrderOption,
@@ -416,66 +417,68 @@ export default function AssignmentDetailsPage() {
                 (voir `TablePagination`), identiques à ceux du `DataTable`. */}
             <TableLengthControl pagination={detailsPagination} />
             <div className="overflow-hidden rounded-lg border border-gray-200">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      #
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Demande d&apos;examen
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Note
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {details.length === 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td
-                        colSpan={4}
-                        className="px-4 py-8 text-center text-sm text-gray-500"
-                      >
-                        Aucune demande d&apos;examen affectée
-                      </td>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        #
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        Demande d&apos;examen
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        Note
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        Actions
+                      </th>
                     </tr>
-                  ) : (
-                    detailsPagination.pageRows.map((d, idx) => (
-                      <tr
-                        key={d.id}
-                        className="border-b border-gray-100 hover:bg-gray-50"
-                      >
-                        <td className="px-4 py-3 text-gray-700">
-                          {detailsPagination.offset + idx + 1}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="font-mono text-sm font-medium text-gray-800">
-                            {d.testOrderCode}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {d.note ?? "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          {canManage && (
-                            <IconButton
-                              variant="delete"
-                              title="Supprimer"
-                              aria-label="Supprimer"
-                              onClick={() => setDetailToDelete(d)}
-                              icon={<Trash2 className="h-4 w-4" />}
-                            />
-                          )}
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {details.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={4}
+                          className="px-4 py-8 text-center text-sm text-gray-500"
+                        >
+                          Aucune demande d&apos;examen affectée
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                    ) : (
+                      detailsPagination.pageRows.map((d, idx) => (
+                        <tr
+                          key={d.id}
+                          className="border-b border-gray-100 hover:bg-gray-50"
+                        >
+                          <td className="px-4 py-3 text-gray-700">
+                            {detailsPagination.offset + idx + 1}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="font-mono text-sm font-medium text-gray-800">
+                              {d.testOrderCode}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {d.note ?? "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {canManage && (
+                              <IconButton
+                                variant="delete"
+                                title="Supprimer"
+                                aria-label="Supprimer"
+                                onClick={() => setDetailToDelete(d)}
+                                icon={<Trash2 className="h-4 w-4" />}
+                              />
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <TablePaginationFooter pagination={detailsPagination} />
@@ -483,16 +486,9 @@ export default function AssignmentDetailsPage() {
             {/* Bouton Soumettre full-width vert (comme Laravel : btn w-100 btn-success) */}
             {canManage && (
               <div className="mt-4 border-t border-gray-200 pt-4">
-                <button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-3 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {updateMutation.isPending && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
+                <Button type="submit" className="w-full py-3" loading={updateMutation.isPending}>
                   {updateMutation.isPending ? "Enregistrement..." : "Soumettre"}
-                </button>
+                </Button>
               </div>
             )}
           </div>

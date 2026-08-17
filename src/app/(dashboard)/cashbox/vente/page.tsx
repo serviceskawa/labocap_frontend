@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -45,9 +47,6 @@ const depositInputClass =
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatFCFA(amount: number): string {
-  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
-}
 
 function formatDateTime(value: string): string {
   if (!value) return "—";
@@ -225,7 +224,7 @@ export default function CashboxVentePage() {
       enableSorting: true,
       cell: ({ row }) => (
         <span className="font-medium text-gray-900">
-          {formatFCFA(row.original.amount)}
+          {formatCFA(row.original.amount)}
         </span>
       ),
     },
@@ -321,7 +320,7 @@ export default function CashboxVentePage() {
             <div>
               <p className="text-xs uppercase tracking-wider text-gray-500">Solde actuel</p>
               <p className="mt-1 text-3xl font-bold text-green-700">
-                {formatFCFA(venteCashbox.balance)}
+                {formatCFA(venteCashbox.balance)}
               </p>
             </div>
             <Link
@@ -396,7 +395,7 @@ export default function CashboxVentePage() {
             <p className="rounded-md bg-gray-50 px-3 py-2 text-xs text-gray-600">
               Solde caisse de vente :{" "}
               <span className="font-semibold text-gray-800">
-                {formatFCFA(venteCashbox.balance)}
+                {formatCFA(venteCashbox.balance)}
               </span>{" "}
               — le montant déposé sera retiré de la caisse.
             </p>
@@ -419,7 +418,7 @@ export default function CashboxVentePage() {
           {/* Montant */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
-              Montant (FCFA) <span className="text-red-500">*</span>
+              Montant <span className="text-red-500">*</span>
             </label>
             <input
               type="number"

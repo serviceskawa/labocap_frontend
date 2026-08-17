@@ -28,6 +28,9 @@ export const PERMISSIONS = {
   DELETE_REPORTS: "delete-reports",
   REVIEW_REPORTS: "review-reports",
   VALIDATE_REPORTS: "validate-reports",
+  // Remise au comptoir : signature du récupérateur, appel du patient, livraison.
+  // Distincte de la validation, qui engage un diagnostic.
+  DELIVER_REPORTS: "deliver-reports",
   SIGN_REPORTS: "sign-reports",
 
   // Macroscopy
@@ -86,11 +89,18 @@ export const PERMISSIONS = {
   DELETE_CLIENTS: "delete-clients",
 
   // Contracts (Laravel uses 'view-contrats')
+  // Contrats — les slugs sont en français côté base, hérités de Laravel.
+  //
+  // Une seconde famille anglaise (« view-contracts », « edit-contracts »…)
+  // cohabitait ici et servait dans toutes les pages du module. Ces slugs
+  // n'existent dans aucune base : `can()` renvoyait donc toujours faux et la
+  // page des contrats se refusait à tout le monde, y compris aux rôles qui
+  // détiennent bien le droit. Seule la barre latérale lisait le bon nom, d'où
+  // un menu visible ouvrant sur un refus.
   VIEW_CONTRATS: "view-contrats",
-  VIEW_CONTRACTS: "view-contracts",
-  CREATE_CONTRACTS: "create-contracts",
-  EDIT_CONTRACTS: "edit-contracts",
-  DELETE_CONTRACTS: "delete-contracts",
+  CREATE_CONTRATS: "create-contrats",
+  EDIT_CONTRATS: "edit-contrats",
+  DELETE_CONTRATS: "delete-contrats",
 
   // Expenses
   VIEW_EXPENSES: "view-expenses",
@@ -155,14 +165,22 @@ export const PERMISSIONS = {
   CREATE_USERS: "create-users",
   EDIT_USERS: "edit-users",
   DELETE_USERS: "delete-users",
-  // Écriture des rôles (création / édition / suppression).
-  // La seule permission de gestion des rôles seedée en base est `manage-roles`
-  // (V2__seed_permissions.sql) — c'est elle que l'utilisateur ADMIN possède réellement.
-  // NB : le backend RoleController annote actuellement ses routes avec
-  // `hasAuthority('edit-roles')` alors que sa propre Javadoc dit `manage-roles` :
-  // incohérence backend à corriger côté API. On gate l'UI sur la permission
-  // réellement attribuée (`manage-roles`) et surtout PAS sur `view-roles` (lecture).
-  MANAGE_ROLES: "manage-roles",
+  // Écriture des rôles — mêmes slugs CRUD que le reste de la base héritée.
+  //
+  // Une constante agrégée « manage-roles » servait ici. Le commentaire qui la
+  // justifiait s'appuyait sur V2__seed_permissions.sql, mais cette migration ne
+  // s'exécute jamais sur un environnement réel : Flyway y démarre à la ligne de
+  // base 50 et le schéma vient de la reprise Laravel. Vérifié en base — le slug
+  // « manage-roles » n'existe nulle part.
+  //
+  // Conséquence : l'entrée « Rôles » du menu ne s'affichait jamais et l'écran
+  // restait fermé à tous, super-admin compris, alors que lui seul détient bien
+  // view/create/edit/delete-roles. C'est aussi ce que le RoleController exige
+  // côté serveur, ce que l'ancien commentaire signalait déjà comme une
+  // « incohérence backend » — c'était en réalité le frontend qui divergeait.
+  CREATE_ROLES: "create-roles",
+  EDIT_ROLES: "edit-roles",
+  DELETE_ROLES: "delete-roles",
   MANAGE_PERMISSIONS: "manage-permissions",
 
   // Consultations

@@ -19,6 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { banksApi, type Bank } from "@/lib/api/banks";
 import type { PageResponse, ApiError } from "@/types/api";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 const schema = z.object({
   name: z.string().min(1, "Le nom est requis"),
@@ -44,7 +45,7 @@ function FormFields({
         <input
           type="text"
           {...register("name")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className={inputClass}
         />
         {errors.name && (
           <p className="text-xs text-red-500">{errors.name.message}</p>
@@ -55,7 +56,7 @@ function FormFields({
         <input
           type="text"
           {...register("accountNumber")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className={inputClass}
         />
       </div>
       <div className="flex flex-col gap-1">

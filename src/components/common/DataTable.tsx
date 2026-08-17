@@ -12,9 +12,18 @@ import {
   PaginationState,
   ColumnFiltersState,
 } from "@tanstack/react-table";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import {
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Inbox,
+  SearchX,
+} from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { INPUT_CLASS } from "@/lib/ui/inputClass";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import {
   TableLengthControl,
   TablePaginationFooter,
@@ -35,6 +44,14 @@ export interface DataTableProps<T> {
   // Options
   isLoading?: boolean;
   rowClassName?: (row: T) => string;
+  /**
+   * Appelé au clic sur une ligne, hors éléments interactifs (boutons, liens).
+   *
+   * Rend la ligne cliquable et atteignable au clavier. Omis, la ligne reste
+   * inerte : on ne veut pas d'un curseur main sur les tableaux où le clic
+   * n'aurait aucun effet.
+   */
+  onRowClick?: (row: T) => void;
   /** Titre affiché dans la barre d'outils du tableau (optionnel). */
   title?: string;
   /**
@@ -44,11 +61,60 @@ export interface DataTableProps<T> {
    */
   hideToolbarSearch?: boolean;
   /**
+   * Titre de l'état vide, quand la liste n'a jamais rien contenu. Nommer l'objet
+   * métier — « Aucun patient » situe mieux que « Aucune donnée ».
+   *
+   * Sans effet quand une recherche est active : ce cas affiche son propre état,
+   * qui reprend le terme cherché.
+   */
+  emptyTitle?: string;
+  /** Phrase sous le titre de l'état vide. Idéalement, ce qui peuplera la liste. */
+  emptyDescription?: string;
+  /**
    * Masque la barre d'outils du tableau (Actualiser · Réduire · Fermer). À utiliser
    * quand la page englobe déjà le tableau dans une carte qui fournit ces actions
    * (ex. `WidgetCard` de « Mon espace »), pour éviter des boutons en double.
    */
   hideToolbar?: boolean;
+  /**
+   * Bande rendue à l'intérieur du cadre de la grille, sous la dernière ligne —
+   * une ligne de total, typiquement.
+   *
+   * Elle existe parce que les pages qui en avaient besoin l'ajoutaient APRÈS le
+   * composant, ce qui les obligeait à enfermer l'ensemble dans un second cadre
+   * pour rattacher visuellement le total au tableau. La barre d'outils et la
+   * pagination, qui vivent volontairement hors du cadre, se retrouvaient alors
+   * enfermées avec lui et collées à sa bordure — trois retraits horizontaux
+   * différents sur trois lignes superposées.
+   *
+   * Le total appartient à la grille : il se rend donc dans son cadre.
+   */
+  tableFooter?: React.ReactNode;
+}
+
+/**
+ * Alignement d'une colonne, déclaré via `meta` dans sa définition :
+ *
+ * ```ts
+ * { header: "Montant", id: "total", meta: { align: "right" }, cell: … }
+ * ```
+ *
+ * Une colonne de montants se ferre à droite : c'est ce qui aligne les unités
+ * sous les unités et rend deux nombres comparables d'un coup d'œil. C'est aussi
+ * la seule position où une ligne de total tombe sous la colonne qu'elle totalise
+ * — ferrée à gauche, elle flotte à l'écart de ses propres chiffres.
+ */
+export type ColumnAlign = "left" | "right" | "center";
+
+const alignClasses: Record<ColumnAlign, string> = {
+  left: "text-left",
+  right: "text-right tabular-nums",
+  center: "text-center",
+};
+
+function alignOf(meta: unknown): ColumnAlign {
+  const a = (meta as { align?: ColumnAlign } | undefined)?.align;
+  return a ?? "left";
 }
 
 export function DataTable<T>({
@@ -63,15 +129,24 @@ export function DataTable<T>({
   onSearchChange,
   isLoading = false,
   rowClassName,
+  onRowClick,
   title,
   hideToolbarSearch = false,
+  emptyTitle = "Aucune donnée",
+  emptyDescription,
   hideToolbar = false,
+  tableFooter,
 }: DataTableProps<T>) {
   const isServerSide = pageCount !== undefined;
 
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [localSearch, setLocalSearch] = useState("");
+
+  // Terme de recherche effectif, quelle que soit la source : la page pilote le
+  // champ (`onSearchChange`) ou le tableau le gère lui-même. Il distingue la
+  // liste vide de la recherche infructueuse — deux états à ne pas confondre.
+  const activeSearch = (onSearchChange ? searchValue : localSearch)?.trim() ?? "";
 
 
   const [localPagination, setLocalPagination] = useState<PaginationState>({
@@ -165,7 +240,7 @@ export function DataTable<T>({
                 type="text"
                 value={onSearchChange ? (searchValue ?? "") : localSearch}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="rounded-lg border border-gray-300 bg-white px-3 py-[.35rem] text-[.9rem] text-gray-800 shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-[3px] focus:ring-blue-500/15"
+                className={cn(INPUT_CLASS, "w-auto py-[.28rem]")}
               />
             </label>
           )}
@@ -175,7 +250,7 @@ export function DataTable<T>({
             non un bloc de texte flottant. Sans cadre ni séparateurs de colonnes,
             l'œil n'avait aucun repère pour suivre une ligne large jusqu'à la
             colonne Actions, à l'autre bout de l'écran. */}
-        <div className="overflow-x-auto overflow-y-hidden rounded-lg ring-1 ring-gray-200">
+        <div className="overflow-x-auto overflow-y-hidden rounded-[var(--radius-surface)] ring-1 ring-gray-200">
           <table className="w-full border-collapse text-[.9rem]">
             <thead className="border-b border-gray-300 bg-gray-50">
               <tr>
@@ -184,7 +259,8 @@ export function DataTable<T>({
                     <th
                       key={header.id}
                       className={cn(
-                        "px-4 py-2.5 text-left text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-600",
+                        "px-4 py-2.5 text-[.7rem] font-semibold uppercase tracking-[0.06em] text-gray-600",
+                        alignClasses[alignOf(header.column.columnDef.meta)],
                         // Filet vertical entre colonnes, sauf après la dernière.
                         "border-r border-gray-200 last:border-r-0",
                         header.column.getCanSort() &&
@@ -216,19 +292,42 @@ export function DataTable<T>({
                 Array.from({ length: currentPageSize }).map((_, i) => (
                   <tr key={i}>
                     {columns.map((_, j) => (
-                      <td key={j} className="border-r border-gray-100 px-4 py-2.5 last:border-r-0">
-                        <div className="h-4 animate-pulse rounded bg-gray-200" />
+                      <td
+                        key={j}
+                        className="border-r border-gray-100 px-4 py-2.5 last:border-r-0"
+                      >
+                        {/* Filets verticaux repris de main : sans eux la grille
+                            se romprait pendant le chargement. Largeurs alternées
+                            — des barres identiques se lisent comme une trame
+                            décorative, pas comme des données à venir. */}
+                        <Skeleton
+                          className={cn("h-4", j % 3 === 2 ? "w-1/2" : "w-4/5")}
+                        />
                       </td>
                     ))}
                   </tr>
                 ))
               ) : table.getRowModel().rows.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={columns.length}
-                    className="px-4 py-12 text-center text-sm text-gray-500"
-                  >
-                    Aucune donnée disponible
+                  <td colSpan={columns.length} className="p-0">
+                    {/* Deux vides distincts, deux réponses distinctes : une
+                        recherche infructueuse appelle à élargir le critère, une
+                        liste jamais alimentée à créer le premier élément. Le
+                        même « Aucune donnée disponible » pour les deux laissait
+                        l'utilisateur sans issue. */}
+                    {activeSearch ? (
+                      <EmptyState
+                        icon={SearchX}
+                        title="Aucun résultat"
+                        description={`Aucun élément ne correspond à « ${activeSearch} ».`}
+                      />
+                    ) : (
+                      <EmptyState
+                        icon={Inbox}
+                        title={emptyTitle}
+                        description={emptyDescription}
+                      />
+                    )}
                   </td>
                 </tr>
               ) : (
@@ -237,13 +336,52 @@ export function DataTable<T>({
                   return (
                     <tr
                       key={row.id}
+                      // Ligne cliquable seulement si l'appelant le demande.
+                      //
+                      // Le clic est ignoré lorsqu'il vient d'un élément
+                      // interactif de la ligne — bouton d'actions, lien,
+                      // sélecteur : sans cette garde, ouvrir un menu
+                      // déclencherait aussi l'action de la ligne.
+                      onClick={
+                        onRowClick
+                          ? (e) => {
+                              const cible = e.target as HTMLElement;
+                              if (cible.closest("button, a, input, select, [role='menu']")) {
+                                return;
+                              }
+                              onRowClick(row.original);
+                            }
+                          : undefined
+                      }
+                      // Au clavier, la ligne devient un élément atteignable et
+                      // actionnable ; sans cela l'information ne serait
+                      // accessible qu'à la souris.
+                      tabIndex={onRowClick ? 0 : undefined}
+                      onKeyDown={
+                        onRowClick
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                onRowClick(row.original);
+                              }
+                            }
+                          : undefined
+                      }
                       className={cn(
-                        "transition-colors duration-100 hover:bg-blue-50",
+                        "transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40",
+                        onRowClick &&
+                          "cursor-pointer focus:outline-none focus-visible:bg-blue-50/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400",
                         custom
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className="border-r border-gray-100 px-4 py-2.5 align-middle text-[.875rem] text-gray-700 last:border-r-0">
+                        <td
+                          key={cell.id}
+                          className={cn(
+                            "border-r border-gray-100 px-4 py-2.5 align-middle text-[.875rem] text-gray-700 last:border-r-0",
+                            alignClasses[alignOf(cell.column.columnDef.meta)],
+                          )}
+                        >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       ))}
@@ -253,6 +391,14 @@ export function DataTable<T>({
               )}
             </tbody>
           </table>
+
+          {/* Pied de grille — dans le cadre, sous la dernière ligne. Le filet
+              supérieur le sépare des données sans le détacher du tableau. */}
+          {tableFooter && (
+            <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
+              {tableFooter}
+            </div>
+          )}
         </div>
 
         {/* Bas : « Afficher page X sur N » (gauche) + pagination « Précédent/Suivant » (droite) */}

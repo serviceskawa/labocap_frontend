@@ -10,6 +10,12 @@ import type { ColumnDef } from "@tanstack/react-table";
 
 import { toast } from "sonner";
 import { DataTable } from "@/components/common/DataTable";
+import { CompteurFiltre } from "@/components/ui/CompteurFiltre";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
@@ -38,54 +44,6 @@ interface DoctorOption {
 }
 
 // ---------------------------------------------------------------------------
-// Composant : dropdown "Affecter à" inline dans le tableau
-// ---------------------------------------------------------------------------
-
-function AttribuateSelect({
-  order,
-  doctors,
-}: {
-  order: TestOrder;
-  doctors: DoctorOption[];
-}) {
-  const queryClient = useQueryClient();
-  const [value, setValue] = useState<string>(order.attribuateDoctorId ?? "");
-
-  const mutation = useMutation({
-    mutationFn: (doctorId: string) =>
-      testOrdersApi.assignDoctor(order.id, doctorId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["test-orders-immuno"] });
-      toast.success("Médecin affecté");
-    },
-    onError: () => toast.error("Erreur lors de l'affectation"),
-  });
-
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const doctorId = e.target.value;
-    setValue(doctorId);
-    if (doctorId) mutation.mutate(doctorId);
-  };
-
-  return (
-    <NativeSelect
-      value={value}
-      onChange={handleChange}
-      disabled={mutation.isPending}
-      className="min-w-[140px]"
-      selectClassName="text-xs"
-    >
-      <option value="">Sélectionner un docteur</option>
-      {doctors.map((d) => (
-        <option key={d.id} value={d.id}>
-          {d.name}
-        </option>
-      ))}
-    </NativeSelect>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Composant : boutons d'action par ligne
 // ---------------------------------------------------------------------------
 
@@ -101,89 +59,93 @@ function ActionButtons({
   const [creatingInvoice, setCreatingInvoice] = useState(false);
 
   const handleCreateInvoice = async () => {
+    // L'onglet s'ouvre AVANT l'appel : après un `await`, le navigateur a perdu
+    // l'activation transitoire née du clic et bloque `window.open`.
+    const onglet = window.open("", "_blank");
+    if (onglet) onglet.opener = null;
+
     setCreatingInvoice(true);
     try {
       const res = await apiClient.post<{ id: string }>(
         `/invoices/from-order/${order.id}`
       );
-      router.push(`/invoices/${res.data.id}`);
+      const url = `/invoices/${res.data.id}`;
+      if (onglet) onglet.location.href = url;
+      else router.push(url);
     } catch {
+      onglet?.close();
       toast.error("Erreur lors de la création de la facture");
     } finally {
       setCreatingInvoice(false);
     }
   };
 
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {/* Voir les détails — BLEU */}
-      <Link
-        href={`/test-orders/${order.id}/details`}
-        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        title="Voir les détails"
-      >
-        <Eye className="h-3.5 w-3.5" />
-      </Link>
+  // Assemblées puis confiées à `RowActions`. Les fonds pleins et saturés
+  // d'origine cèdent aux variantes du système.
+  const actions: RowAction[] = [
+    {
+      label: "Voir les détails",
+      icon: <Eye className="h-3.5 w-3.5" />,
+      href: `/test-orders/${order.id}/details`,
+      newTab: true,
+    },
+  ];
 
-      {/* Modifier — BLEU */}
-      {can(PERMISSIONS.EDIT_TEST_ORDERS) && (
-        <Link
-          href={`/test-orders/${order.id}/edit`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          title="Mettre à jour l'examen"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </Link>
-      )}
+  if (can(PERMISSIONS.EDIT_TEST_ORDERS)) {
+    actions.push({
+      label: "Mettre à jour l'examen",
+      icon: <Pencil className="h-3.5 w-3.5" />,
+      href: `/test-orders/${order.id}/edit`,
+      newTab: true,
+    });
+  }
 
-      {/* Compte rendu — JAUNE */}
-      {order.reportId && can(PERMISSIONS.VIEW_REPORTS) && (
-        <Link
-          href={`/reports/${order.reportId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-600 transition-colors"
-          title="Compte rendu"
-        >
-          <FileText className="h-3.5 w-3.5" />
-        </Link>
-      )}
+  if (order.reportId && can(PERMISSIONS.VIEW_REPORTS)) {
+    actions.push({
+      label: "Compte rendu",
+      icon: <FileText className="h-3.5 w-3.5" />,
+      href: `/reports/${order.reportId}`,
+      newTab: true,
+    });
+  }
 
-      {/* Facture — VERT */}
-      {order.invoiceId ? (
-        <Link
-          href={`/invoices/${order.invoiceId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
-          title="Voir la facture"
-        >
-          <Printer className="h-3.5 w-3.5" />
-        </Link>
-      ) : order.reportStatus === "VALIDATED" ||
-        order.reportStatus === "DELIVERED" ? (
-        <button
-          type="button"
-          onClick={handleCreateInvoice}
-          disabled={creatingInvoice}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-          title="Créer la facture"
-        >
-          {creatingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
-        </button>
-      ) : null}
+  if (order.invoiceId) {
+    actions.push({
+      label: "Voir la facture",
+      icon: <Printer className="h-3.5 w-3.5" />,
+      href: `/invoices/${order.invoiceId}`,
+      newTab: true,
+    });
+  } else if (
+    order.reportStatus === "VALIDATED" ||
+    order.reportStatus === "DELIVERED"
+  ) {
+    actions.push({
+      label: "Créer la facture",
+      icon: creatingInvoice ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Printer className="h-3.5 w-3.5" />
+      ),
+      onClick: handleCreateInvoice,
+      disabled: creatingInvoice,
+    });
+  }
 
-      {/* Supprimer — ROUGE */}
-      {order.status !== "VALIDATED" &&
-        order.status !== "DELIVERED" &&
-        can(PERMISSIONS.DELETE_TEST_ORDERS) && (
-          <button
-            type="button"
-            onClick={() => onDelete(order)}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-            title="Supprimer"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-    </div>
-  );
+  if (
+    order.status !== "VALIDATED" &&
+    order.status !== "DELIVERED" &&
+    can(PERMISSIONS.DELETE_TEST_ORDERS)
+  ) {
+    actions.push({
+      label: "Supprimer",
+      icon: <Trash2 className="h-3.5 w-3.5" />,
+      onClick: () => onDelete(order),
+      variant: "delete",
+    });
+  }
+
+  return <RowActions actions={actions} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -264,16 +226,18 @@ export default function TestOrdersImmunoPage() {
         ),
   });
 
-  // Stats globales (Livrer / Valider / Cas urgent) — variantes immuno
-  const { data: statsLivrer } = useQuery({
-    queryKey: ["test-orders-immuno-stats-livrer"],
+  // Compteurs — sur le statut du BON, comme le menu « Status » de cet écran.
+  // Ils restaient à zéro sur « Livré » tant que l'historique migré de Laravel
+  // n'avait pas été repris ; cf. migration V62 côté backend.
+  const { data: statsLivre } = useQuery({
+    queryKey: ["test-orders-immuno-stats-livre"],
     queryFn: () =>
       testOrdersApi
         .findAllImmuno({ page: 0, size: 1, status: "DELIVERED" })
         .then((r) => r.data.totalElements),
   });
-  const { data: statsValider } = useQuery({
-    queryKey: ["test-orders-immuno-stats-valider"],
+  const { data: statsValide } = useQuery({
+    queryKey: ["test-orders-immuno-stats-valide"],
     queryFn: () =>
       testOrdersApi
         .findAllImmuno({ page: 0, size: 1, status: "VALIDATED" })
@@ -286,6 +250,12 @@ export default function TestOrdersImmunoPage() {
         .findAllImmuno({ page: 0, size: 1, isUrgent: true })
         .then((r) => r.data.totalElements),
   });
+
+  /** Applique le statut, ou le retire si le compteur cliqué est déjà actif. */
+  const basculerStatut = (statut: string) => {
+    setStatusFilter(statusFilter === statut ? "" : statut);
+    setPage(0);
+  };
 
   const orders = data?.content ?? [];
   const pageCount = data?.totalPages ?? 0;
@@ -308,40 +278,41 @@ export default function TestOrdersImmunoPage() {
 
   // --- Colonnes (ordre exact index2.blade.php)
   const columns: ColumnDef<TestOrder>[] = [
-    // 1. Actions — PREMIÈRE colonne comme Laravel
-    {
-      header: "Actions",
-      id: "actions",
-      cell: ({ row }) => (
-        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
-      ),
-    },
     // 2. Date
     {
       header: "Date",
       accessorKey: "createdAt",
       cell: ({ getValue }) => formatDate(getValue<string>()),
     },
-    // 3. Code
+    // 3. Code — porte aussi le laborantin affecté, comme sur « Toutes les demandes »
     {
       header: "Code",
       accessorKey: "code",
-      cell: ({ row }) =>
-        row.original.code ?? (
-          <span className="whitespace-nowrap text-gray-400 italic text-xs">
-            En attente
-          </span>
-        ),
+      cell: ({ row }) => {
+        const affecteA = row.original.assignedUserName?.trim();
+        return (
+          <div className="min-w-0">
+            {row.original.code ?? (
+              <span className="whitespace-nowrap text-gray-400 italic text-xs">
+                En attente
+              </span>
+            )}
+            {/* Rien n'est affiché quand le bon n'est pas affecté : une mention
+                « non affecté » répétée sur la moitié des lignes ferait du bruit
+                là où l'absence se lit d'elle-même. */}
+            {affecteA ? (
+              <div
+                className="mt-0.5 truncate text-xs text-gray-500"
+                title={`Affecté à ${affecteA}`}
+              >
+                {affecteA}
+              </div>
+            ) : null}
+          </div>
+        );
+      },
     },
-    // 4. Affecter à — dropdown docteur
-    {
-      header: "Affecter à",
-      id: "affecter",
-      cell: ({ row }) => (
-        <AttribuateSelect order={row.original} doctors={doctors} />
-      ),
-    },
-    // 5. Patient
+    // 4. Patient
     {
       header: "Patient",
       id: "patient",
@@ -395,18 +366,13 @@ export default function TestOrdersImmunoPage() {
         );
       },
     },
-    // 10. Urgent — badge rouge si urgent
+    // Actions — DERNIÈRE colonne, comme sur les autres écrans.
     {
-      header: "Urgent",
-      id: "urgent",
-      cell: ({ row }) =>
-        row.original.isUrgent ? (
-          <span className="inline-flex items-center rounded-full bg-red-700 px-2 py-0.5 text-xs font-medium text-white">
-            Urgent
-          </span>
-        ) : (
-          <span className="text-gray-400 text-xs">—</span>
-        ),
+      header: "Actions",
+      id: "actions",
+      cell: ({ row }) => (
+        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
+      ),
     },
   ];
 
@@ -455,10 +421,10 @@ export default function TestOrdersImmunoPage() {
               onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
             >
               <option value="">Tous</option>
-              <option value="VALIDATED">Valider</option>
+              <option value="VALIDATED">Validé</option>
               <option value="PENDING">En attente</option>
-              <option value="DELIVERED">Livrer</option>
-              <option value="CANCELLED">Non Livrer</option>
+              <option value="DELIVERED">Livré</option>
+              <option value="CANCELLED">Annulé</option>
             </NativeSelect>
           </div>
 
@@ -521,31 +487,52 @@ export default function TestOrdersImmunoPage() {
           </div>
         </div>
 
-        {/* Barre de statistiques (Livrer / Valider / Cas urgent) */}
+        {/* Compteurs cliquables. Sur cet écran ils portent sur le statut du
+            BON — c'est aussi ce que filtre le menu « Status » juste au-dessus,
+            contrairement à la liste générale qui, elle, filtre le rapport. Le
+            chiffre correspond donc à ce que la liste montre une fois filtrée. */}
         <div className="mb-4 flex flex-wrap gap-3">
-          <div className="rounded-full bg-green-100 px-4 py-1.5 text-[.9rem] font-medium text-green-800 ring-1 ring-green-300">
-            Livrer : {statsLivrer ?? "…"}
-          </div>
-          <div className="rounded-full bg-yellow-100 px-4 py-1.5 text-[.9rem] font-medium text-yellow-800 ring-1 ring-yellow-300">
-            Valider : {statsValider ?? "…"}
-          </div>
-          <div className="rounded-full bg-red-100 px-4 py-1.5 text-[.9rem] font-medium text-red-800 ring-1 ring-red-300">
-            Cas urgent : {statsUrgent ?? "…"}
-          </div>
+          <CompteurFiltre
+            libelle="Livré"
+            valeur={statsLivre}
+            actif={statusFilter === "DELIVERED"}
+            onClick={() => basculerStatut("DELIVERED")}
+            couleur="green"
+          />
+          <CompteurFiltre
+            libelle="Validé"
+            valeur={statsValide}
+            actif={statusFilter === "VALIDATED"}
+            onClick={() => basculerStatut("VALIDATED")}
+            couleur="yellow"
+          />
+          <CompteurFiltre
+            libelle="Cas urgent"
+            valeur={statsUrgent}
+            actif={urgentFilter === "1"}
+            onClick={() => {
+              setUrgentFilter(urgentFilter === "1" ? "" : "1");
+              setPage(0);
+            }}
+            couleur="red"
+          />
         </div>
 
         {/* Tableau */}
-        <DataTable
-          columns={columns}
-          data={orders}
-          isLoading={isLoading}
-          pageCount={pageCount}
-          pageIndex={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
-          rowClassName={(row) => (row.isUrgent ? "bg-red-50" : "")}
-        />
+        {/* Six actions déclarées : le tableau replie uniformément. */}
+        <RowActionsProvider collapse>
+          <DataTable
+            columns={columns}
+            data={orders}
+            isLoading={isLoading}
+            pageCount={pageCount}
+            pageIndex={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+            rowClassName={(row) => (row.isUrgent ? "bg-red-50" : "")}
+          />
+        </RowActionsProvider>
       </div>
 
       <ConfirmModal

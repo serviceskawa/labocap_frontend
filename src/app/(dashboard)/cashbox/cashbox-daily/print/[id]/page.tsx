@@ -6,11 +6,24 @@ import { Printer, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 import { cashboxApi, type CashboxDailyResponseDto } from "@/lib/api/cashbox";
+import { isPlaceholder, DEFAULT_APP_NAME } from "@/hooks/useBranding";
+import { formatCFAAvecDevise } from "@/lib/utils";
+import { DocumentHeader } from "@/components/ui/DocumentHeader";
+import { Button } from "@/components/ui/Button";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
-function formatFCFA(v: number | null | undefined) {
+/**
+ * Montant AVEC son unité — c'est un document.
+ *
+ * Les écrans ont perdu la mention : dans une application qui ne sert qu'une
+ * zone monétaire, la répéter à chaque ligne n'apprend rien. Une feuille de
+ * caisse, elle, sort de l'application et s'archive : elle se lira hors
+ * contexte, peut-être des années plus tard, peut-être par un tiers.
+ */
+function formatMontant(v: number | null | undefined) {
   if (v === null || v === undefined) return "—";
-  return new Intl.NumberFormat("fr-FR").format(v) + " FCFA";
+  return formatCFAAvecDevise(v);
 }
 
 // Date + heure (l'en-tête Laravel affiche created_at / updated_at avec l'heure).
@@ -41,8 +54,12 @@ export default function CashboxDailyPrintPage({ params }: PageProps) {
   });
 
   const { data: appSettings } = useAppSettings();
-  const logoSrc = appSettings?.logo?.trim() || appSettings?.logo_white?.trim() || "";
-  const appName = appSettings?.app_name?.trim() || "Labo AnaPath";
+  // Le logo du laboratoire a toute sa place ICI — un document imprimé engage le
+  // laboratoire, pas l'éditeur du logiciel. `isPlaceholder` écarte la sentinelle
+  // « path » de `setting_apps`, qui ferait imprimer une image cassée.
+  const rawLogo = appSettings?.logo?.trim() || appSettings?.logo_white?.trim() || "";
+  const logoSrc = isPlaceholder(rawLogo) ? "" : rawLogo;
+  const appName = appSettings?.app_name?.trim() || DEFAULT_APP_NAME;
 
   // Déclenche l'impression automatiquement une fois les données chargées.
   useEffect(() => {
@@ -71,14 +88,9 @@ export default function CashboxDailyPrintPage({ params }: PageProps) {
           <ArrowLeft className="h-4 w-4" />
           Retour
         </Link>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600"
-        >
-          <Printer className="h-4 w-4" />
+        <Button onClick={() => window.print()} icon={<Printer className="h-4 w-4" />}>
           Imprimer
-        </button>
+        </Button>
       </div>
 
       <RecapPrint daily={daily} logoSrc={logoSrc} appName={appName} />
@@ -101,17 +113,16 @@ function RecapPrint({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-8 shadow-sm print:border-0 print:shadow-none">
-      {/* Logo du laboratoire en tête du reçu (calque print.blade). */}
-      {logoSrc ? (
-        <div className="mb-4 flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logoSrc} alt={appName} className="h-16 w-auto object-contain" />
-        </div>
-      ) : null}
-      <h1 className="mb-6 text-center text-lg font-bold text-gray-900">
+      {/* En-tête du document. Le logo n'était affiché que s'il était configuré,
+          et rien du tout sinon — or aucun logo n'est renseigné en production :
+          la feuille sortait de l'imprimante sans mentionner le laboratoire
+          nulle part. Le nom est désormais toujours porté. */}
+      <DocumentHeader logoSrc={logoSrc} name={appName} className="mb-6" />
+
+      <h2 className="mb-6 text-center text-[.9375rem] font-semibold text-gray-800">
         {daily.code} — {formatDateTime(daily.createdAt)}
         {daily.updatedAt ? ` → ${formatDateTime(daily.updatedAt)}` : ""}
-      </h1>
+      </h2>
 
       <table className="w-full border-collapse text-sm">
         <thead>
@@ -127,43 +138,43 @@ function RecapPrint({
         <tbody>
           <Row
             label="Espèces"
-            fond={formatFCFA(opening)}
-            vente={formatFCFA(cashCalc)}
-            solde={formatFCFA(soldeEspeces)}
-            comptage={formatFCFA(daily.cashConfirmation)}
-            ecart={formatFCFA(daily.cashEcart)}
+            fond={formatMontant(opening)}
+            vente={formatMontant(cashCalc)}
+            solde={formatMontant(soldeEspeces)}
+            comptage={formatMontant(daily.cashConfirmation)}
+            ecart={formatMontant(daily.cashEcart)}
           />
           <Row
             label="Mobile Money"
             fond="-"
-            vente={formatFCFA(daily.mobileMoneyCalculated)}
+            vente={formatMontant(daily.mobileMoneyCalculated)}
             solde="-"
-            comptage={formatFCFA(daily.moneyMoneyConfirmation)}
-            ecart={formatFCFA(daily.mobileMoneyEcart)}
+            comptage={formatMontant(daily.moneyMoneyConfirmation)}
+            ecart={formatMontant(daily.mobileMoneyEcart)}
           />
           <Row
             label="Chèque"
             fond="-"
-            vente={formatFCFA(daily.chequeCalculated)}
+            vente={formatMontant(daily.chequeCalculated)}
             solde="-"
-            comptage={formatFCFA(daily.chequeConfirmation)}
-            ecart={formatFCFA(daily.chequeEcart)}
+            comptage={formatMontant(daily.chequeConfirmation)}
+            ecart={formatMontant(daily.chequeEcart)}
           />
           <Row
             label="Virement"
             fond="-"
-            vente={formatFCFA(daily.virementCalculated)}
+            vente={formatMontant(daily.virementCalculated)}
             solde="-"
-            comptage={formatFCFA(daily.virementConfirmation)}
-            ecart={formatFCFA(daily.virementEcart)}
+            comptage={formatMontant(daily.virementConfirmation)}
+            ecart={formatMontant(daily.virementEcart)}
           />
           <tr className="border-t-2 border-gray-400 font-bold">
             <td className="py-2 pr-4">Total</td>
-            <td className="py-2 pr-4 text-right">{formatFCFA(opening)}</td>
-            <td className="py-2 pr-4 text-right">{formatFCFA(daily.totalCalculated)}</td>
-            <td className="py-2 pr-4 text-right">{formatFCFA(soldeEspeces)}</td>
-            <td className="py-2 pr-4 text-right">{formatFCFA(daily.totalConfirmation)}</td>
-            <td className="py-2 text-right">{formatFCFA(daily.totalEcart)}</td>
+            <td className="py-2 pr-4 text-right">{formatMontant(opening)}</td>
+            <td className="py-2 pr-4 text-right">{formatMontant(daily.totalCalculated)}</td>
+            <td className="py-2 pr-4 text-right">{formatMontant(soldeEspeces)}</td>
+            <td className="py-2 pr-4 text-right">{formatMontant(daily.totalConfirmation)}</td>
+            <td className="py-2 text-right">{formatMontant(daily.totalEcart)}</td>
           </tr>
         </tbody>
       </table>
@@ -176,12 +187,12 @@ function RecapPrint({
         <input
           value={daily.description ?? ""}
           readOnly
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+          className={inputClass}
         />
       </div>
 
       <p className="mt-8 text-right text-lg font-bold text-gray-900">
-        SOLDE DE FERMETURE : {formatFCFA(daily.closingBalance)}
+        SOLDE DE FERMETURE : {formatMontant(daily.closingBalance)}
       </p>
     </div>
   );

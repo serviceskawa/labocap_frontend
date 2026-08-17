@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
-import { Loader2 } from "lucide-react";
+
 import { LimitedSelect as ReactSelect } from "@/components/ui/LimitedSelect";
+import { Button } from "@/components/ui/Button";
 
 import { hrApi } from "@/lib/api/hr";
 import { macroscopyApi } from "@/lib/api/macroscopy";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectField } from "@/components/ui/SelectField";
 import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Page — Ajouter une macroscopie (réplique exact du formulaire Laravel)
@@ -73,8 +75,6 @@ export default function AddMacroscopyPage() {
     },
   });
 
-  const inputClass =
-    "w-full rounded-lg border border-gray-300 px-3 py-2 text-[.9rem] shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
 
   return (
     <div className="space-y-6">
@@ -212,15 +212,9 @@ export default function AddMacroscopyPage() {
           >
             Annuler
           </button>
-          <button
-            type="button"
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending}
-            className="inline-flex items-center gap-2 rounded px-4 py-2 text-sm font-medium bg-yellow-500 text-white hover:bg-yellow-600 transition-colors disabled:opacity-50"
-          >
-            {mutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+          <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>
             {mutation.isPending ? "Enregistrement..." : "Ajouter"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

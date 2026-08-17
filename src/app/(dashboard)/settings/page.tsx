@@ -49,13 +49,12 @@ import {
   settingInvoicesApi,
   type SettingInvoice,
 } from "@/lib/api/settingInvoices";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
 // Style partagé
 // ---------------------------------------------------------------------------
 
-const inputClass =
-  "w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm transition-all duration-150 placeholder:text-gray-400 hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500";
 
 // ---------------------------------------------------------------------------
 // Définition des champs clé/valeur (fidèle aux onglets Laravel)
@@ -73,7 +72,7 @@ type FieldDef = {
 
 // Onglet Général → sous-onglet « Général »
 const GENERAL_FIELDS: FieldDef[] = [
-  { key: "app_name", label: "Nom du laboratoire", full: true, placeholder: "Ex : Labo AnaPath" },
+  { key: "app_name", label: "Nom du laboratoire", full: true, placeholder: "Ex : Laboratoire d'anatomopathologie" },
   { key: "devise", label: "Devise", placeholder: "Ex : FCFA" },
   { key: "phone", label: "Téléphone", placeholder: "97000000" },
   { key: "email", label: "Email", type: "email", placeholder: "contact@laboratoire.bj" },
@@ -109,7 +108,7 @@ const EMAIL_FIELDS: FieldDef[] = [
     ],
   },
   { key: "from_adresse", label: "Adresse d'expédition", type: "email", placeholder: "no-reply@laboratoire.bj" },
-  { key: "from_name", label: "Nom d'expéditeur", placeholder: "Labo AnaPath" },
+  { key: "from_name", label: "Nom d'expéditeur", placeholder: "Nom du laboratoire" },
   { key: "email_technician", label: "Email du technicien", type: "email", placeholder: "technicien@laboratoire.bj" },
 ];
 

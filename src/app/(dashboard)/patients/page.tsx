@@ -10,16 +10,19 @@ import {
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import Link from "next/link";
 import { Eye, Pencil, Trash2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/common/DataTable";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
-import { PermissionGate } from "@/components/common/PermissionGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RHFCreatableSelect } from "@/components/ui/RHFCreatableSelect";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -43,7 +46,11 @@ const patientSchema = z.object({
   age: z.string().min(1, "L'âge est requis"),
   yearOrMonth: z.string().min(1, "L'unité d'âge est requise"),
   profession: z.string().optional(),
-  telephone1: z.string().min(1, "Le contact 1 est requis"),
+  // Facultatif et sans format imposé, à la demande du client : tous les patients
+  // n'ont pas de numéro, et ceux qui en ont l'écrivent librement (indicatif,
+  // second numéro entre parenthèses, mention « fils de… »). Ni le backend ni la
+  // base ne l'exigeaient : la contrainte n'existait qu'ici.
+  telephone1: z.string().optional(),
   telephone2: z.string().optional(),
   adresse: z.string().min(1, "L'adresse est requise"),
 });
@@ -228,11 +235,12 @@ function PatientFormFields({
 
       {/* 10. Téléphone 1 */}
       <div className="flex flex-col gap-1">
-        <label className="text-sm font-medium text-gray-700">
-          Téléphone 1 <span className="text-red-500">*</span>
-        </label>
+        <label className="text-sm font-medium text-gray-700">Téléphone 1</label>
+        {/* `text` et non `tel` : sur mobile, `tel` ouvre un pavé numérique d'où
+            une lettre ou un « + » ne se saisit pas — la valeur les accepterait,
+            mais le clavier les rend inatteignables. */}
         <input
-          type="tel"
+          type="text"
           placeholder="97000000"
           {...register("telephone1")}
           className={fieldInput}
@@ -245,7 +253,7 @@ function PatientFormFields({
       {/* 11. Téléphone 2 */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-medium text-gray-700">Téléphone 2</label>
-        <input type="tel" {...register("telephone2")} className={fieldInput} />
+        <input type="text" {...register("telephone2")} className={fieldInput} />
       </div>
 
       {/* 12. Adresse — pleine largeur (comme Laravel) */}
@@ -434,7 +442,9 @@ export default function PatientsPage() {
       age: Number(formData.age),
       yearOrMonth: formData.yearOrMonth ? formData.yearOrMonth === "true" : undefined,
       profession: formData.profession || undefined,
-      telephone1: formData.telephone1,
+      // Champ vide → absent du payload, comme `telephone2` et les autres
+      // facultatifs : on enregistre l'absence de numéro, pas une chaîne vide.
+      telephone1: formData.telephone1 || undefined,
       telephone2: formData.telephone2 || undefined,
       adresse: formData.adresse,
     };
@@ -453,7 +463,9 @@ export default function PatientsPage() {
       age: Number(formData.age),
       yearOrMonth: formData.yearOrMonth ? formData.yearOrMonth === "true" : undefined,
       profession: formData.profession || undefined,
-      telephone1: formData.telephone1,
+      // Champ vide → absent du payload, comme `telephone2` et les autres
+      // facultatifs : on enregistre l'absence de numéro, pas une chaîne vide.
+      telephone1: formData.telephone1 || undefined,
       telephone2: formData.telephone2 || undefined,
       adresse: formData.adresse,
     };
@@ -516,42 +528,33 @@ export default function PatientsPage() {
       enableSorting: false,
       cell: ({ row }) => {
         const patient = row.original;
-        return (
-          <div className="flex items-center gap-1">
-            {/* Voir — toujours visible */}
-            <Link
-              href={`/patients/${patient.id}`}
-              className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-              title="Voir le profil"
-            >
-              <Eye className="h-3.5 w-3.5" />
-            </Link>
+        const actions: RowAction[] = [
+          {
+            label: "Voir le profil",
+            icon: <Eye className="h-3.5 w-3.5" />,
+            href: `/patients/${patient.id}`,
+          },
+        ];
 
-            {/* Modifier */}
-            <PermissionGate permission={PERMISSIONS.EDIT_PATIENTS}>
-              <button
-                type="button"
-                onClick={() => handleOpenEdit(patient)}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                title="Modifier"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            </PermissionGate>
+        if (can(PERMISSIONS.EDIT_PATIENTS)) {
+          actions.push({
+            label: "Modifier",
+            icon: <Pencil className="h-3.5 w-3.5" />,
+            variant: "edit",
+            onClick: () => handleOpenEdit(patient),
+          });
+        }
 
-            {/* Supprimer */}
-            <PermissionGate permission={PERMISSIONS.DELETE_PATIENTS}>
-              <button
-                type="button"
-                onClick={() => setDeleteConfirm(patient)}
-                className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-                title="Supprimer"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </PermissionGate>
-          </div>
-        );
+        if (can(PERMISSIONS.DELETE_PATIENTS)) {
+          actions.push({
+            label: "Supprimer",
+            icon: <Trash2 className="h-3.5 w-3.5" />,
+            variant: "delete",
+            onClick: () => setDeleteConfirm(patient),
+          });
+        }
+
+        return <RowActions actions={actions} />;
       },
     },
   ];
@@ -595,19 +598,22 @@ export default function PatientsPage() {
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={patients}
-          isLoading={isLoading}
-          pageCount={pageCount}
-          pageIndex={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(0);
-          }}
-        />
+        {/* Jusqu'à trois actions : le tableau replie uniformément. */}
+        <RowActionsProvider collapse>
+          <DataTable
+            columns={columns}
+            data={patients}
+            isLoading={isLoading}
+            pageCount={pageCount}
+            pageIndex={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setPage(0);
+            }}
+          />
+        </RowActionsProvider>
       </div>
 
       {/* ================================================================

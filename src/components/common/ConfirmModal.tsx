@@ -68,7 +68,7 @@ export function ConfirmModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-xl bg-white shadow-[var(--elevation-overlay)]"
+        className="w-full max-w-md rounded-[var(--radius-surface)] bg-white shadow-[var(--elevation-overlay)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Body */}
@@ -107,7 +107,7 @@ export function ConfirmModal({
             type="button"
             onClick={onClose}
             disabled={isLoading}
-            className="rounded-lg border border-gray-300 bg-white px-[.9rem] py-2 text-[.9rem] font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40 disabled:opacity-50"
+            className="rounded-[var(--radius-control)] border border-gray-300 bg-white px-[.9rem] py-2 text-[.9rem] font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40 disabled:opacity-50"
           >
             {cancelLabel}
           </button>
@@ -117,7 +117,7 @@ export function ConfirmModal({
             onClick={onConfirm}
             loading={isLoading}
             className={cn(
-              "gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2",
+              "gap-2 rounded-[var(--radius-control)] px-4 py-2 text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2",
               confirmButtonClass
             )}
           >

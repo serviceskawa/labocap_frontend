@@ -40,3 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .gstack/
+
+# Références visuelles de benchmark (hors dépôt)
+.benchmark/
+
+# Secrets locaux — ne doivent jamais partir sur le distant.
+password.txt

@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +13,7 @@ import { ArrowLeft, Loader2, Paperclip, Trash2 } from "lucide-react";
 import type { AxiosError } from "axios";
 
 import { ConfirmModal } from "@/components/common/ConfirmModal";
+import { Button } from "@/components/ui/Button";
 import { FormField } from "@/components/ui/FormField";
 import { CreatableSelectField } from "@/components/ui/CreatableSelectField";
 import {
@@ -63,12 +66,9 @@ function chiffresSeulement(
 }
 
 function formatAmount(amount: number): string {
-  // FCFA n'a pas de sous-unité : on affiche des entiers, jamais de décimales.
-  return (
-    new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(
-      Math.round(amount),
-    ) + " FCFA"
-  );
+  // Le FCFA n'a pas de sous-unité : jamais de décimales. L'unité elle-même
+  // n'est plus affichée à l'écran (cf. formatCFA).
+  return formatCFA(Math.round(amount));
 }
 
 // Le montant ne figure plus dans le formulaire : il vaut toujours la somme des
@@ -607,14 +607,14 @@ export default function ExpenseDetailPage({
           </div>
           <TablePaginationFooter pagination={detailsPagination} />
 
-          <button
+          <Button
             type="submit"
-            disabled={lockedWhenDelivered || updateMutation.isPending}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-60"
+            className="mt-5 w-full"
+            disabled={lockedWhenDelivered}
+            loading={updateMutation.isPending}
           >
-            {updateMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
             Soumettre
-          </button>
+          </Button>
         </div>
       </form>
 

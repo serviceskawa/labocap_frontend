@@ -35,17 +35,27 @@ function withSharedHeight<
 
 /**
  * Nombre maximum d'options affichées dans le menu déroulant.
- * Le menu ne défile jamais : on n'en montre que 6. Si l'option voulue n'y est
- * pas, l'utilisateur tape sa recherche — celle-ci porte sur la **totalité** des
- * options, et les 6 premiers résultats correspondants sont affichés.
+ *
+ * Six auparavant, sans défilement : au-delà, il fallait affiner sa recherche.
+ * C'était trop peu pour les listes où l'on parcourt — un catalogue de 273
+ * examens, une liste de patients — et l'utilisateur ne savait pas si la
+ * troncature lui cachait la bonne réponse.
+ *
+ * La recherche continue de porter sur la **totalité** des options, jamais sur
+ * les seules lignes affichées : cinquante est un plafond d'affichage, pas un
+ * plafond de recherche.
  */
-export const MAX_VISIBLE_OPTIONS = 6;
+export const MAX_VISIBLE_OPTIONS = 50;
 
 /**
- * Assez haut pour que 6 options (+ éventuellement la ligne « Ajouter … » d'un
- * select créable) tiennent sans barre de défilement.
+ * Hauteur du menu, au-delà de laquelle il défile.
+ *
+ * Cinquante options ne peuvent pas tenir à l'écran : le menu défile désormais,
+ * ce qu'il ne faisait pas quand il n'en montrait que six. La hauteur est
+ * calculée pour laisser voir une dizaine de lignes — assez pour parcourir sans
+ * masquer le reste de la page.
  */
-const MENU_HEIGHT = 400;
+const MENU_HEIGHT = 320;
 
 const DEFAULT_FILTER = createFilter<unknown>();
 
@@ -61,11 +71,11 @@ function isGroup<Option, Group extends GroupBase<Option>>(
 
 /**
  * Recalcule les props passées à react-select :
- * - `options` : filtrées sur toute la liste puis tronquées à 6 ;
+ * - `options` : filtrées sur toute la liste puis tronquées à
+ *   {@link MAX_VISIBLE_OPTIONS} ;
  * - `inputValue` / `onInputChange` : pilotés ici pour connaître la recherche en
  *   cours (le `onInputChange` éventuel de l'appelant reste appelé) ;
- * - `maxMenuHeight` : hauteur libre, la limitation se fait par le nombre
- *   d'options et non par un défilement.
+ * - `maxMenuHeight` : borne au-delà de laquelle le menu défile.
  */
 function useLimitedSelectProps<
   Option,
@@ -162,10 +172,10 @@ function useLimitedSelectProps<
 }
 
 /**
- * react-select dont le menu n'affiche **que 6 options**, sans défilement.
- * La recherche interne porte sur la liste complète : ce qui n'est pas visible
- * se trouve en tapant quelques lettres. Remplace `import Select from
- * "react-select"` partout dans l'app.
+ * react-select dont le menu affiche au plus {@link MAX_VISIBLE_OPTIONS} options,
+ * en défilant au-delà de la hauteur retenue. La recherche interne porte sur la
+ * liste complète : ce qui n'est pas visible se trouve en tapant quelques
+ * lettres. Remplace `import Select from "react-select"` partout dans l'app.
  */
 export function LimitedSelect<
   Option,
@@ -178,7 +188,7 @@ export function LimitedSelect<
 /**
  * Variante créable (saisie d'une valeur absente de la liste) de
  * {@link LimitedSelect}. La détection « cette valeur existe déjà » se fait sur
- * la liste complète, pas seulement sur les 6 options affichées.
+ * la liste complète, pas seulement sur les options affichées.
  */
 export function LimitedCreatableSelect<
   Option,

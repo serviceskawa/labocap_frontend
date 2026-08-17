@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -9,18 +11,15 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Button } from "@/components/ui/Button";
 import { DataTable } from "@/components/common/DataTable";
+import { RowActions, RowActionsProvider } from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
 import { FormField } from "@/components/ui/FormField";
-import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import {
-  cashboxApi,
-  CashboxDailyResponseDto,
-  CashboxResponseDto,
-} from "@/lib/api/cashbox";
+import { cashboxApi, CashboxDailyResponseDto } from "@/lib/api/cashbox";
 import type { ApiError } from "@/types/api";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
@@ -29,14 +28,13 @@ import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function formatFCFA(amount: number | null | undefined) {
-  if (amount === undefined || amount === null) return "—";
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "XOF",
-    minimumFractionDigits: 0,
-  }).format(amount);
+function formatMontant(amount?: number | null): string {
+  // Conserve la tolérance au nul de la copie locale ; le montant
+  // lui-même passe par le format partagé, sans unité monétaire.
+  if (amount === null || amount === undefined) return "—";
+  return formatCFA(amount);
 }
+
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", {
@@ -88,7 +86,6 @@ export default function CashboxDailyPage() {
   const [dateFilter, setDateFilter] = useState("");
   const [openModalOpen, setOpenModalOpen] = useState(false);
   const [openingBalance, setOpeningBalance] = useState("");
-  const [cashboxId, setCashboxId] = useState("");
   const [detail, setDetail] = useState<CashboxDailyResponseDto | null>(null);
 
   const { data, isLoading } = useQuery({
@@ -106,42 +103,50 @@ export default function CashboxDailyPage() {
   const sessions: CashboxDailyResponseDto[] = data?.content ?? [];
   const totalPages = data?.totalPages ?? 0;
 
-  // Caisses disponibles — sert à la fois au statut Ouvert/Fermé et au choix de la
-  // caisse dans la modale d'ouverture.
-  const { data: cashboxes } = useQuery<CashboxResponseDto[]>({
-    queryKey: ["cashboxes"],
-    queryFn: () => cashboxApi.getCashboxes().then((r) => r.data.content),
+  // Dernière session ouverte, toutes pages confondues.
+  //
+  // Requête à part, sans filtre de date ni pagination : le bouton d'en-tête est
+  // global, il ne peut pas dépendre de la page qu'on regarde. Chercher dans
+  // `sessions` reviendrait à ignorer les sessions des pages suivantes, ou à
+  // changer de cible dès qu'on filtre par date.
+  const { data: derniereData } = useQuery({
+    queryKey: ["cashbox-dailies-derniere"],
+    queryFn: () => cashboxApi.getDailies({ page: 0, size: 1 }).then((r) => r.data),
   });
+  const derniereSession = derniereData?.content?.[0];
 
-  // Caisse de vente « principale » — même heuristique que la page vente : parmi les
-  // caisses de type "vente" (doublons possibles hérités de la migration), retenir
-  // celle au solde le plus élevé (la caisse réellement active).
-  const venteCashbox = (cashboxes ?? [])
-    .filter((c) => c.type === "vente")
-    .reduce<CashboxResponseDto | undefined>(
-      (best, c) =>
-        !best || Number(c.balance ?? 0) > Number(best.balance ?? 0) ? c : best,
-      undefined,
-    );
+  // Le bouton « Fermer » ne vise QUE la dernière session, et seulement si elle
+  // est ouverte.
+  //
+  // Il visait auparavant la session ouverte la plus récemment modifiée. Avec 24
+  // sessions jamais fermées, dont certaines de 2024, cela conduisait à fermer un
+  // dossier vieux de plusieurs jours en croyant clôturer la journée — la
+  // fermeture proposait alors des montants couvrant toute cette période.
+  //
+  // Si la dernière session est déjà close, il n'y a rien à fermer : le bouton
+  // laisse la place à « Ouvrir la caisse ». Les anciennes sessions restées
+  // ouvertes se ferment depuis leur propre ligne, délibérément, et non par
+  // mégarde depuis l'en-tête.
+  const openSession = derniereSession?.status === 1 ? derniereSession : undefined;
+  const isOpen = Boolean(openSession);
 
-  // Statut = calque exact de Laravel (cashbox_daily/index.blade.php :
-  // `@if ($cashboxtest->statut == 0) Ouvrir @elseif == 1 Fermer`). La source de
-  // vérité est la colonne `statut` de la caisse de vente, pas les sessions.
-  const isOpen = venteCashbox?.statut === 1;
-
-  // Session à clôturer — Laravel : CashboxDaily::where('status',1)
-  // ->orderBy('updated_at','desc')->first(). Sert de cible au bouton « Fermer ».
-  const openSession = sessions
-    .filter((d) => d.status === 1)
-    .sort((a, b) =>
-      (b.updatedAt ?? b.createdAt).localeCompare(a.updatedAt ?? a.createdAt),
-    )[0];
-
+  // Aucun choix de caisse à l'ouverture.
+  //
+  // Cet écran est celui de la caisse de VENTE — son titre le dit. Le champ
+  // proposait pourtant les deux caisses, indiscernables puisqu'elles portent le
+  // même nom en base : c'est ainsi que la journée du 10/08 s'est ouverte sur la
+  // caisse de DÉPENSE, 705 000 de recettes rattachés au mauvais compte.
+  //
+  // L'identifiant n'est plus transmis : le backend retient alors la caisse de
+  // vente de la branche (`resolveCashbox`, repli sur le type). C'est le
+  // comportement de Laravel, qui visait une caisse fixe — à ceci près que le
+  // type remplace l'identifiant en dur.
+  //
+  // Un choix impossible protège mieux qu'un choix bien étiqueté.
   const openMutation = useMutation({
     mutationFn: () =>
       cashboxApi.openDaily({
         soldeOuverture: Number(openingBalance) || 0,
-        cashboxId,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cashbox-dailies"] });
@@ -149,17 +154,15 @@ export default function CashboxDailyPage() {
       toast.success("Caisse ouverte");
       setOpenModalOpen(false);
       setOpeningBalance("");
-      setCashboxId("");
     },
     onError: (e: AxiosError<ApiError>) =>
       toast.error(e.response?.data?.message ?? "Erreur lors de l'ouverture"),
   });
 
   const handleOpenSubmit = () => {
-    if (!cashboxId) {
-      toast.error("Veuillez sélectionner une caisse");
-      return;
-    }
+    // Plus rien à valider : la caisse n'est plus un choix, et le fond de caisse
+    // vaut zéro par défaut. Le backend refusera si aucune caisse de vente
+    // n'existe pour la branche, et son message remontera dans le toast d'erreur.
     openMutation.mutate();
   };
 
@@ -167,29 +170,6 @@ export default function CashboxDailyPage() {
   // Solde d'ouverture, Date de fermeture, Solde de fermeture, Utilisateur,
   // Écart, Statut.
   const columns: ColumnDef<CashboxDailyResponseDto>[] = [
-    {
-      header: "Actions",
-      id: "actions",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setDetail(row.original)}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-            title="Voir le récapitulatif"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </button>
-          <Link
-            href={`/cashbox/cashbox-daily/print/${row.original.id}`}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
-            title="Imprimer"
-          >
-            <Printer className="h-3.5 w-3.5" />
-          </Link>
-        </div>
-      ),
-    },
     {
       header: "ID",
       id: "rownum",
@@ -216,7 +196,7 @@ export default function CashboxDailyPage() {
     {
       header: "Solde d'ouverture",
       accessorKey: "openingBalance",
-      cell: ({ row }) => formatFCFA(row.original.openingBalance),
+      cell: ({ row }) => formatMontant(row.original.openingBalance),
     },
     {
       header: "Date de fermeture",
@@ -231,7 +211,7 @@ export default function CashboxDailyPage() {
     {
       header: "Solde de fermeture",
       accessorKey: "closingBalance",
-      cell: ({ row }) => formatFCFA(row.original.closingBalance),
+      cell: ({ row }) => formatMontant(row.original.closingBalance),
     },
     {
       header: "Utilisateur",
@@ -253,7 +233,7 @@ export default function CashboxDailyPage() {
           <span
             className={ecart < 0 ? "font-medium text-red-600" : "text-gray-700"}
           >
-            {formatFCFA(ecart)}
+            {formatMontant(ecart)}
           </span>
         );
       },
@@ -262,6 +242,43 @@ export default function CashboxDailyPage() {
       header: "Statut",
       accessorKey: "status",
       cell: ({ row }) => statusBadge(row.original.status),
+    },
+    // Actions — DERNIÈRE colonne. Deux actions seulement : elles restent à
+    // plat, le repli n'économiserait aucune largeur.
+    {
+      header: "Actions",
+      id: "actions",
+      cell: ({ row }) => (
+        <RowActions
+          actions={[
+            {
+              label: "Voir le récapitulatif",
+              icon: <Eye className="h-3.5 w-3.5" />,
+              onClick: () => setDetail(row.original),
+            },
+            {
+              label: "Imprimer",
+              icon: <Printer className="h-3.5 w-3.5" />,
+              href: `/cashbox/cashbox-daily/print/${row.original.id}`,
+            },
+            // Fermeture depuis la ligne, réservée aux sessions ouvertes.
+            //
+            // Le bouton d'en-tête ne vise plus que la dernière session : sans
+            // cette action, les sessions anciennes restées ouvertes n'auraient
+            // plus aucun moyen d'être clôturées. Ici le geste est délibéré —
+            // on ferme la ligne qu'on regarde, pas celle que l'écran a choisie.
+            ...(row.original.status === 1 && can(PERMISSIONS.EDIT_CASHBOX_DAILIES)
+              ? [
+                  {
+                    label: "Fermer cette caisse",
+                    icon: <Lock className="h-3.5 w-3.5" />,
+                    href: `/cashbox/cashbox-daily/fermeture/${row.original.id}`,
+                  },
+                ]
+              : []),
+          ]}
+        />
+      ),
     },
   ];
 
@@ -296,14 +313,12 @@ export default function CashboxDailyPage() {
                 </Link>
               </PermissionGate>
             ) : can(PERMISSIONS.CREATE_CASHBOX_DAILIES) ? (
-              <button
-                type="button"
+              <Button
                 onClick={() => setOpenModalOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                icon={<Plus className="h-4 w-4" />}
               >
-                <Plus className="h-4 w-4" />
                 Ouvrir la caisse
-              </button>
+              </Button>
             ) : undefined
           }
         />
@@ -340,19 +355,32 @@ export default function CashboxDailyPage() {
             )}
           </div>
 
-          <DataTable
-            columns={columns}
-            data={sessions}
-            isLoading={isLoading}
-            pageCount={totalPages}
-            pageIndex={pageIndex}
-            pageSize={pageSize}
-            onPageChange={setPageIndex}
-            onPageSizeChange={(s) => {
-              setPageSize(s);
-              setPageIndex(0);
-            }}
-          />
+          {/*
+            Actions repliées pour toutes les lignes.
+
+            Une ligne ouverte en porte trois — voir, imprimer, fermer — une ligne
+            close seulement deux. Laissées libres, les premières se replieraient
+            et les secondes s'afficheraient à plat : la colonne changerait de
+            forme d'une ligne à l'autre, et l'icône de fermeture apparaîtrait à
+            la place de l'imprimante selon les lignes. Le repli uniforme donne
+            une colonne stable, où chaque geste se trouve toujours au même
+            endroit.
+          */}
+          <RowActionsProvider collapse>
+            <DataTable
+              columns={columns}
+              data={sessions}
+              isLoading={isLoading}
+              pageCount={totalPages}
+              pageIndex={pageIndex}
+              pageSize={pageSize}
+              onPageChange={setPageIndex}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPageIndex(0);
+              }}
+            />
+          </RowActionsProvider>
         </div>
 
         {/* Modal ouverture de session */}
@@ -368,24 +396,6 @@ export default function CashboxDailyPage() {
             <p className="text-sm text-gray-500">
               Veuillez entrer le montant du fond de caisse.
             </p>
-            <FormField label="Caisse" required>
-              <NativeSelect
-                value={cashboxId}
-                onChange={(e) => setCashboxId(e.target.value)}
-              >
-                <option value="">Sélectionner une caisse…</option>
-                {(cashboxes ?? []).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name?.trim() ||
-                      (c.type === "vente"
-                        ? "Caisse de vente"
-                        : c.type === "depense"
-                          ? "Caisse de dépense"
-                          : "Caisse")}
-                  </option>
-                ))}
-              </NativeSelect>
-            </FormField>
 
             <FormField label="Fond de caisse (Espèces)">
               <input
@@ -456,49 +466,49 @@ function RecapModal({
               <tbody className="divide-y divide-gray-100">
                 <RecapRow
                   label="Espèces"
-                  fond={formatFCFA(opening)}
-                  vente={formatFCFA(cashCalc)}
-                  solde={formatFCFA(soldeEspeces)}
-                  comptage={formatFCFA(daily.cashConfirmation)}
+                  fond={formatMontant(opening)}
+                  vente={formatMontant(cashCalc)}
+                  solde={formatMontant(soldeEspeces)}
+                  comptage={formatMontant(daily.cashConfirmation)}
                   ecart={daily.cashEcart}
                 />
                 <RecapRow
                   label="Mobile Money"
                   fond="-"
-                  vente={formatFCFA(daily.mobileMoneyCalculated)}
+                  vente={formatMontant(daily.mobileMoneyCalculated)}
                   solde="-"
-                  comptage={formatFCFA(daily.moneyMoneyConfirmation)}
+                  comptage={formatMontant(daily.moneyMoneyConfirmation)}
                   ecart={daily.mobileMoneyEcart}
                 />
                 <RecapRow
                   label="Chèque"
                   fond="-"
-                  vente={formatFCFA(daily.chequeCalculated)}
+                  vente={formatMontant(daily.chequeCalculated)}
                   solde="-"
-                  comptage={formatFCFA(daily.chequeConfirmation)}
+                  comptage={formatMontant(daily.chequeConfirmation)}
                   ecart={daily.chequeEcart}
                 />
                 <RecapRow
                   label="Virement"
                   fond="-"
-                  vente={formatFCFA(daily.virementCalculated)}
+                  vente={formatMontant(daily.virementCalculated)}
                   solde="-"
-                  comptage={formatFCFA(daily.virementConfirmation)}
+                  comptage={formatMontant(daily.virementConfirmation)}
                   ecart={daily.virementEcart}
                 />
                 <tr className="border-t-2 border-gray-300 font-semibold">
                   <td className="py-2 pr-4 text-gray-800">Total</td>
                   <td className="py-2 pr-4 text-right text-gray-800">
-                    {formatFCFA(opening)}
+                    {formatMontant(opening)}
                   </td>
                   <td className="py-2 pr-4 text-right text-gray-800">
-                    {formatFCFA(daily.totalCalculated)}
+                    {formatMontant(daily.totalCalculated)}
                   </td>
                   <td className="py-2 pr-4 text-right text-gray-800">
-                    {formatFCFA(soldeEspeces)}
+                    {formatMontant(soldeEspeces)}
                   </td>
                   <td className="py-2 pr-4 text-right text-gray-800">
-                    {formatFCFA(daily.totalConfirmation)}
+                    {formatMontant(daily.totalConfirmation)}
                   </td>
                   <td
                     className={`py-2 text-right ${
@@ -507,7 +517,7 @@ function RecapModal({
                         : "text-green-600"
                     }`}
                   >
-                    {formatFCFA(daily.totalEcart)}
+                    {formatMontant(daily.totalEcart)}
                   </td>
                 </tr>
               </tbody>
@@ -522,12 +532,12 @@ function RecapModal({
             <input
               value={daily.description ?? ""}
               readOnly
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              className={inputClass}
             />
           </div>
 
           <p className="mt-6 text-right text-lg font-bold text-gray-900">
-            SOLDE DE FERMETURE : {formatFCFA(daily.closingBalance)}
+            SOLDE DE FERMETURE : {formatMontant(daily.closingBalance)}
           </p>
         </div>
         <div className="flex justify-end border-t border-gray-200 px-6 py-4">
@@ -571,7 +581,7 @@ function RecapRow({
           (ecart ?? 0) !== 0 ? "text-red-600" : "text-green-600"
         }`}
       >
-        {formatFCFA(ecart)}
+        {formatMontant(ecart)}
       </td>
     </tr>
   );

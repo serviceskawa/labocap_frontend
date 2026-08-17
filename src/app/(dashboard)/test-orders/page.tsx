@@ -4,13 +4,18 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
-import { Eye, Pencil, FileText, Trash2, Plus, Printer, Check, FileDown, Download, Loader2 } from "lucide-react";
+import { Eye, Pencil, FileText, Trash2, Plus, Printer, Check, FileDown, Loader2 } from "lucide-react";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { toast } from "sonner";
 import { DataTable } from "@/components/common/DataTable";
+import { CompteurFiltre } from "@/components/ui/CompteurFiltre";
+import {
+  RowActions,
+  RowActionsProvider,
+  type RowAction,
+} from "@/components/ui/RowActions";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
@@ -18,13 +23,12 @@ import { FormSelect } from "@/components/ui/FormSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { formatCFA, formatDate } from "@/lib/utils";
-import { buildSelectStyles, SELECT_MENU_CLASSNAMES } from "@/components/ui/selectStyles";
 import { testOrdersApi, type TestOrder } from "@/lib/api/testOrders";
 import { reportsApi } from "@/lib/api/reports";
 import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
 import { usersApi } from "@/lib/api/users";
 import apiClient from "@/lib/api/client";
-import { openDocFile } from "@/lib/api/docs";
+import { getApiErrorMessageFromBlob } from "@/lib/api/errorMessages";
 import type { PageResponse, ApiError } from "@/types/api";
 
 // ---------------------------------------------------------------------------
@@ -36,70 +40,11 @@ interface ContractOption {
   name: string;
 }
 
-// Le dropdown "Affecter à" (et le filtre Docteur) référencent un utilisateur
-// ayant le rôle docteur — même source que `attribuateDoctorId`.
+// Le filtre Docteur référence un utilisateur ayant le rôle docteur — même
+// source que `attribuateDoctorId`.
 interface DoctorOption {
   id: string;
   name: string;
-}
-
-// ---------------------------------------------------------------------------
-// Composant : dropdown "Affecter à" inline dans le tableau
-// ---------------------------------------------------------------------------
-
-type DoctorSelectOption = { value: string; label: string };
-
-function AttribuateSelect({
-  order,
-  doctors,
-}: {
-  order: TestOrder;
-  doctors: DoctorOption[];
-}) {
-  const queryClient = useQueryClient();
-  const [value, setValue] = useState<string>(order.attribuateDoctorId ?? "");
-
-  const mutation = useMutation({
-    mutationFn: (doctorId: string) =>
-      testOrdersApi.assignDoctor(order.id, doctorId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["test-orders"] });
-      toast.success("Médecin affecté");
-    },
-    onError: () => toast.error("Erreur lors de l'affectation"),
-  });
-
-  // Options react-select : dropdown avec champ de recherche intégré.
-  const options: DoctorSelectOption[] = doctors.map((d) => ({
-    value: d.id,
-    label: d.name,
-  }));
-  const selected = options.find((o) => o.value === value) ?? null;
-
-  return (
-    <div className="min-w-[180px]">
-      <Select<DoctorSelectOption, false>
-        options={options}
-        value={selected}
-        onChange={(opt) => {
-          const doctorId = opt?.value ?? "";
-          setValue(doctorId);
-          if (doctorId) mutation.mutate(doctorId);
-        }}
-        isDisabled={mutation.isPending}
-        isSearchable
-        placeholder="Sélectionner un docteur"
-        noOptionsMessage={() => "Aucun docteur"}
-        classNamePrefix="react-select"
-        classNames={SELECT_MENU_CLASSNAMES}
-        styles={buildSelectStyles(false)}
-        menuPortalTarget={
-          typeof document !== "undefined" ? document.body : undefined
-        }
-        menuPosition="fixed"
-      />
-    </div>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -120,13 +65,27 @@ function ActionButtons({
   const [downloading, setDownloading] = useState(false);
 
   const handleCreateInvoice = async () => {
+    // L'onglet s'ouvre AVANT l'appel : après un `await`, le navigateur a perdu
+    // l'activation transitoire née du clic et bloque `window.open`. C'est le
+    // défaut constaté sur les affectations — l'onglet s'ouvrait vide et la
+    // navigation retombait dans la page courante.
+    const onglet = window.open("", "_blank");
+    // Passer « noopener » en option ferait renvoyer `null` par `window.open`,
+    // par spécification : on coupe le lien vers la page d'origine après coup.
+    if (onglet) onglet.opener = null;
+
     setCreatingInvoice(true);
     try {
       const res = await apiClient.post<{ id: string }>(
         `/invoices/from-order/${order.id}`
       );
-      router.push(`/invoices/${res.data.id}`);
+      const url = `/invoices/${res.data.id}`;
+      // Repli si un bloqueur a refusé l'onglet : mieux vaut naviguer sur place
+      // que laisser l'utilisateur devant une facture créée qu'il ne voit pas.
+      if (onglet) onglet.location.href = url;
+      else router.push(url);
     } catch {
+      onglet?.close();
       toast.error("Erreur lors de la création de la facture");
     } finally {
       setCreatingInvoice(false);
@@ -153,119 +112,126 @@ function ActionButtons({
       const url = URL.createObjectURL(res.data as Blob);
       window.open(url, "_blank");
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch {
-      toast.error("Erreur lors de la génération du PDF");
+    } catch (err) {
+      toast.error(
+        await getApiErrorMessageFromBlob(
+          err,
+          "Erreur lors de la génération du PDF",
+        ),
+      );
     } finally {
       setDownloading(false);
     }
   };
 
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {/* Voir les détails — BLEU */}
-      <Link
-        href={`/test-orders/${order.id}/details`}
-        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-        title="Voir les détails"
-      >
-        <Eye className="h-3.5 w-3.5" />
-      </Link>
+  // Les actions sont assemblées puis passées à `RowActions`, qui décide seul de
+  // les poser à plat ou de les replier — le décompte se fait sur ce qui est
+  // RÉELLEMENT permis pour cette ligne, pas sur les huit que l'écran déclare.
+  //
+  // Les fonds pleins et saturés d'origine (bleu, jaune, vert, gris, rouge)
+  // disparaissent : huit pastilles vives par ligne faisaient de la colonne un
+  // damier où la couleur ne signalait plus rien.
+  const actions: RowAction[] = [
+    {
+      label: "Voir les détails",
+      icon: <Eye className="h-3.5 w-3.5" />,
+      href: `/test-orders/${order.id}/details`,
+      newTab: true,
+    },
+  ];
 
-      {/* Modifier — BLEU. Masqué dès que le bon est validé/livré : le backend
-          refuse la mise à jour (« Impossible de modifier un bon d'examen déjà
-          validé »), le bouton ne menait donc qu'à une erreur. Même condition
-          que l'action Supprimer, soumise à la même règle. */}
-      {order.status !== "VALIDATED" &&
-        order.status !== "DELIVERED" &&
-        can(PERMISSIONS.EDIT_TEST_ORDERS) && (
-        <Link
-          href={`/test-orders/${order.id}/edit`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-          title="Mettre à jour l'examen"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </Link>
-      )}
+  // Modifier — masqué dès que le bon est validé/livré : le backend refuse la
+  // mise à jour, le bouton ne menait qu'à une erreur. Même règle que Supprimer.
+  const modifiable =
+    order.status !== "VALIDATED" && order.status !== "DELIVERED";
 
-      {/* Compte rendu — JAUNE */}
-      {order.reportId && can(PERMISSIONS.VIEW_REPORTS) && (
-        <Link
-          href={`/reports/${order.reportId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-yellow-500 text-white hover:bg-yellow-600 transition-colors"
-          title="Compte rendu"
-        >
-          <FileText className="h-3.5 w-3.5" />
-        </Link>
-      )}
+  if (modifiable && can(PERMISSIONS.EDIT_TEST_ORDERS)) {
+    actions.push({
+      label: "Mettre à jour l'examen",
+      icon: <Pencil className="h-3.5 w-3.5" />,
+      href: `/test-orders/${order.id}/edit`,
+      newTab: true,
+    });
+  }
 
-      {/* Marquer comme retiré — VERT (si validé mais pas encore livré) */}
-      {order.reportStatus === "VALIDATED" &&
-        !order.reportIsDelivered &&
-        can(PERMISSIONS.EDIT_REPORTS) && (
-          <button
-            type="button"
-            onClick={() => deliverMutation.mutate()}
-            disabled={deliverMutation.isPending}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-            title="Marquer comme retiré"
-          >
-            {deliverMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-          </button>
-        )}
+  if (order.reportId && can(PERMISSIONS.VIEW_REPORTS)) {
+    actions.push({
+      label: "Compte rendu",
+      icon: <FileText className="h-3.5 w-3.5" />,
+      href: `/reports/${order.reportId}`,
+      newTab: true,
+    });
+  }
 
-      {/* Imprimer le compte rendu — GRIS (si compte rendu validé/livré) */}
-      {order.reportId &&
-        (order.reportStatus === "VALIDATED" ||
-          order.reportStatus === "DELIVERED") && (
-          <button
-            type="button"
-            onClick={handlePrint}
-            disabled={downloading}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-gray-600 text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
-            title="Imprimer le compte rendu"
-          >
-            {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
-          </button>
-        )}
+  if (
+    order.reportStatus === "VALIDATED" &&
+    !order.reportIsDelivered &&
+    can(PERMISSIONS.EDIT_REPORTS)
+  ) {
+    actions.push({
+      label: "Marquer comme retiré",
+      icon: deliverMutation.isPending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Check className="h-3.5 w-3.5" />
+      ),
+      onClick: () => deliverMutation.mutate(),
+      disabled: deliverMutation.isPending,
+    });
+  }
 
-      {/* Facture — VERT */}
-      {order.invoiceId ? (
-        <Link
-          href={`/invoices/${order.invoiceId}`}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
-          title="Voir la facture"
-        >
-          <Printer className="h-3.5 w-3.5" />
-        </Link>
-      ) : order.reportStatus === "VALIDATED" ||
-        order.reportStatus === "DELIVERED" ? (
-        <button
-          type="button"
-          onClick={handleCreateInvoice}
-          disabled={creatingInvoice}
-          className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-          title="Créer la facture"
-        >
-          {creatingInvoice ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />}
-        </button>
-      ) : null}
+  if (
+    order.reportId &&
+    (order.reportStatus === "VALIDATED" || order.reportStatus === "DELIVERED")
+  ) {
+    actions.push({
+      label: "Imprimer le compte rendu",
+      icon: downloading ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <FileDown className="h-3.5 w-3.5" />
+      ),
+      onClick: handlePrint,
+      disabled: downloading,
+      variant: "secondary",
+    });
+  }
 
-      {/* Supprimer — ROUGE */}
-      {order.status !== "VALIDATED" &&
-        order.status !== "DELIVERED" &&
-        can(PERMISSIONS.DELETE_TEST_ORDERS) && (
-          <button
-            type="button"
-            onClick={() => onDelete(order)}
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium bg-red-600 text-white hover:bg-red-700 transition-colors"
-            title="Supprimer"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-    </div>
-  );
+  if (order.invoiceId) {
+    actions.push({
+      label: "Voir la facture",
+      icon: <Printer className="h-3.5 w-3.5" />,
+      href: `/invoices/${order.invoiceId}`,
+      newTab: true,
+    });
+  } else if (
+    order.reportStatus === "VALIDATED" ||
+    order.reportStatus === "DELIVERED"
+  ) {
+    actions.push({
+      label: "Créer la facture",
+      icon: creatingInvoice ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Printer className="h-3.5 w-3.5" />
+      ),
+      onClick: handleCreateInvoice,
+      disabled: creatingInvoice,
+    });
+  }
+
+  if (modifiable && can(PERMISSIONS.DELETE_TEST_ORDERS)) {
+    actions.push({
+      label: "Supprimer",
+      icon: <Trash2 className="h-3.5 w-3.5" />,
+      onClick: () => onDelete(order),
+      variant: "delete",
+    });
+  }
+
+  return <RowActions actions={actions} />;
 }
+
 
 // ---------------------------------------------------------------------------
 // Page principale
@@ -352,19 +318,21 @@ export default function TestOrdersPage() {
         ),
   });
 
-  // Stats globales (Livrer / Valider / Cas urgent)
-  const { data: statsLivrer } = useQuery({
-    queryKey: ["test-orders-stats-livrer"],
+  // Compteurs — sur le statut du RAPPORT, comme le menu « Status » et la
+  // pastille de la colonne Compte rendu. Ils interrogeaient le statut du BON,
+  // un troisième axe qui affichait « Livrer : 0 » à côté de lignes « Livré ».
+  const { data: statsLivre } = useQuery({
+    queryKey: ["test-orders-stats-livre"],
     queryFn: () =>
       testOrdersApi
-        .findAll({ page: 0, size: 1, status: "DELIVERED" })
+        .findAll({ page: 0, size: 1, reportStatus: "DELIVERED" })
         .then((r) => r.data.totalElements),
   });
-  const { data: statsValider } = useQuery({
-    queryKey: ["test-orders-stats-valider"],
+  const { data: statsValide } = useQuery({
+    queryKey: ["test-orders-stats-valide"],
     queryFn: () =>
       testOrdersApi
-        .findAll({ page: 0, size: 1, status: "VALIDATED" })
+        .findAll({ page: 0, size: 1, reportStatus: "VALIDATED" })
         .then((r) => r.data.totalElements),
   });
   const { data: statsUrgent } = useQuery({
@@ -374,6 +342,12 @@ export default function TestOrdersPage() {
         .findAll({ page: 0, size: 1, isUrgent: true })
         .then((r) => r.data.totalElements),
   });
+
+  /** Applique le statut, ou le retire si le compteur cliqué est déjà actif. */
+  const basculerStatut = (statut: string) => {
+    setStatusFilter(statusFilter === statut ? "" : statut);
+    setPage(0);
+  };
 
   const orders = data?.content ?? [];
   const pageCount = data?.totalPages ?? 0;
@@ -411,47 +385,52 @@ export default function TestOrdersPage() {
 
   // --- Colonnes (ordre exact index2.blade.php)
   const columns: ColumnDef<TestOrder>[] = [
-    // 1. Actions — PREMIÈRE colonne comme Laravel
-    {
-      header: "Actions",
-      id: "actions",
-      cell: ({ row }) => (
-        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
-      ),
-    },
-    // 2. Date
+    // 1. Date
     {
       header: "Date",
       accessorKey: "createdAt",
       cell: ({ getValue }) => formatDate(getValue<string>()),
     },
-    // 3. Code
+    // 2. Code — le code du bon, et sous lui la personne à qui il est affecté.
+    //
+    // Réunis dans une seule colonne plutôt que séparés : le nom ne se lit que
+    // rapporté au bon qu'il concerne, et une colonne de plus dans un tableau
+    // déjà large se paie en largeur pour les colonnes voisines.
     {
       header: "Code",
       accessorKey: "code",
-      cell: ({ row }) =>
-        row.original.code ?? (
-          <span className="whitespace-nowrap text-gray-400 italic text-xs">
-            En attente
-          </span>
-        ),
+      cell: ({ row }) => {
+        const affecteA = row.original.assignedUserName?.trim();
+        return (
+          <div className="min-w-0">
+            {row.original.code ?? (
+              <span className="whitespace-nowrap text-gray-400 italic text-xs">
+                En attente
+              </span>
+            )}
+            {/* Rien n'est affiché quand le bon n'est pas affecté : une mention
+                « non affecté » répétée sur la moitié des lignes ferait du bruit
+                là où l'absence se lit d'elle-même. */}
+            {affecteA ? (
+              <div
+                className="mt-0.5 truncate text-xs text-gray-500"
+                title={`Affecté à ${affecteA}`}
+              >
+                {affecteA}
+              </div>
+            ) : null}
+          </div>
+        );
+      },
     },
-    // 4. Affecter à — dropdown docteur
-    {
-      header: "Affecter à",
-      id: "affecter",
-      cell: ({ row }) => (
-        <AttribuateSelect order={row.original} doctors={doctors} />
-      ),
-    },
-    // 5. Patient
+    // 3. Patient
     {
       header: "Patient",
       id: "patient",
       cell: ({ row }) =>
         `${row.original.patientFirstname} ${row.original.patientLastname}`,
     },
-    // 6. Examens — comme Laravel : titre du type d'examen (en gras) suivi des
+    // 4. Examens — comme Laravel : titre du type d'examen (en gras) suivi des
     // analyses. Le type s'affiche même avant l'ajout d'analyses (juste après la
     // création), pour ne pas laisser la colonne vide.
     {
@@ -480,38 +459,19 @@ export default function TestOrdersPage() {
         );
       },
     },
-    // 7. Contrat
+    // 5. Contrat
     {
       header: "Contrat",
       accessorKey: "contratName",
       cell: ({ row }) => row.original.contratName ?? "—",
     },
-    // Pièce jointe — comme Laravel : lien vers le fichier (nouvel onglet), sinon « Aucun fichier ».
-    {
-      header: "Pièce jointe",
-      id: "archive",
-      enableSorting: false,
-      cell: ({ row }) =>
-        row.original.archive ? (
-          <button
-            type="button"
-            onClick={() => openDocFile(row.original.archive!)}
-            className="inline-flex items-center gap-1 text-blue-600 hover:underline"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Voir
-          </button>
-        ) : (
-          <span className="text-xs text-gray-400">Aucun fichier</span>
-        ),
-    },
-    // 8. Montant
+    // 6. Montant
     {
       header: "Montant",
       id: "amount",
       cell: ({ row }) => formatCFA(row.original.total),
     },
-    // 9. Compte rendu — 4 statuts (aligné sur la page détails) :
+    // 7. Compte rendu — 4 statuts (aligné sur la page détails) :
     // Non renseigné (pas de CR) / En attente (brouillon) / Validé / Livré.
     {
       header: "Compte rendu",
@@ -542,18 +502,16 @@ export default function TestOrdersPage() {
         );
       },
     },
-    // 10. Urgent — badge rouge si urgent
+    // Actions — DERNIÈRE colonne. Elle était en tête, héritage de Laravel.
+    // Une colonne d'actions ouvre la ligne sur des commandes avant d'avoir dit
+    // de quoi il s'agit : on choisit avant de lire. Elle ferme désormais la
+    // ligne, comme sur les 35 autres écrans de l'application.
     {
-      header: "Urgent",
-      id: "urgent",
-      cell: ({ row }) =>
-        row.original.isUrgent ? (
-          <span className="inline-flex items-center rounded-full bg-red-700 px-2 py-0.5 text-xs font-medium text-white">
-            Urgent
-          </span>
-        ) : (
-          <span className="text-gray-400 text-xs">—</span>
-        ),
+      header: "Actions",
+      id: "actions",
+      cell: ({ row }) => (
+        <ActionButtons order={row.original} onDelete={setDeleteTarget} />
+      ),
     },
   ];
 
@@ -672,36 +630,66 @@ export default function TestOrdersPage() {
           </div>
         </div>
 
-        {/* Barre de statistiques (Livrer / Valider / Cas urgent) */}
+        {/* ── Compteurs, qui filtrent ────────────────────────────────────
+            Ils comptent désormais sur le MÊME critère que le menu « Status »
+            et que la pastille de la colonne Compte rendu : le statut du
+            rapport. Ils interrogeaient jusqu'ici le statut du BON, un troisième
+            axe — d'où « Livrer : 0 » affiché à côté de lignes marquées
+            « Livré ». Le chiffre correspond maintenant toujours à ce que la
+            liste montre une fois le filtre appliqué.
+
+            Les libellés passent à l'indicatif : « Livrer » se lisait comme une
+            consigne — les demandes À livrer — alors qu'il s'agit de celles qui
+            l'ont été. */}
         <div className="mb-4 flex flex-wrap gap-3">
-          <div className="rounded-full bg-green-100 px-4 py-1.5 text-[.9rem] font-medium text-green-800 ring-1 ring-green-300">
-            Livrer : {statsLivrer ?? "…"}
-          </div>
-          <div className="rounded-full bg-yellow-100 px-4 py-1.5 text-[.9rem] font-medium text-yellow-800 ring-1 ring-yellow-300">
-            Valider : {statsValider ?? "…"}
-          </div>
-          <div className="rounded-full bg-red-100 px-4 py-1.5 text-[.9rem] font-medium text-red-800 ring-1 ring-red-300">
-            Cas urgent : {statsUrgent ?? "…"}
-          </div>
+          <CompteurFiltre
+            libelle="Livré"
+            valeur={statsLivre}
+            actif={statusFilter === "DELIVERED"}
+            onClick={() => basculerStatut("DELIVERED")}
+            couleur="green"
+          />
+          <CompteurFiltre
+            libelle="Validé"
+            valeur={statsValide}
+            actif={statusFilter === "VALIDATED"}
+            onClick={() => basculerStatut("VALIDATED")}
+            couleur="yellow"
+          />
+          <CompteurFiltre
+            libelle="Cas urgent"
+            valeur={statsUrgent}
+            actif={urgentFilter === "1"}
+            onClick={() => {
+              setUrgentFilter(urgentFilter === "1" ? "" : "1");
+              setPage(0);
+            }}
+            couleur="red"
+          />
         </div>
 
         {/* Tableau */}
-        <DataTable
-          columns={columns}
-          data={orders}
-          isLoading={isLoading}
-          pageCount={pageCount}
-          pageIndex={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
-          rowClassName={(row) => {
-            if (row.isUrgent && !row.reportIsDelivered) return "bg-red-50";
-            if (row.reportIsDelivered) return "bg-green-50";
-            if (row.reportStatus === "VALIDATED") return "bg-yellow-50";
-            return "";
-          }}
-        />
+        {/* Cet écran déclare huit actions : certaines lignes dépassent le
+            seuil, donc TOUTES replient. Une colonne qui alterne deux icônes,
+            un menu, puis une icône déplacerait le même geste à chaque ligne. */}
+        <RowActionsProvider collapse>
+          <DataTable
+            columns={columns}
+            data={orders}
+            isLoading={isLoading}
+            pageCount={pageCount}
+            pageIndex={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
+            rowClassName={(row) => {
+              if (row.isUrgent && !row.reportIsDelivered) return "bg-red-50";
+              if (row.reportIsDelivered) return "bg-green-50";
+              if (row.reportStatus === "VALIDATED") return "bg-yellow-50";
+              return "";
+            }}
+          />
+        </RowActionsProvider>
       </div>
 
       <ConfirmModal

@@ -194,7 +194,7 @@ function RefundsContent() {
                 <button
                   onClick={() => approveMutation.mutate(refund.id)}
                   disabled={pending}
-                  className={`${actionBtn} bg-green-600 hover:bg-green-700`}
+                  className={`${actionBtn} bg-blue-600 hover:bg-blue-700`}
                   aria-label="Accepter"
                   title="Accepter"
                 >
@@ -224,7 +224,7 @@ function RefundsContent() {
               can(PERMISSIONS.EDIT_REFUNDS) && (
                 <button
                   onClick={() => setEditing(refund)}
-                  className={`${actionBtn} bg-yellow-500 hover:bg-yellow-600`}
+                  className={`${actionBtn} bg-gray-600 hover:bg-gray-700`}
                   aria-label="Modifier"
                   title="Modifier"
                 >
@@ -368,32 +368,34 @@ function RefundsContent() {
                 Historique des mises à jour
               </h3>
               <TableLengthControl pagination={detailLogsPagination} />
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
-                    <th className="pb-2 pr-4">#</th>
-                    <th className="pb-2 pr-4">Demande de rembousement</th>
-                    <th className="pb-2 pr-4">Utilisateur</th>
-                    <th className="pb-2 pr-4">Operation</th>
-                    <th className="pb-2">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {detailLogsPagination.pageRows.map((l, i) => (
-                    <tr key={l.id ?? i}>
-                      <td className="py-2 pr-4">
-                        {detailLogsPagination.offset + i + 1}
-                      </td>
-                      <td className="py-2 pr-4">{detail.code ?? ""}</td>
-                      <td className="py-2 pr-4">{l.userFullName ?? ""}</td>
-                      <td className="py-2 pr-4">{l.operation}</td>
-                      <td className="py-2 text-gray-500">
-                        {formatDateTime(l.createdAt)}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
+                      <th className="pb-2 pr-4">#</th>
+                      <th className="pb-2 pr-4">Demande de rembousement</th>
+                      <th className="pb-2 pr-4">Utilisateur</th>
+                      <th className="pb-2 pr-4">Operation</th>
+                      <th className="pb-2">Date</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {detailLogsPagination.pageRows.map((l, i) => (
+                      <tr key={l.id ?? i}>
+                        <td className="py-2 pr-4">
+                          {detailLogsPagination.offset + i + 1}
+                        </td>
+                        <td className="py-2 pr-4">{detail.code ?? ""}</td>
+                        <td className="py-2 pr-4">{l.userFullName ?? ""}</td>
+                        <td className="py-2 pr-4">{l.operation}</td>
+                        <td className="py-2 text-gray-500">
+                          {formatDateTime(l.createdAt)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
               <TablePaginationFooter pagination={detailLogsPagination} />
             </div>
           </div>

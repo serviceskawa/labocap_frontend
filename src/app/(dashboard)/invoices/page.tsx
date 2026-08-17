@@ -11,16 +11,20 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { cn } from "@/lib/utils";
+import { cn, formatCFA, formatDate } from "@/lib/utils";
 import { invoicesApi, type Invoice } from "@/lib/api/invoices";
+import { Button } from "@/components/ui/Button";
+import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
+import {
+  RACCOURCIS_PERIODE,
+  raccourciCorrespondant,
+  type Periode,
+} from "@/lib/periods";
 
 // ---------------------------------------------------------------------------
 // Formatage montant FCFA
 // ---------------------------------------------------------------------------
 
-function formatFCFA(amount: number): string {
-  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
-}
 
 // ---------------------------------------------------------------------------
 // Badge statut paiement (Payé vert / En attente orange)
@@ -44,37 +48,22 @@ function PaidBadge({ paid }: { paid: boolean }) {
 }
 
 // ---------------------------------------------------------------------------
-// Mois en français pour le sélecteur Rapports
-// ---------------------------------------------------------------------------
-
-const MONTHS_FR: { value: number; label: string }[] = [
-  { value: 1, label: "Janvier" },
-  { value: 2, label: "Février" },
-  { value: 3, label: "Mars" },
-  { value: 4, label: "Avril" },
-  { value: 5, label: "Mai" },
-  { value: 6, label: "Juin" },
-  { value: 7, label: "Juillet" },
-  { value: 8, label: "Août" },
-  { value: 9, label: "Septembre" },
-  { value: 10, label: "Octobre" },
-  { value: 11, label: "Novembre" },
-  { value: 12, label: "Décembre" },
-];
-
-// ---------------------------------------------------------------------------
 // Boutons d'action ligne
 // ---------------------------------------------------------------------------
 
 // La liste Laravel n'expose qu'une seule action, sans aucun gate de permission :
-// un bouton vert vers la facture (InvoiceController::getInvoiceIndexforDatable).
+// un bouton vers la facture (InvoiceController::getInvoiceIndexforDatable).
 // L'encaissement se fait depuis la page de détail, pas depuis la liste.
+//
+// Le vert d'origine passe au primaire : dans le système, le vert dit qu'un état
+// est bon — c'est ce que porte la pastille « Payé » juste à côté, dans la même
+// ligne. Le même vert sur l'action voisine brouille les deux lectures.
 function ActionButtons({ invoice }: { invoice: Invoice }) {
   return (
     <div className="flex items-center gap-1">
       <Link
         href={`/invoices/${invoice.id}`}
-        className="inline-flex items-center justify-center rounded p-1.5 text-white bg-green-600 hover:bg-green-700 transition-colors"
+        className="inline-flex items-center justify-center rounded-[var(--radius-control)] bg-blue-600 p-1.5 text-white transition-colors duration-[var(--duration-fast)] ease-emphasized hover:bg-blue-700"
         title="Facture"
       >
         <Printer className="h-4 w-4" />
@@ -106,14 +95,26 @@ export default function InvoicesPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  // Filtres rapports
-  const currentYear = new Date().getFullYear();
-  const currentMonth = new Date().getMonth() + 1;
-  const [reportYear, setReportYear] = useState<number>(currentYear);
-  const [reportMonth, setReportMonth] = useState<number>(currentMonth);
-  // Année/mois appliqués (déclenchés par "Filtrer")
-  const [appliedYear, setAppliedYear] = useState<number>(currentYear);
-  const [appliedMonth, setAppliedMonth] = useState<number>(currentMonth);
+  // --- Filtres rapports : une période, plus un seul mois.
+  //
+  // L'état est dédoublé — les deux champs saisis d'un côté, la période
+  // APPLIQUÉE de l'autre. Sans cela, le rapport se relancerait à chaque frappe
+  // dans un champ de date, y compris sur les états intermédiaires qu'un
+  // navigateur produit en cours de saisie (une année à deux chiffres, par
+  // exemple), et le bouton « Filtrer » n'aurait plus d'objet.
+  //
+  // Par défaut, le mois en cours : c'est ce que l'écran montrait jusqu'ici.
+  const [periode, setPeriode] = useState<Periode>(() =>
+    RACCOURCIS_PERIODE[0].calculer(new Date()),
+  );
+  const [debut, setDebut] = useState<string>(periode.debut);
+  const [fin, setFin] = useState<string>(periode.fin);
+
+  const periodeValide = Boolean(debut && fin) && debut <= fin;
+  // Comparaison de chaînes ISO `AAAA-MM-JJ` : leur ordre lexicographique est
+  // leur ordre chronologique, aucune conversion en Date n'est nécessaire.
+
+  const raccourciActif = raccourciCorrespondant(periode, new Date());
 
   // --- Query : liste des factures
   const { data, isLoading } = useQuery({
@@ -158,13 +159,21 @@ export default function InvoicesPage() {
     enabled: activeTab === "list",
   });
 
-  // --- Query : rapport mensuel
+  // --- Query : rapport sur la période
   const { data: report, isLoading: isReportLoading } = useQuery({
-    queryKey: ["invoices", "reports", appliedYear, appliedMonth],
+    queryKey: ["invoices", "reports", periode.debut, periode.fin],
     queryFn: () =>
-      invoicesApi.getReports(appliedYear, appliedMonth).then((r) => r.data),
+      invoicesApi.getReports(periode.debut, periode.fin).then((r) => r.data),
     enabled: activeTab === "reports",
   });
+
+  // `months` est absent des réponses de l'API antérieure au rapport par période.
+  // Sans ce repli, un frontend déployé avant son backend ferait tomber l'onglet
+  // sur un `undefined.length` — la sûreté de la production ne doit pas reposer
+  // sur un ordre de déploiement. Le repli dégrade proprement : on retombe sur
+  // la ligne unique, exactement l'écran d'avant.
+  const moisDuRapport = report?.months ?? [];
+  const ventile = moisDuRapport.length > 1;
 
   const invoices = data?.content ?? [];
   const pageCount = data?.totalPages ?? 0;
@@ -183,11 +192,24 @@ export default function InvoicesPage() {
   const columns: ColumnDef<Invoice>[] = [
     {
       // Laravel lit la colonne `date` (saisie à la création), pas `created_at`.
+      //
+      // Elle est vide sur la TOTALITÉ des factures reprises de Laravel — 12 409
+      // sur 12 409 — et la colonne s'affichait donc vierge sur toute la liste.
+      // L'API Java renseigne bien ce champ, mais aucune facture n'a encore été
+      // créée par elle : le repli couvre donc l'intégralité de l'historique.
+      //
+      // `createdAt` est le meilleur substitut disponible : sur ces lignes
+      // reprises, c'est la seule trace de la date d'émission.
       header: "Date",
       accessorKey: "date",
-      cell: ({ row }) => (
-        <span className="text-xs text-gray-500">{row.original.date ?? ""}</span>
-      ),
+      cell: ({ row }) => {
+        const brute = row.original.date ?? row.original.createdAt;
+        return (
+          <span className="text-xs text-gray-500">
+            {brute ? formatDate(brute) : "—"}
+          </span>
+        );
+      },
     },
     {
       header: "Demande",
@@ -255,9 +277,6 @@ export default function InvoicesPage() {
     },
   ];
 
-  // Années disponibles (année courante - 5 ans)
-  const years = Array.from({ length: 6 }, (_, i) => currentYear - i);
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -291,7 +310,7 @@ export default function InvoicesPage() {
           className={cn(
             "rounded-full border px-5 py-2 text-sm font-medium transition-colors",
             activeTab === "list"
-              ? "bg-green-100 text-green-700 border-green-300"
+              ? "bg-blue-50 text-blue-700 border-blue-200"
               : "bg-gray-100 text-gray-700 border-transparent hover:bg-gray-200"
           )}
         >
@@ -303,7 +322,7 @@ export default function InvoicesPage() {
           className={cn(
             "rounded-full border px-5 py-2 text-sm font-medium transition-colors",
             activeTab === "reports"
-              ? "bg-green-100 text-green-700 border-green-300"
+              ? "bg-blue-50 text-blue-700 border-blue-200"
               : "bg-gray-100 text-gray-700 border-transparent hover:bg-gray-200"
           )}
         >
@@ -438,131 +457,192 @@ export default function InvoicesPage() {
       {/* === Onglet 2 : Rapports === */}
       {activeTab === "reports" && (
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          {/* Filtres */}
-          <div className="mb-5 grid grid-cols-1 items-end gap-3 md:grid-cols-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
-                Année
-              </label>
-              <NativeSelect
-                value={reportYear}
-                onChange={(e) => setReportYear(Number(e.target.value))}
-              >
-                {years.map((y) => (
-                  <option key={y} value={y}>
-                    {y}
-                  </option>
-                ))}
-              </NativeSelect>
+          {/* ── Filtres de période ───────────────────────────────────────
+              Le rapport ne se demandait que par mois. Une période libre le
+              rend comparatif : on lit la tendance et le mois creux, pas
+              seulement la somme du mois en cours. */}
+          <div className="mb-5 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {RACCOURCIS_PERIODE.map((r) => {
+                const actif = r.cle === raccourciActif;
+                return (
+                  <button
+                    key={r.cle}
+                    type="button"
+                    onClick={() => {
+                      const p = r.calculer(new Date());
+                      setDebut(p.debut);
+                      setFin(p.fin);
+                      setPeriode(p);
+                    }}
+                    className={cn(
+                      "rounded-[var(--radius-control)] px-3 py-1.5 text-[.8125rem] font-medium",
+                      "transition-colors duration-[var(--duration-fast)] ease-emphasized",
+                      "focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
+                      actif
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200",
+                    )}
+                  >
+                    {r.libelle}
+                  </button>
+                );
+              })}
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">
-                Mois
-              </label>
-              <NativeSelect
-                value={reportMonth}
-                onChange={(e) => setReportMonth(Number(e.target.value))}
-              >
-                {MONTHS_FR.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </NativeSelect>
-            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <label
+                  htmlFor="rapport-debut"
+                  className="mb-1 block text-xs font-medium text-gray-600"
+                >
+                  Du
+                </label>
+                <input
+                  id="rapport-debut"
+                  type="date"
+                  value={debut}
+                  max={fin || undefined}
+                  onChange={(e) => setDebut(e.target.value)}
+                  className={cn(inputClass, "w-[11rem]")}
+                />
+              </div>
 
-            <div>
-              <button
-                type="button"
-                onClick={() => {
-                  setAppliedYear(reportYear);
-                  setAppliedMonth(reportMonth);
-                }}
-                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+              <div>
+                <label
+                  htmlFor="rapport-fin"
+                  className="mb-1 block text-xs font-medium text-gray-600"
+                >
+                  Au
+                </label>
+                <input
+                  id="rapport-fin"
+                  type="date"
+                  value={fin}
+                  min={debut || undefined}
+                  onChange={(e) => setFin(e.target.value)}
+                  className={cn(inputClass, "w-[11rem]")}
+                />
+              </div>
+
+              <Button
+                onClick={() => setPeriode({ debut, fin })}
+                disabled={!periodeValide}
               >
                 Filtrer
-              </button>
+              </Button>
             </div>
+
+            {/* Le message remplace un filtrage silencieux : sans lui, cliquer
+                sur « Filtrer » avec des bornes inversées ne produirait rien et
+                laisserait croire à une absence de données. */}
+            {!periodeValide && (
+              <p className="text-[.8125rem] text-red-700">
+                {!debut || !fin
+                  ? "Renseignez les deux dates de la période."
+                  : "La date de fin ne peut pas précéder la date de début."}
+              </p>
+            )}
           </div>
 
-          {/* Tableau rapports */}
+          {/* ── Tableau ─────────────────────────────────────────────────── */}
           <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Période
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Factures de ventes
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Factures d&apos;avoirs
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Chiffre d&apos;affaires
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Encaissements
-                    </th>
+                    {[
+                      "Période",
+                      "Factures de ventes",
+                      "Factures d'avoirs",
+                      "Chiffre d'affaires",
+                      "Encaissements",
+                    ].map((titre) => (
+                      <th
+                        key={titre}
+                        className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600"
+                      >
+                        {titre}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {isReportLoading ? (
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="px-4 py-8 text-center text-sm text-gray-500"
-                      >
+                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
                         Chargement…
                       </td>
                     </tr>
                   ) : !report ? (
                     <tr>
-                      <td
-                        colSpan={5}
-                        className="px-4 py-8 text-center text-sm text-gray-500"
-                      >
+                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
                         Aucune donnée
                       </td>
                     </tr>
                   ) : (
-                    <tr>
-                      <td className="px-4 py-3 align-top text-sm font-medium text-gray-800">
-                        {report.period}
-                      </td>
-                      <td className="px-4 py-3 align-top text-sm text-gray-700">
-                        <div className="font-semibold">
-                          Total : {formatFCFA(report.totalSales)}
-                        </div>
-                        {report.byContracts && report.byContracts.length > 0 && (
-                          <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
-                            {report.byContracts.map((c, idx) => (
-                              <li key={idx}>
-                                {c.contractName} : {formatFCFA(c.total)}
-                              </li>
-                            ))}
-                          </ul>
+                    <>
+                      {/* Une ligne par mois civil. Les mois sans activité sont
+                          rendus à zéro par l'API plutôt qu'omis : un trou dans
+                          la suite se lirait comme une donnée manquante. La
+                          ventilation est masquée sur un mois unique, où elle
+                          répéterait la ligne de total. */}
+                      {ventile &&
+                        moisDuRapport.map((m) => (
+                          <tr key={`${m.year}-${m.month}`}>
+                            <td className="px-4 py-2.5 text-sm text-gray-700">{m.label}</td>
+                            <td className="px-4 py-2.5 text-sm tabular-nums text-gray-700">
+                              {formatCFA(m.sales)}
+                            </td>
+                            <td className="px-4 py-2.5 text-sm tabular-nums text-gray-700">
+                              {formatCFA(m.credits)}
+                            </td>
+                            <td className="px-4 py-2.5 text-sm tabular-nums text-gray-700">
+                              {formatCFA(m.turnover)}
+                            </td>
+                            <td className="px-4 py-2.5 text-sm tabular-nums text-gray-700">
+                              {formatCFA(m.collections)}
+                            </td>
+                          </tr>
+                        ))}
+
+                      {/* Ligne de total — et ligne unique quand la période
+                          couvre un seul mois. Le filet supérieur ne se justifie
+                          que s'il y a des lignes au-dessus à séparer. */}
+                      <tr
+                        className={cn(
+                          "bg-gray-50",
+                          ventile && "border-t-2 border-gray-300",
                         )}
-                      </td>
-                      <td className="px-4 py-3 align-top text-sm text-gray-700">
-                        <div className="font-semibold">
-                          Total : {formatFCFA(report.totalCredits)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 align-top text-sm text-gray-700">
-                        <div className="font-semibold">
-                          Total : {formatFCFA(report.turnover)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 align-top text-sm text-gray-700">
-                        <div className="font-semibold">
-                          Total : {formatFCFA(report.collections)}
-                        </div>
-                      </td>
-                    </tr>
+                      >
+                        <td className="px-4 py-3 align-top text-sm font-semibold text-gray-900">
+                          {ventile ? "Total" : report.period}
+                        </td>
+                        <td className="px-4 py-3 align-top text-sm text-gray-800">
+                          <div className="font-semibold tabular-nums">
+                            {formatCFA(report.totalSales)}
+                          </div>
+                          {report.byContracts && report.byContracts.length > 0 && (
+                            <ul className="mt-1 space-y-0.5 text-xs font-normal text-gray-600">
+                              {report.byContracts.map((c, idx) => (
+                                <li key={idx}>
+                                  {c.contractName} : {formatCFA(c.total)}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 align-top text-sm font-semibold tabular-nums text-gray-800">
+                          {formatCFA(report.totalCredits)}
+                        </td>
+                        <td className="px-4 py-3 align-top text-sm font-semibold tabular-nums text-gray-800">
+                          {formatCFA(report.turnover)}
+                        </td>
+                        <td className="px-4 py-3 align-top text-sm font-semibold tabular-nums text-gray-800">
+                          {formatCFA(report.collections)}
+                        </td>
+                      </tr>
+                    </>
                   )}
                 </tbody>
               </table>

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { useBranding } from "@/hooks/useBranding";
+import { useBranding, DEFAULT_APP_NAME } from "@/hooks/useBranding";
+import { BrandMark } from "./BrandMark";
 
 interface AppLogoProps {
   /**
@@ -57,28 +58,43 @@ export function AppLogo({
     );
   }
 
+  // Aucun logo configuré : on montre la marque du produit. Un laboratoire qui
+  // n'a pas encore téléversé la sienne voyait jusqu'ici son nom en gras générique
+  // ou une initiale dans un carré — l'application paraissait inachevée dès le
+  // premier écran. La marque du client, dès qu'elle existe, continue de primer
+  // (branche `src` ci-dessus).
+  //
+  // `initial` correspond aux contextes contraints (menu replié) : la lettrine.
   if (fallback === "initial") {
+    return <BrandMark surface={surface} compact className={fallbackClassName} />;
+  }
+
+  // Le nom paramétré prime sur celui du produit : un laboratoire qui a saisi sa
+  // raison sociale doit la voir, c'est la sienne. La marque AnapathLab ne
+  // s'affiche que tant qu'aucun nom propre n'a été renseigné.
+  //
+  // La comparaison lit la constante et non une chaîne recopiée : `useBranding`
+  // retombe sur `DEFAULT_APP_NAME` quand rien n'est configuré, si bien qu'un
+  // littéral divergent ici ferait passer le défaut pour un nom saisi — et le
+  // laboratoire verrait le nom du produit annoncé comme le sien.
+  if (appName && appName !== DEFAULT_APP_NAME) {
     return (
-      <div
+      <span
         className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white",
-          fallbackClassName
+          "text-xl font-bold tracking-[-0.02em]",
+          surface === "dark" ? "text-white" : "text-gray-900",
+          fallbackClassName,
         )}
       >
-        {appName.charAt(0).toUpperCase()}
-      </div>
+        {appName}
+      </span>
     );
   }
 
   return (
-    <span
-      className={cn(
-        "text-xl font-bold",
-        surface === "dark" ? "text-white" : "text-gray-800",
-        fallbackClassName
-      )}
-    >
-      {appName}
-    </span>
+    <BrandMark
+      surface={surface}
+      className={cn("text-xl", fallbackClassName)}
+    />
   );
 }

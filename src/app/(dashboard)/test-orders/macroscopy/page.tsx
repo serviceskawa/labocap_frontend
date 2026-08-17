@@ -698,7 +698,7 @@ export default function MacroscopyGlobalPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`rounded-full px-4 py-1.5 text-[.9rem] font-medium transition-colors ${
                   activeTab === tab.key
-                    ? "bg-green-600 text-white"
+                    ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >

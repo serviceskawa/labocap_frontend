@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, ClipboardList, Loader2 } from "lucide-react";
+import { Eye, ClipboardList } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTable } from "@/components/common/DataTable";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -18,6 +19,8 @@ import {
   type ReportPerformance,
 } from "@/lib/api/reports";
 import { usersApi, type User } from "@/lib/api/users";
+import { GuideProjecteur } from "@/components/ui/GuideProjecteur";
+import { ApercuCompteRendu } from "./ApercuCompteRendu";
 import type { PageResponse } from "@/types/api";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
@@ -73,6 +76,9 @@ export default function ReportsPage() {
   const [dateEnd, setDateEnd] = useState<string>("");
 
   // --- État : pagination
+  // Ligne dont l'aperçu est ouvert. `null` = panneau fermé.
+  const [apercu, setApercu] = useState<ReportListItem | null>(null);
+
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(10);
 
@@ -238,7 +244,10 @@ export default function ReportsPage() {
               <Link
                 href={`/test-orders/${r.testOrderId}/details`}
                 className="inline-flex items-center justify-center rounded-md bg-yellow-500 px-2 py-1.5 text-white transition-colors hover:bg-yellow-600"
-                title="Détails"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Détails (nouvel onglet)"
+                aria-label="Détails de la demande (nouvel onglet)"
               >
                 <ClipboardList className="h-4 w-4" />
               </Link>
@@ -297,6 +306,8 @@ export default function ReportsPage() {
             <label className={labelClass} htmlFor="filter-search">
               Rechercher
             </label>
+            {/* Le champ interroge aussi le texte du compte rendu : sans cette
+                mention, personne ne songe à y chercher un terme de diagnostic. */}
             <input
               id="filter-search"
               type="text"
@@ -305,6 +316,7 @@ export default function ReportsPage() {
                 setSearch(e.target.value);
                 setPage(0);
               }}
+              placeholder="Nom, téléphone, code ou mot du compte rendu…"
               className={inputClass}
             />
           </div>
@@ -362,8 +374,10 @@ export default function ReportsPage() {
           </div>
         </div>
 
+
         {/* Tableau */}
-        <DataTable
+        <div id="tableau-comptes-rendus">
+          <DataTable
           columns={columns}
           data={reports}
           isLoading={listQuery.isLoading}
@@ -375,7 +389,29 @@ export default function ReportsPage() {
             setPageSize(size);
             setPage(0);
           }}
+            onRowClick={setApercu}
+          />
+        </div>
+
+        {/*
+          Guide en projecteur : la page s'assombrit et seule la première ligne
+          reste éclairée. Il n'apparaît qu'une fois, et jamais sur un tableau
+          vide — il n'aurait alors rien à désigner.
+
+          Son bouton n'explique pas la fonction : il l'exécute sur cette même
+          ligne. On retient ce qu'on a vu se produire.
+        */}
+        <GuideProjecteur
+          cle="apercu-compte-rendu"
+          cible="#tableau-comptes-rendus tbody tr:first-child"
+          actif={!listQuery.isLoading && reports.length > 0 && !apercu}
+          titre="Aperçu rapide d'un compte rendu"
+          texte="Cliquez sur une ligne pour en lire un extrait dans un panneau latéral, sans quitter la liste."
+          actionLabel="Montrez-moi"
+          onAction={() => setApercu(reports[0])}
         />
+
+        <ApercuCompteRendu ligne={apercu} onClose={() => setApercu(null)} />
       </div>
 
       {/* ===================================================================
@@ -452,57 +488,52 @@ export default function ReportsPage() {
           </div>
 
           <div className="flex items-end">
-            <button
-              type="submit"
-              className="inline-flex w-full items-center justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:opacity-50"
-              disabled={perfQuery.isFetching}
-            >
-              {perfQuery.isFetching && (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              )}
+            <Button type="submit" className="w-full" loading={perfQuery.isFetching}>
               Filtrer
-            </button>
+            </Button>
           </div>
         </form>
 
         {/* Tableau statistique */}
         <div className="overflow-hidden rounded-lg border border-gray-200">
-          <table className="w-full text-sm [&_th]:border-r [&_th]:border-gray-300 [&_th:last-child]:border-r-0 [&_td]:border-r [&_td]:border-gray-200 [&_td:last-child]:border-r-0">
-            <thead className="border-b-2 border-gray-300 bg-gray-200">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800">
-                  Période
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800">
-                  Comptes sortis
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800">
-                  Délai respecté
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800">
-                  Hors Délai
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr>
-                <td className="px-4 py-3 text-gray-800">{periodLabel}</td>
-                <td className="px-4 py-3 text-gray-800">
-                  {perfQuery.isLoading ? "…" : (perf?.totalReports ?? 0)}
-                </td>
-                <td className="px-4 py-3 font-semibold text-green-600">
-                  {perfQuery.isLoading
-                    ? "…"
-                    : `${perf?.percentageInDeadline ?? 0} %`}
-                </td>
-                <td className="px-4 py-3 font-semibold text-red-600">
-                  {perfQuery.isLoading
-                    ? "…"
-                    : `${perf?.percentageOverDeadline ?? 0} %`}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm [&_th]:border-r [&_th]:border-gray-300 [&_th:last-child]:border-r-0 [&_td]:border-r [&_td]:border-gray-200 [&_td:last-child]:border-r-0">
+              <thead className="border-b-2 border-gray-300 bg-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800">
+                    Période
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800">
+                    Comptes sortis
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800">
+                    Délai respecté
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-gray-800">
+                    Hors Délai
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                <tr>
+                  <td className="px-4 py-3 text-gray-800">{periodLabel}</td>
+                  <td className="px-4 py-3 text-gray-800">
+                    {perfQuery.isLoading ? "…" : (perf?.totalReports ?? 0)}
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-green-600">
+                    {perfQuery.isLoading
+                      ? "…"
+                      : `${perf?.percentageInDeadline ?? 0} %`}
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-red-600">
+                    {perfQuery.isLoading
+                      ? "…"
+                      : `${perf?.percentageOverDeadline ?? 0} %`}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

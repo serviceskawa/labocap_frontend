@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCFA } from "@/lib/utils";
+
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm, Controller } from "react-hook-form";
@@ -37,7 +39,7 @@ type FormValues = z.infer<typeof schema>;
 
 
 function formatAmount(amount: number): string {
-  return new Intl.NumberFormat("fr-FR").format(amount) + " FCFA";
+  return formatCFA(amount);
 }
 
 /**

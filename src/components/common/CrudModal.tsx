@@ -96,7 +96,7 @@ export function CrudModal({
     >
       <div
         className={cn(
-          "relative flex max-h-[90vh] w-full flex-col rounded-xl bg-white shadow-[var(--elevation-overlay)]",
+          "relative flex max-h-[90vh] w-full flex-col rounded-[var(--radius-surface)] bg-white shadow-[var(--elevation-overlay)]",
           sizeClasses[size],
           contentClassName
         )}
@@ -112,7 +112,7 @@ export function CrudModal({
           </h2>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
+            className="rounded-[var(--radius-control)] p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40"
             aria-label="Fermer"
           >
             <X className="h-5 w-5" />
@@ -132,7 +132,7 @@ export function CrudModal({
                 type="button"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="rounded-lg border border-gray-300 bg-white px-[.9rem] py-2 text-[.9rem] font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40 disabled:opacity-50"
+                className="rounded-[var(--radius-control)] border border-gray-300 bg-white px-[.9rem] py-2 text-[.9rem] font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40 disabled:opacity-50"
               >
                 Annuler
               </button>

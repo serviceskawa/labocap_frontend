@@ -61,6 +61,36 @@ export function getApiErrorMessage(
 }
 
 /**
+ * Variante pour les appels `responseType: "blob"` (PDF, exports).
+ *
+ * Axios applique le type de réponse demandé à *toutes* les réponses, y compris
+ * les erreurs : sur un 422, `response.data` est un Blob et non l'objet JSON.
+ * `data.message` vaut donc `undefined` et {@link getApiErrorMessage} retombe sur
+ * son repli générique — le message du serveur est perdu alors qu'il est là.
+ *
+ * C'est ce qui rendait « Erreur lors de la génération du PDF » indéchiffrable :
+ * le backend renvoie la cause exacte (`InvalidOperationException`, cf.
+ * PdfReportServiceImpl), et le front l'effaçait avant de l'afficher.
+ */
+export async function getApiErrorMessageFromBlob(
+  err: unknown,
+  fallback = "Une erreur est survenue"
+): Promise<string> {
+  const data = (err as AxiosError<ApiError | Blob>).response?.data;
+  if (data instanceof Blob) {
+    try {
+      const parsed = JSON.parse(await data.text()) as ApiError;
+      const message = translateApiError(parsed?.message);
+      if (message) return message;
+    } catch {
+      // Corps vide, non-JSON ou illisible : le repli générique reste préférable
+      // à l'affichage d'un fragment brut.
+    }
+  }
+  return getApiErrorMessage(err as AxiosError<ApiError> | Error, fallback);
+}
+
+/**
  * Reporte les erreurs de validation du backend sur les champs du formulaire.
  *
  * Le backend renvoie déjà le détail champ par champ :

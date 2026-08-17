@@ -165,7 +165,7 @@ export function TablePaginationFooter({
           type="button"
           onClick={() => setPageIndex(pageIndex - 1)}
           disabled={pageIndex === 0}
-          className="flex h-8 items-center justify-center rounded-lg px-3 text-[.875rem] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          className="flex h-8 items-center justify-center rounded-[var(--radius-control)] px-3 text-[.875rem] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
         >
           Précédent
         </button>
@@ -181,7 +181,7 @@ export function TablePaginationFooter({
               type="button"
               onClick={() => setPageIndex(page)}
               className={cn(
-                "flex h-8 min-w-[2rem] items-center justify-center rounded-lg px-2 text-[.875rem] font-medium transition-colors",
+                "flex h-8 min-w-[2rem] items-center justify-center rounded-[var(--radius-control)] px-2 text-[.875rem] font-medium transition-colors",
                 pageIndex === page
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-gray-600 hover:bg-gray-100 hover:text-gray-900",
@@ -196,7 +196,7 @@ export function TablePaginationFooter({
           type="button"
           onClick={() => setPageIndex(pageIndex + 1)}
           disabled={pageIndex >= pageCount - 1}
-          className="flex h-8 items-center justify-center rounded-lg px-3 text-[.875rem] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          className="flex h-8 items-center justify-center rounded-[var(--radius-control)] px-3 text-[.875rem] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
         >
           Suivant
         </button>

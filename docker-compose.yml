@@ -15,5 +15,11 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
+      # Content Security Policy (cf. docs/csp.md). Variable lue AU RUNTIME par
+      # le proxy — contrairement aux NEXT_PUBLIC_*, elle ne nécessite pas de
+      # reconstruire l'image : un `docker compose up -d` suffit à basculer.
+      #   absente / false → Content-Security-Policy-Report-Only (observation)
+      #   true            → Content-Security-Policy (blocage effectif)
+      CSP_ENFORCE: ${CSP_ENFORCE:-false}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
