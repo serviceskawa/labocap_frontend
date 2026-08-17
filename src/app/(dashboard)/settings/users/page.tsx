@@ -6,7 +6,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, Trash2, UserX, UserCheck } from "lucide-react";
+import { Eye, Trash2, UserX, UserCheck, Smartphone } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 import type { UseFormReturn } from "react-hook-form";
@@ -21,6 +21,7 @@ import {
   type RowAction,
 } from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
+import { AccesMobile } from "./AccesMobile";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -100,6 +101,9 @@ export default function UsersPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  /// Utilisateur dont on gère l'accès mobile, ou `null` si la fenêtre est fermée.
+  const [accesMobile, setAccesMobile] = useState<User | null>(null);
 
   // Signature (data-URL) capturée depuis le champ fichier de chaque modale.
   const createSignatureRef = useRef<string | undefined>(undefined);
@@ -291,6 +295,18 @@ export default function UsersPage() {
           });
         }
 
+        if (can(PERMISSIONS.EDIT_USERS)) {
+          // Séparé de « Voir / modifier » : ouvrir un accès mobile engendre deux
+          // secrets à transmettre séance tenante, ce qui n'a rien à voir avec la
+          // retouche d'une fiche et ne doit pas s'y perdre.
+          actions.push({
+            label: "Accès mobile",
+            icon: <Smartphone className="h-4 w-4" />,
+            variant: "secondary",
+            onClick: () => setAccesMobile(utilisateur),
+          });
+        }
+
         if (can(PERMISSIONS.DELETE_USERS)) {
           actions.push({
             label: "Supprimer",
@@ -393,6 +409,14 @@ export default function UsersPage() {
         confirmVariant="danger"
         isLoading={deleteMutation.isPending}
       />
+
+      {/* ---- Accès à l'application mobile ---- */}
+      {accesMobile && (
+        <AccesMobile
+          utilisateur={accesMobile}
+          onClose={() => setAccesMobile(null)}
+        />
+      )}
     </div>
   );
 }
