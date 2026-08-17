@@ -6,8 +6,9 @@ import { toast } from "sonner";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { Wallet } from "lucide-react";
+import { BadgeCheck, ExternalLink, FileMinus, ShieldCheck, Wallet } from "lucide-react";
 
+import { CrudModal } from "@/components/common/CrudModal";
 import { DataTable } from "@/components/common/DataTable";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -111,6 +112,16 @@ const lineColumns: ColumnDef<InvoiceLine>[] = [
  */
 const CODE_NORMALISE_LENGTH = 24;
 
+/** Une ligne du récapitulatif présenté avant confirmation. */
+function RecapRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 px-3 py-2">
+      <dt className="text-sm text-gray-500">{label}</dt>
+      <dd className="text-sm font-medium text-gray-900">{value || "—"}</dd>
+    </div>
+  );
+}
+
 const NOTE_IMPORTANTE =
   "Les résultats de vos analyses seront disponibles dans un délai de 3 semaines. " +
   "Selon la complexité du cas, les résultats peuvent être disponibles plus tôt ou plus tard. " +
@@ -132,6 +143,11 @@ export default function InvoiceDetailPage({
 
   const [payment, setPayment] = useState<InvoicePayment>("ESPECES");
   const [codeNormalise, setCodeNormalise] = useState("");
+
+  /** Récapitulatif de confirmation, avant tout envoi à la DGI. */
+  const [showNormalizeModal, setShowNormalizeModal] = useState(false);
+  /** Récapitulatif de confirmation, avant création de l'avoir. */
+  const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
     queryKey: ["invoice", id],
@@ -172,6 +188,57 @@ export default function InvoiceDetailPage({
       // erreurs d'API portent le leur dans la réponse.
       const apiMessage = (err as AxiosError<ApiError>).response?.data?.message;
       toast.error(apiMessage ?? err.message ?? "Erreur lors du paiement");
+    },
+  });
+
+  /**
+   * Normalisation DGI.
+   *
+   * Le document s'ouvre dans un nouvel onglet dès la première normalisation.
+   * L'ouverture peut être refusée par le bloqueur de fenêtres — elle survient
+   * après un aller-retour réseau, donc hors du geste utilisateur qui l'a
+   * déclenchée. On le dit alors explicitement : le bouton « Voir la facture
+   * normalisée », désormais présent, reste le chemin d'accès au document.
+   */
+  const normalizeMutation = useMutation({
+    mutationFn: () => invoicesApi.normalize(id).then((r) => r.data),
+    onSuccess: (normalized: Invoice) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      setShowNormalizeModal(false);
+      toast.success("Facture normalisée");
+
+      if (normalized?.normalizedUrl) {
+        const onglet = window.open(
+          normalized.normalizedUrl,
+          "_blank",
+          "noopener,noreferrer",
+        );
+        if (!onglet) {
+          toast.info(
+            "Ouverture bloquée par le navigateur — utilisez « Voir la facture normalisée ».",
+          );
+        }
+      }
+    },
+    onError: (err: Error) => {
+      const apiMessage = (err as AxiosError<ApiError>).response?.data?.message;
+      toast.error(apiMessage ?? err.message ?? "Erreur lors de la normalisation");
+    },
+  });
+
+  /** Création de l'avoir. La facture d'origine reste intacte. */
+  const creditNoteMutation = useMutation({
+    mutationFn: () => invoicesApi.createCreditNote(id).then((r) => r.data),
+    onSuccess: (avoir: Invoice) => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      setShowCreditNoteModal(false);
+      toast.success(`Facture d'avoir ${avoir?.code ?? ""} créée`);
+    },
+    onError: (err: Error) => {
+      const apiMessage = (err as AxiosError<ApiError>).response?.data?.message;
+      toast.error(apiMessage ?? err.message ?? "Erreur lors de la création de l'avoir");
     },
   });
 
@@ -225,6 +292,13 @@ export default function InvoiceDetailPage({
   const refund = invoice.refund;
 
   /**
+   * Une facture normalisée l'est définitivement : le lien du document fait foi.
+   * Il commande le basculement « Normaliser » → « Voir la facture normalisée ».
+   */
+  const isNormalized = Boolean(invoice.normalizedUrl);
+  const canEditInvoices = can(PERMISSIONS.EDIT_INVOICES);
+
+  /**
    * Lignes du tableau. Un avoir n'en porte qu'une, reprenant la raison du
    * remboursement ; une facture de vente liste ses prestations.
    */
@@ -262,11 +336,107 @@ export default function InvoiceDetailPage({
       <PageHeader
         title={title}
         action={
-          <Button onClick={pdfAction.run} loading={pdfAction.pending}>
-            Voir tout
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Une fois normalisée, la facture ne propose plus que l'accès au
+                document : la renvoyer produirait un second document fiscal. */}
+            {isNormalized ? (
+              <Button
+                variant="secondary"
+                icon={<ExternalLink className="h-4 w-4" />}
+                onClick={() =>
+                  window.open(
+                    invoice.normalizedUrl,
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                Voir la facture normalisée
+              </Button>
+            ) : (
+              canEditInvoices && (
+                <Button
+                  variant="secondary"
+                  icon={<ShieldCheck className="h-4 w-4" />}
+                  onClick={() => setShowNormalizeModal(true)}
+                >
+                  Normaliser la facture
+                </Button>
+              )
+            )}
+
+            {/* L'avoir contrepasse une vente : il n'a pas de sens sur un avoir. */}
+            {!isAvoir && canEditInvoices && (
+              <Button
+                variant="secondary"
+                icon={<FileMinus className="h-4 w-4" />}
+                onClick={() => setShowCreditNoteModal(true)}
+              >
+                Créer une facture d&apos;avoir
+              </Button>
+            )}
+
+            <Button onClick={pdfAction.run} loading={pdfAction.pending}>
+              Voir tout
+            </Button>
+          </div>
         }
       />
+
+      {/* Récapitulatif avant envoi à la DGI. La normalisation est irréversible :
+          l'utilisateur doit voir ce qu'il engage avant de confirmer. */}
+      <CrudModal
+        isOpen={showNormalizeModal}
+        onClose={() => setShowNormalizeModal(false)}
+        title="Normaliser la facture"
+        submitLabel="Confirmer la normalisation"
+        isSubmitting={normalizeMutation.isPending}
+        onSubmit={() => normalizeMutation.mutate()}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Vérifiez ces informations : une facture normalisée ne peut plus
+            l&apos;être une seconde fois.
+          </p>
+          <dl className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+            <RecapRow label="Type" value={isAvoir ? "Facture d'avoir" : "Facture de vente"} />
+            <RecapRow label="Code" value={invoice.code ?? ""} />
+            <RecapRow label="Date" value={formatDateTimeSql(invoice.createdAt)} />
+            <RecapRow label="Client" value={invoice.clientName ?? ""} />
+            <RecapRow label="Nombre de lignes" value={String(lines.length)} />
+            <RecapRow
+              label="Montant TTC"
+              value={`${formatMontant(Number(invoice.total ?? 0))} FCFA`}
+            />
+          </dl>
+        </div>
+      </CrudModal>
+
+      {/* Récapitulatif avant création de l'avoir. */}
+      <CrudModal
+        isOpen={showCreditNoteModal}
+        onClose={() => setShowCreditNoteModal(false)}
+        title="Créer une facture d'avoir"
+        submitLabel="Créer l'avoir"
+        isSubmitting={creditNoteMutation.isPending}
+        onSubmit={() => creditNoteMutation.mutate()}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            L&apos;avoir est l&apos;opération inverse de cette vente. Il
+            s&apos;enregistre comme une facture distincte : la facture
+            d&apos;origine reste intacte.
+          </p>
+          <dl className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+            <RecapRow label="Facture contrepassée" value={invoice.code ?? ""} />
+            <RecapRow label="Client" value={invoice.clientName ?? ""} />
+            <RecapRow
+              label="Montant de l'avoir"
+              value={`${formatMontant(Number(invoice.total ?? 0))} FCFA`}
+            />
+          </dl>
+        </div>
+      </CrudModal>
 
       {/* ---- Document ---- */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -310,6 +480,15 @@ export default function InvoiceDetailPage({
               <strong>CODE MECeF / DGI: </strong>
               <span className="uppercase"> {invoice.codeNormalise ?? ""}</span>
             </p>
+            {/* Le flow demande qu'une facture normalisée le dise d'elle-même :
+                sans ce libellé, l'absence du bouton « Normaliser » se lirait
+                comme un droit manquant plutôt que comme une opération faite. */}
+            {isNormalized && (
+              <p className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-[.8rem] font-medium text-green-700">
+                <BadgeCheck className="h-4 w-4" />
+                Facture déjà normalisée
+              </p>
+            )}
           </div>
 
           {/* Colonne 2 — le destinataire */}
