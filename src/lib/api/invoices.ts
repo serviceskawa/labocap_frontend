@@ -189,6 +189,16 @@ export const invoicesApi = {
   normalize: (id: string) =>
     apiClient.post<Invoice>(`/invoices/${id}/normalize`),
 
+  /**
+   * Télécharge le document de la facture normalisée.
+   *
+   * Passe par le backend et non par `normalizedUrl` : l'adresse du document
+   * chez FluidInvoice est authentifiée par la clé API, que le navigateur ne
+   * doit pas connaître.
+   */
+  downloadNormalizedDocument: (id: string) =>
+    apiClient.get(`/invoices/${id}/normalized-document`, { responseType: "blob" }),
+
   /** Crée la facture d'avoir contrepassant cette facture de vente. */
   createCreditNote: (id: string) =>
     apiClient.post<Invoice>(`/invoices/${id}/credit-note`),

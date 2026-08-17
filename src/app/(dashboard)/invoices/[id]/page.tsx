@@ -192,6 +192,37 @@ export default function InvoiceDetailPage({
   });
 
   /**
+   * Ouvre le document de la facture normalisée.
+   *
+   * Le document est récupéré par le backend, qui seul détient la clé API de
+   * FluidInvoice, puis ouvert depuis un blob local — même chemin que « Voir
+   * tout » juste en dessous.
+   */
+  const ouvrirDocumentNormalise = async () => {
+    try {
+      const res = await invoicesApi.downloadNormalizedDocument(id);
+      const blob = new Blob([res.data as BlobPart], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const onglet = window.open(url, "_blank");
+      if (!onglet) {
+        toast.info(
+          "Ouverture bloquée par le navigateur — utilisez « Voir la facture normalisée ».",
+        );
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      toast.error(
+        await getApiErrorMessageFromBlob(
+          err,
+          "Erreur lors de l'ouverture du document normalisé",
+        ),
+      );
+    }
+  };
+
+  const normalizedDocAction = useAsyncAction(ouvrirDocumentNormalise);
+
+  /**
    * Normalisation DGI.
    *
    * Le document s'ouvre dans un nouvel onglet dès la première normalisation.
@@ -209,16 +240,7 @@ export default function InvoiceDetailPage({
       toast.success("Facture normalisée");
 
       if (normalized?.normalizedUrl) {
-        const onglet = window.open(
-          normalized.normalizedUrl,
-          "_blank",
-          "noopener,noreferrer",
-        );
-        if (!onglet) {
-          toast.info(
-            "Ouverture bloquée par le navigateur — utilisez « Voir la facture normalisée ».",
-          );
-        }
+        void ouvrirDocumentNormalise();
       }
     },
     onError: (err: Error) => {
@@ -343,13 +365,8 @@ export default function InvoiceDetailPage({
               <Button
                 variant="secondary"
                 icon={<ExternalLink className="h-4 w-4" />}
-                onClick={() =>
-                  window.open(
-                    invoice.normalizedUrl,
-                    "_blank",
-                    "noopener,noreferrer",
-                  )
-                }
+                onClick={normalizedDocAction.run}
+                loading={normalizedDocAction.pending}
               >
                 Voir la facture normalisée
               </Button>
