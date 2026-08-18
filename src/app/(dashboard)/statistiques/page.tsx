@@ -1,8 +1,12 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { SearchX } from "lucide-react";
 
+import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ProgressTable } from "@/components/dashboard/ProgressTable";
 import { DonutChart } from "@/components/dashboard/DonutChart";
@@ -127,7 +131,28 @@ export default function StatistiquesPage() {
     { name: "En attente", value: stats?.noFinishTest ?? 0, color: CHART_STATUS.critical },
   ];
 
-  const doctorStatsPagination = useTablePagination(doctorStats);
+  // « Rechercher: » du tableau « Statistique par docteurs ». C'est le seul
+  // tableau de ces statistiques réellement initialisé en DataTable côté Laravel
+  // (viewjs/home.js sur #datatable1, et jQuery ne prend que la première des
+  // trois tables portant cet id) : il est donc le seul à avoir un champ de
+  // recherche. Laravel exclut la colonne « Docteurs » de la recherche
+  // (columnDefs searchable:false sur la colonne 0), ce qui ne laisse chercher
+  // que sur les compteurs ; on cherche ici sur les trois colonnes, ce que
+  // l'utilisateur attend d'un champ posé au-dessus d'une liste de docteurs.
+  const [doctorStatsSearch, setDoctorStatsSearch] = useState("");
+  const doctorStatsFiltered = useMemo(() => {
+    const q = doctorStatsSearch.trim().toLowerCase();
+    if (!q) return doctorStats;
+    return doctorStats.filter((ds: DoctorStat) =>
+      [ds.doctor, ds.assigne, ds.traite].some((v) =>
+        String(v ?? "")
+          .toLowerCase()
+          .includes(q),
+      ),
+    );
+  }, [doctorStats, doctorStatsSearch]);
+
+  const doctorStatsPagination = useTablePagination(doctorStatsFiltered);
   const connectedUsersPagination = useTablePagination(connectedUsers);
 
   return (
@@ -303,7 +328,13 @@ export default function StatistiquesPage() {
         <div className="flex-1">
           <Card>
             <CardHeader title="Statistique par docteurs" />
-            <TableLengthControl pagination={doctorStatsPagination} className="px-6" />
+            <TableLengthControl pagination={doctorStatsPagination} className="px-6">
+              <SearchInput
+                className="sm:w-56"
+                value={doctorStatsSearch}
+                onChange={(e) => setDoctorStatsSearch(e.target.value)}
+              />
+            </TableLengthControl>
             <div className="overflow-x-auto px-3">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
@@ -320,11 +351,30 @@ export default function StatistiquesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {doctorStatsLoading
-                    ? Array.from({ length: 4 }).map((_, i) => (
-                        <SkeletonRow key={i} cols={3} />
-                      ))
-                    : doctorStatsPagination.pageRows.map((ds: DoctorStat, i) => (
+                  {doctorStatsLoading ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <SkeletonRow key={i} cols={3} />
+                    ))
+                  ) : doctorStatsPagination.total === 0 ? (
+                    // Une recherche infructueuse laissait un corps de tableau
+                    // vide entre l'en-tête et le paginateur : l'écran passait
+                    // pour cassé au lieu de dire qu'il n'y a rien à montrer.
+                    <tr>
+                      <td colSpan={3} className="p-0">
+                        <EmptyState
+                          compact
+                          icon={SearchX}
+                          title="Aucun résultat"
+                          description={
+                            doctorStatsSearch.trim()
+                              ? `Aucun docteur ne correspond à « ${doctorStatsSearch.trim()} ».`
+                              : "Aucune statistique par docteur pour l'instant."
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    doctorStatsPagination.pageRows.map((ds: DoctorStat, i) => (
                         <tr
                           key={i}
                           className="transition-colors duration-[var(--duration-instant)] ease-emphasized hover:bg-blue-50/40"
@@ -339,7 +389,8 @@ export default function StatistiquesPage() {
                             {ds.traite}
                           </td>
                         </tr>
-                      ))}
+                      ))
+                  )}
                 </tbody>
               </table>
             </div>

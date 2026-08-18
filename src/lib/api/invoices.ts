@@ -56,6 +56,13 @@ export interface Invoice {
   codeMecef?: string;
   /** Code normalisé saisi par le caissier (24 caractères). Distinct de codeMecef. */
   codeNormalise?: string;
+  /**
+   * Lien FluidInvoice vers le document de la facture normalisée.
+   *
+   * Sa présence vaut preuve de normalisation : c'est elle qui fait basculer la
+   * page de « Normaliser la facture » à « Voir la facture normalisée ».
+   */
+  normalizedUrl?: string;
   qrcode?: string;
   /** Code de la facture de vente d'origine, pour un avoir. */
   referenceCode?: string;
@@ -172,6 +179,29 @@ export const invoicesApi = {
     apiClient.get<{ exists: boolean }>("/invoices/check-code", {
       params: { code },
     }),
+
+  /**
+   * Normalise la facture auprès de la DGI via FluidInvoice.
+   *
+   * Renvoie la facture enrichie de son code MECeF et de `normalizedUrl`, le lien
+   * du document que la page ouvre dans un nouvel onglet.
+   */
+  normalize: (id: string) =>
+    apiClient.post<Invoice>(`/invoices/${id}/normalize`),
+
+  /**
+   * Télécharge le document de la facture normalisée.
+   *
+   * Passe par le backend et non par `normalizedUrl` : l'adresse du document
+   * chez FluidInvoice est authentifiée par la clé API, que le navigateur ne
+   * doit pas connaître.
+   */
+  downloadNormalizedDocument: (id: string) =>
+    apiClient.get(`/invoices/${id}/normalized-document`, { responseType: "blob" }),
+
+  /** Crée la facture d'avoir contrepassant cette facture de vente. */
+  createCreditNote: (id: string) =>
+    apiClient.post<Invoice>(`/invoices/${id}/credit-note`),
 
   confirmMecef: (id: string, uid: string) =>
     apiClient.post<Invoice>(`/invoices/${id}/confirm-mecef`, { uid }),
