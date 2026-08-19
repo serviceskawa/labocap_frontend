@@ -111,6 +111,16 @@ export interface ReportSuivi {
 
 export interface StoreSignatureRequest {
   signatorName: string;
+  /**
+   * À quel titre la personne emporte le compte rendu — « Lui-même », « Mère »,
+   * « Coursier »…
+   *
+   * Facultative côté serveur : un champ qu'on remplit pour passer outre ne
+   * vaudrait rien comme justification. Mais le web et le mobile écrivent les
+   * mêmes colonnes, et ne la poser que sur l'un donnerait une trace à moitié
+   * remplie selon le guichet emprunté.
+   */
+  relation?: string;
   signature: string;
 }
 
