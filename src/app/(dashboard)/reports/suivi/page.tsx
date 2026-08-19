@@ -270,7 +270,7 @@ function DeliveryCell({ row, onOpenSignature, onOpenDetail }: DeliveryCellProps)
 interface SignatureModalProps {
   row: ReportSuiviRow | null;
   onClose: () => void;
-  onSubmit: (signatorName: string, signature: string) => void;
+  onSubmit: (signatorName: string, relation: string, signature: string) => void;
   isSubmitting: boolean;
 }
 
@@ -291,7 +291,7 @@ function SignatureModal({ row, onClose, onSubmit, isSubmitting }: SignatureModal
 interface SignatureModalInnerProps {
   row: ReportSuiviRow;
   onClose: () => void;
-  onSubmit: (signatorName: string, signature: string) => void;
+  onSubmit: (signatorName: string, relation: string, signature: string) => void;
   isSubmitting: boolean;
 }
 
@@ -303,6 +303,7 @@ function SignatureModalInner({
 }: SignatureModalInnerProps) {
   const padRef = useRef<SignaturePadHandle | null>(null);
   const [retrieverName, setRetrieverName] = useState("");
+  const [relation, setRelation] = useState("");
   const [usePatientName, setUsePatientName] = useState(false);
 
   const fullPatientName = `${row.patientFirstname ?? ""} ${row.patientLastname ?? ""}`.trim();
@@ -310,6 +311,9 @@ function SignatureModalInner({
   const handleTogglePatient = (checked: boolean) => {
     setUsePatientName(checked);
     setRetrieverName(checked ? fullPatientName : "");
+    // Cocher la case répond déjà à « à quel titre ? ». Décocher rend la main
+    // sans effacer ce que l'agent aurait écrit entre-temps.
+    if (checked) setRelation("Lui-même");
   };
 
   /**
@@ -343,7 +347,7 @@ function SignatureModalInner({
       toast.error("Veuillez signer dans le cadre prévu");
       return;
     }
-    onSubmit(retrieverName.trim(), pad.toDataURL());
+    onSubmit(retrieverName.trim(), relation.trim(), pad.toDataURL());
   };
 
   return (
@@ -1172,7 +1176,7 @@ export default function ReportsSuiviPage() {
       data,
     }: {
       id: string;
-      data: { signatorName: string; signature: string };
+      data: { signatorName: string; relation?: string; signature: string };
     }) => reportsApi.storeSignature(id, data),
     onSuccess: () => {
       toast.success("Signature enregistrée avec succès");
@@ -1258,11 +1262,16 @@ export default function ReportsSuiviPage() {
         key={signatureRow?.reportId ?? "closed"}
         row={signatureRow}
         onClose={() => setSignatureRow(null)}
-        onSubmit={(signatorName, signature) => {
+        onSubmit={(signatorName, relation, signature) => {
           if (!signatureRow) return;
           signatureMutation.mutate({
             id: signatureRow.reportId,
-            data: { signatorName, signature },
+            // La qualité n'est envoyée que si elle a été saisie : une chaîne
+            // vide écrirait un blanc en base, indistinguable d'un champ rempli
+            // puis effacé.
+            data: relation
+              ? { signatorName, relation, signature }
+              : { signatorName, signature },
           });
         }}
         isSubmitting={signatureMutation.isPending}

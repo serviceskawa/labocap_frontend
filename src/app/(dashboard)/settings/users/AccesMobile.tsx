@@ -4,8 +4,10 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Copy, Smartphone, ShieldOff, KeyRound } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 
 import { CrudModal } from "@/components/common/CrudModal";
+import { API_ORIGIN } from "@/lib/api/client";
 import {
   mobileAccessApi,
   type MobileAccessSecrets,
@@ -102,6 +104,41 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
                 Ces deux codes ne seront plus jamais affichés — seules leurs
                 empreintes sont conservées. Les régénérer invalidera ceux-ci.
               </p>
+
+              {/*
+                Le QR d'abord : rattacher un téléphone demandait de recopier une
+                adresse, une adresse électronique et huit caractères sur un
+                clavier de téléphone, sous la dictée. Trois occasions de se
+                tromper, dont la dernière consomme le code à usage unique.
+
+                Il ne porte rien de plus que les deux champs affichés juste en
+                dessous — même secret, même durée de vie, même usage unique.
+                Le code PIN en est absent : il ouvre les sessions suivantes et
+                n'a pas à voyager sur un écran qu'on photographie.
+              */}
+              <div className="mt-4 flex flex-col items-center rounded-lg bg-white p-4">
+                <QRCodeSVG
+                  value={JSON.stringify({
+                    v: 1,
+                    url: API_ORIGIN,
+                    email: utilisateur.email,
+                    code: secrets.codeEnrolement,
+                    // Le nom sert à baptiser l'appareil dans la liste ci-dessous.
+                    // L'agent ne le saisit plus : c'est le seul libellé que
+                    // l'administrateur cherchait de toute façon en révoquant.
+                    nom: secrets.nomComplet,
+                  })}
+                  size={196}
+                  level="M"
+                  marginSize={2}
+                />
+                <p className="mt-3 text-center text-xs text-blue-900">
+                  À scanner depuis l&apos;application, écran de connexion. Il
+                  rattache le téléphone à lui seul.
+                  <br />
+                  Le code PIN reste à saisir à la main, à chaque session.
+                </p>
+              </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <Secret
