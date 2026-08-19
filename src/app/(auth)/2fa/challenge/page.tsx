@@ -14,6 +14,7 @@ import {
   getPending2faEmail,
   getPending2faExpiry,
   getPending2faTotalMs,
+  pending2faParApplication,
 } from "@/lib/auth-2fa";
 import { AuthCard } from "@/components/ui/AuthCard";
 import { OtpCountdown } from "@/components/ui/OtpCountdown";
@@ -58,6 +59,10 @@ export default function TwoFactorChallengePage() {
   const maskedEmail = storedEmail
     ? maskEmail(storedEmail)
     : "votre adresse e-mail";
+
+  // Le code vient-il de l'application ? Le serveur l'a dit au login ; l'écran
+  // en a besoin pour ne pas annoncer un courriel que personne n'a reçu.
+  const parApplication = pending2faParApplication();
 
   /** Fin du challenge : verrou levé, retour à l'écran de connexion. */
   const backToLogin = useCallback(
@@ -187,10 +192,20 @@ export default function TwoFactorChallengePage() {
       // déjà le mot de passe appelle pour réclamer le code qui vient d'arriver.
       tip={OTP_TIP}
       subtitle={
-        <>
-          Saisissez le code à 6 chiffres envoyé à{" "}
-          <strong className="font-semibold text-gray-700">{maskedEmail}</strong>.
-        </>
+        parApplication ? (
+          <>
+            Saisissez le code à 6 chiffres affiché par votre application, dans{" "}
+            <strong className="font-semibold text-gray-700">
+              Codes de connexion
+            </strong>
+            .
+          </>
+        ) : (
+          <>
+            Saisissez le code à 6 chiffres envoyé à{" "}
+            <strong className="font-semibold text-gray-700">{maskedEmail}</strong>.
+          </>
+        )
       }
       footer={
         <a
@@ -245,7 +260,15 @@ export default function TwoFactorChallengePage() {
         </Button>
 
         <p className="mt-4 text-center text-[.875rem] text-gray-500">
-          Vous n&apos;avez pas reçu le code ?{" "}
+          {/*
+            Un repli, et non un simple renvoi. Pour qui a l'application, ce lien
+            est la porte de sortie du téléphone perdu, déchargé ou resté à la
+            maison : sans lui, un second facteur qu'on ne peut plus lire
+            enfermerait dehors.
+          */}
+          {parApplication
+            ? "Téléphone indisponible ? "
+            : "Vous n'avez pas reçu le code ? "}
           {/* <button> et non <a href="#"> : ce n'est pas une navigation. Un lien
               vide reste focalisable et annoncé comme tel par un lecteur
               d'écran, alors qu'il déclenche une action. */}
@@ -255,7 +278,11 @@ export default function TwoFactorChallengePage() {
             disabled={isResending}
             className="rounded-[var(--radius-control)] font-semibold text-blue-600 transition-colors duration-[var(--duration-fast)] ease-emphasized hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40 disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline"
           >
-            {isResending ? "Envoi en cours…" : "Renvoyer"}
+            {isResending
+              ? "Envoi en cours…"
+              : parApplication
+                ? "Recevoir un code par courriel"
+                : "Renvoyer"}
           </button>
         </p>
       </form>
