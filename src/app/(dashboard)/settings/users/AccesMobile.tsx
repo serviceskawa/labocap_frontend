@@ -123,15 +123,20 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
                     url: API_ORIGIN,
                     email: utilisateur.email,
                     code: secrets.codeEnrolement,
+                    // Le nom sert à baptiser l'appareil dans la liste ci-dessous.
+                    // L'agent ne le saisit plus : c'est le seul libellé que
+                    // l'administrateur cherchait de toute façon en révoquant.
+                    nom: secrets.nomComplet,
                   })}
                   size={196}
                   level="M"
                   marginSize={2}
                 />
                 <p className="mt-3 text-center text-xs text-blue-900">
-                  À scanner depuis l&apos;application, écran de connexion.
+                  À scanner depuis l&apos;application, écran de connexion. Il
+                  rattache le téléphone à lui seul.
                   <br />
-                  Le code PIN reste à saisir à la main.
+                  Le code PIN reste à saisir à la main, à chaque session.
                 </p>
               </div>
 
