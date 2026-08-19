@@ -68,7 +68,7 @@ export default function LoginPage() {
         // par l'API : rien de sensible à stocker côté navigateur. On mémorise
         // seulement l'e-mail (affichage masqué) et l'échéance du code (décompte
         // + verrouillage de /login jusqu'à expiration).
-        beginPending2fa(data.email, result.expiresIn);
+        beginPending2fa(data.email, result.expiresIn, result.otpCanal);
         router.replace("/2fa/challenge");
         return;
       }

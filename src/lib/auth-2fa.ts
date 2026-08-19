@@ -29,6 +29,15 @@ export const PENDING_2FA_EMAIL_COOKIE = "pending_2fa_email";
  * change côté API (`JwtTokenProvider.TEMP_TOKEN_VALIDITY_MS`).
  */
 export const PENDING_2FA_TOTAL_COOKIE = "pending_2fa_total";
+/**
+ * Canal par lequel le code a été mis à disposition : « APP » ou « EMAIL ».
+ *
+ * Mémorisé pour que l'écran de saisie se formule juste. Annoncer « code envoyé
+ * à v…@caap.bj » à quelqu'un qui n'a rien reçu — parce que son application
+ * l'engendre — le ferait attendre un courriel qui ne viendra pas, puis appeler
+ * l'assistance.
+ */
+export const PENDING_2FA_CANAL_COOKIE = "pending_2fa_canal";
 /** Cookie HttpOnly posé par l'API — non lisible ici, lu par le proxy serveur. */
 export const PENDING_2FA_COOKIE = "pending_2fa";
 
@@ -60,11 +69,21 @@ function deleteCookie(name: string): void {
  * @param email     adresse saisie au login (affichée masquée sur l'écran de saisie)
  * @param expiresIn durée de validité du code en secondes, telle que renvoyée par l'API
  */
-export function beginPending2fa(email: string, expiresIn?: number | null): void {
+export function beginPending2fa(
+  email: string,
+  expiresIn?: number | null,
+  canal?: string | null,
+): void {
   const ttl = expiresIn && expiresIn > 0 ? Math.floor(expiresIn) : DEFAULT_TTL_SECONDS;
   writeCookie(PENDING_2FA_UNTIL_COOKIE, String(Date.now() + ttl * 1000), ttl);
   writeCookie(PENDING_2FA_EMAIL_COOKIE, email, ttl);
   writeCookie(PENDING_2FA_TOTAL_COOKIE, String(ttl), ttl);
+  writeCookie(PENDING_2FA_CANAL_COOKIE, canal === "APP" ? "APP" : "EMAIL", ttl);
+}
+
+/** Le code est-il attendu depuis l'application d'authentification ? */
+export function pending2faParApplication(): boolean {
+  return readCookie(PENDING_2FA_CANAL_COOKIE) === "APP";
 }
 
 /** Ferme le challenge (code validé, ou expiré côté client). */
@@ -72,6 +91,7 @@ export function clearPending2fa(): void {
   deleteCookie(PENDING_2FA_UNTIL_COOKIE);
   deleteCookie(PENDING_2FA_EMAIL_COOKIE);
   deleteCookie(PENDING_2FA_TOTAL_COOKIE);
+  deleteCookie(PENDING_2FA_CANAL_COOKIE);
 }
 
 /** Horodatage (ms) d'expiration du challenge en cours, `null` s'il n'y en a pas. */

@@ -8,6 +8,8 @@ import { Eye, EyeOff, Save, UserCircle } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useAuthStore } from "@/stores/auth.store";
+import { authApi } from "@/lib/api/auth";
+import { AuthentificationParApplication } from "./AuthentificationParApplication";
 import { meApi } from "@/lib/api/me";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -43,6 +45,22 @@ function apiMessage(err: unknown, fallback: string): string {
 
 export default function ProfilePage() {
   const { user, setUser } = useAuthStore();
+
+  /**
+   * Relit la fiche après un changement d'authentification.
+   *
+   * L'état de l'application vit côté serveur ; sans cette relecture, activer
+   * puis regarder l'écran montrerait encore « Activer », et l'on croirait que
+   * rien ne s'est passé.
+   */
+  const rafraichirProfil = async () => {
+    try {
+      const reponse = await authApi.me();
+      setUser(reponse.data);
+    } catch {
+      // Sans importance : le prochain chargement de page rétablira l'affichage.
+    }
+  };
 
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [signaturePreview, setSignaturePreview] = useState<string | null>(
@@ -260,6 +278,17 @@ export default function ProfilePage() {
                   </Button>
                 </div>
               </form>
+            </div>
+
+            {/*
+              Sous le mot de passe, dans la même colonne : les deux relèvent de
+              la même question — comment on prouve qu'on est soi.
+            */}
+            <div className="mt-4">
+              <AuthentificationParApplication
+                actif={user.twoFactorEnabled ?? false}
+                onChangement={rafraichirProfil}
+              />
             </div>
           </div>
         </div>
