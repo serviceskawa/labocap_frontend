@@ -47,6 +47,13 @@ export interface Role {
   name: string;
   slug?: string;
   description?: string;
+  /**
+   * Rôle structurant — laborantin, secrétariat, docteur — dont le serveur
+   * refuse la suppression. Le bouton est masqué plutôt que laissé à mener à un
+   * refus : proposer un geste qui échouera ensuite fait chercher ce qu'on a mal
+   * fait, alors qu'il n'y avait rien à faire.
+   */
+  isProtected?: boolean;
   permissions: PermissionResponseDto[];
   createdByName?: string;
   createdAt?: string;
