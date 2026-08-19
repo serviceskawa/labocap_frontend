@@ -164,15 +164,22 @@ export default function RolesPage() {
               icon={<Eye className="h-4 w-4" />}
             />
           </PermissionGate>
-          <PermissionGate permission={PERMISSIONS.EDIT_ROLES}>
-            <IconButton
-              variant="delete"
-              title="Supprimer"
-              aria-label="Supprimer"
-              onClick={() => openDelete(row.original)}
-              icon={<Trash2 className="h-4 w-4" />}
-            />
-          </PermissionGate>
+          {/*
+            Les rôles structurants n'exposent pas de bouton de suppression.
+            Le serveur la refuse de toute façon ; l'afficher ferait chercher
+            ce qu'on a mal fait, alors qu'il n'y avait rien à faire.
+          */}
+          {!row.original.isProtected && (
+            <PermissionGate permission={PERMISSIONS.EDIT_ROLES}>
+              <IconButton
+                variant="delete"
+                title="Supprimer"
+                aria-label="Supprimer"
+                onClick={() => openDelete(row.original)}
+                icon={<Trash2 className="h-4 w-4" />}
+              />
+            </PermissionGate>
+          )}
         </div>
       ),
     },
