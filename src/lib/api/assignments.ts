@@ -86,6 +86,16 @@ export const assignmentsApi = {
   labels: () =>
     apiClient.get<string[]>("/test-order-assignments/labels"),
 
+  /**
+   * Verse une étiquette au catalogue sans attendre qu'une demande soit
+   * affectée.
+   *
+   * Sans cela, une étiquette saisie puis abandonnée était perdue, et rien ne
+   * permettait d'en déclarer une à l'avance. Renvoie le catalogue complet.
+   */
+  addLabel: (value: string) =>
+    apiClient.post<string[]>("/test-order-assignments/labels", { value }),
+
   addDetail: (assignmentId: string, data: AssignmentDetailRequest) =>
     apiClient.post<AssignmentDetail>(
       `/test-order-assignments/${assignmentId}/details`,
