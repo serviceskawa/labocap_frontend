@@ -33,6 +33,8 @@ interface Props {
 export function AccesMobile({ utilisateur, onClose }: Props) {
   const queryClient = useQueryClient();
   const [secrets, setSecrets] = useState<MobileAccessSecrets | null>(null);
+  /** Le PIN ne disparaît de l'écran qu'une fois déclaré noté. */
+  const [pinNote, setPinNote] = useState(false);
 
   const etat = useQuery({
     queryKey: ["acces-mobile", utilisateur.id],
@@ -46,9 +48,19 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
     mutationFn: () => mobileAccessApi.open(utilisateur.id).then((r) => r.data),
     onSuccess: (data) => {
       setSecrets(data);
+      setPinNote(false);
       invalider();
     },
     onError: () => toast.error("L'accès n'a pas pu être ouvert."),
+  });
+
+  const revoquerCode = useMutation({
+    mutationFn: () => mobileAccessApi.revokeCode(utilisateur.id),
+    onSuccess: () => {
+      invalider();
+      toast.success("Code d'enrôlement révoqué. Les appareils déjà enrôlés restent actifs.");
+    },
+    onError: () => toast.error("Le code n'a pas pu être révoqué."),
   });
 
   const fermer = useMutation({
@@ -77,11 +89,24 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
 
   const acces = etat.data?.acces ?? false;
   const appareilsActifs = (etat.data?.appareils ?? []).filter((a) => !a.revokedAt);
+  // Celui qui vient d'être délivré prime : l'état en cache date d'avant.
+  const codeVivant = secrets?.codeEnrolement ?? etat.data?.codeEnrolement ?? null;
+
+  // Fermer sans avoir noté le PIN le perd définitivement.
+  const fermetureBloquee = !!secrets && !pinNote;
 
   return (
     <CrudModal
       isOpen
-      onClose={onClose}
+      // Tant que le PIN n'est pas déclaré noté, la fenêtre ne se referme pas :
+      // c'est le seul secret que rien ne rattrape.
+      onClose={() => {
+        if (fermetureBloquee) {
+          toast.error("Notez le code PIN avant de fermer : il ne sera plus affiché.");
+          return;
+        }
+        onClose();
+      }}
       title={`Accès mobile — ${utilisateur.firstname} ${utilisateur.lastname}`}
       size="lg"
     >
@@ -95,58 +120,24 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
             liste d'appareils serait le meilleur moyen de les voir disparaître
             à la fermeture de la fenêtre.
           */}
-          {secrets && (
-            <div className="rounded-xl border-2 border-blue-600 bg-blue-50 p-4">
-              <p className="text-sm font-semibold text-blue-900">
-                À transmettre maintenant à {secrets.nomComplet}
+          {/*
+            Le PIN, et lui seul, est éphémère : la base n'en garde que
+            l'empreinte. Un bandeau ne suffisait pas — on referme une fenêtre
+            sans lire —, d'où la case à cocher qui verrouille la sortie.
+          */}
+          {secrets && !pinNote && (
+            <div className="rounded-xl border-2 border-amber-500 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-900">
+                Code PIN de {secrets.nomComplet} — notez-le maintenant
               </p>
-              <p className="mt-1 text-xs text-blue-800">
-                Ces deux codes ne seront plus jamais affichés — seules leurs
-                empreintes sont conservées. Les régénérer invalidera ceux-ci.
+              <p className="mt-1 text-xs text-amber-800">
+                Il ne sera plus jamais affiché : seule son empreinte est
+                conservée. Le retrouver sera impossible, il faudra en régénérer
+                un nouveau. Le QR d&apos;enrôlement, lui, reste consultable
+                ci-dessous.
               </p>
 
-              {/*
-                Le QR d'abord : rattacher un téléphone demandait de recopier une
-                adresse, une adresse électronique et huit caractères sur un
-                clavier de téléphone, sous la dictée. Trois occasions de se
-                tromper, dont la dernière consomme le code à usage unique.
-
-                Il ne porte rien de plus que les deux champs affichés juste en
-                dessous — même secret, même durée de vie, même usage unique.
-                Le code PIN en est absent : il ouvre les sessions suivantes et
-                n'a pas à voyager sur un écran qu'on photographie.
-              */}
-              <div className="mt-4 flex flex-col items-center rounded-lg bg-white p-4">
-                <QRCodeSVG
-                  value={JSON.stringify({
-                    v: 1,
-                    url: API_ORIGIN,
-                    email: utilisateur.email,
-                    code: secrets.codeEnrolement,
-                    // Le nom sert à baptiser l'appareil dans la liste ci-dessous.
-                    // L'agent ne le saisit plus : c'est le seul libellé que
-                    // l'administrateur cherchait de toute façon en révoquant.
-                    nom: secrets.nomComplet,
-                  })}
-                  size={196}
-                  level="M"
-                  marginSize={2}
-                />
-                <p className="mt-3 text-center text-xs text-blue-900">
-                  À scanner depuis l&apos;application, écran de connexion. Il
-                  rattache le téléphone à lui seul.
-                  <br />
-                  Le code PIN reste à saisir à la main, à chaque session.
-                </p>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <Secret
-                  libelle="Code d'enrôlement"
-                  valeur={secrets.codeEnrolement}
-                  note={`Valable jusqu'au ${formatDate(secrets.codeExpireLe)}, une seule fois`}
-                  onCopier={() => copier(secrets.codeEnrolement, "Code d'enrôlement")}
-                />
+              <div className="mt-3">
                 <Secret
                   libelle="Code PIN"
                   valeur={secrets.pin}
@@ -154,7 +145,95 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
                   onCopier={() => copier(secrets.pin, "Code PIN")}
                 />
               </div>
+
+              <label className="mt-3 flex items-center gap-2 text-sm font-medium text-amber-900">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-amber-400"
+                  onChange={(e) => setPinNote(e.target.checked)}
+                />
+                J&apos;ai noté le code PIN
+              </label>
             </div>
+          )}
+
+          {/*
+            Le QR à chaque consultation. Il n'existait qu'à l'instant de sa
+            création : refermer la fenêtre coûtait un accès à rouvrir, et donc
+            un PIN régénéré pour tout le monde. Le code est désormais conservé
+            scellé côté serveur, et se remontre.
+
+            Il ne porte rien de plus que ce qui est affiché en clair juste en
+            dessous. Le PIN en est absent : il ouvre les sessions et n'a pas à
+            voyager sur un écran qu'on photographie.
+          */}
+          {acces && codeVivant && (
+            <div className="rounded-xl border-2 border-blue-600 bg-blue-50 p-4">
+              <p className="text-sm font-semibold text-blue-900">
+                Code d&apos;enrôlement — à scanner par{" "}
+                {utilisateur.firstname} {utilisateur.lastname}
+              </p>
+              <p className="mt-1 text-xs text-blue-800">
+                Valable jusqu&apos;à sa révocation, pour autant de téléphones
+                qu&apos;il en faut.
+                {etat.data?.codeCreeLe &&
+                  ` Délivré le ${formatDate(etat.data.codeCreeLe)}.`}
+              </p>
+
+              <div className="mt-4 flex flex-col items-center rounded-lg bg-white p-4">
+                <QRCodeSVG
+                  value={JSON.stringify({
+                    v: 1,
+                    url: API_ORIGIN,
+                    email: utilisateur.email,
+                    code: codeVivant,
+                    // Le nom sert à baptiser l'appareil dans la liste ci-dessous.
+                    // L'agent ne le saisit plus : c'est le seul libellé que
+                    // l'administrateur cherchait de toute façon en révoquant.
+                    nom: `${utilisateur.firstname} ${utilisateur.lastname}`,
+                  })}
+                  size={196}
+                  level="M"
+                  marginSize={2}
+                />
+                <p className="mt-3 text-center text-xs text-blue-900">
+                  À scanner depuis l&apos;application, écran de connexion.
+                  <br />
+                  Le code PIN reste à saisir à la main, à chaque session.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <Secret
+                  libelle="Code d'enrôlement"
+                  valeur={codeVivant}
+                  note="Pour une saisie à la main, si le scan est impossible"
+                  onCopier={() => copier(codeVivant, "Code d'enrôlement")}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => revoquerCode.mutate()}
+                disabled={revoquerCode.isPending}
+                className="mt-3 w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
+              >
+                Révoquer ce code
+              </button>
+            </div>
+          )}
+
+          {/*
+            Un accès ouvert dont le code ne se réaffiche pas : soit il a été
+            révoqué, soit il date d'avant sa conservation, soit le serveur n'a
+            pas de clé de chiffrement. Le dire, plutôt que de laisser un vide
+            qu'on prend pour un bug.
+          */}
+          {acces && !codeVivant && !secrets && (
+            <p className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+              Aucun code d&apos;enrôlement à afficher. Régénérez-en un
+              ci-dessous pour rattacher un nouveau téléphone.
+            </p>
           )}
 
           <div className="flex items-start justify-between gap-4 rounded-lg border border-gray-200 p-4">
@@ -203,6 +282,15 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
             >
               Régénérer le code d&apos;enrôlement et le code PIN
             </button>
+          )}
+          {acces && (
+            // Le dire avant, pas après : régénérer casse le PIN de quelqu'un
+            // qui s'en servait, et c'est rarement ce qu'on cherche quand on
+            // voulait seulement revoir le QR — lequel s'affiche déjà plus haut.
+            <p className="-mt-4 text-xs text-gray-500">
+              Régénérer remplace le code PIN en service : l&apos;agent ne
+              pourra plus ouvrir de session avec l&apos;ancien.
+            </p>
           )}
 
           <div>

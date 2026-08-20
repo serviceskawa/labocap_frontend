@@ -20,20 +20,31 @@ export interface MobileAccessState {
   acces: boolean;
   pinDefini: boolean;
   appareils: MobileDevice[];
+  /**
+   * Le code d'enrôlement vivant, pour réafficher le QR à volonté.
+   *
+   * Nul quand il n'y en a pas, quand le serveur n'a pas de clé de chiffrement
+   * configurée, ou pour un code délivré avant que la base ne le conserve : il
+   * enrôle encore, mais ne se réaffiche pas. Nul aussi pour qui n'a pas le
+   * droit d'en créer.
+   */
+  codeEnrolement: string | null;
+  codeCreeLe: string | null;
 }
 
 /**
  * Secrets délivrés à l'ouverture d'un accès.
  *
- * Le code d'enrôlement et le code PIN ne sont renvoyés **qu'ici**, une seule
- * fois : la base n'en garde que les empreintes. Ils ne se retrouvent pas — il
- * faut rouvrir l'accès pour en régénérer, ce qui invalide les précédents.
+ * Le **code PIN** n'est renvoyé qu'ici, une seule fois : la base n'en garde que
+ * l'empreinte, et rien ne le retrouve. Le code d'enrôlement, lui, se réaffiche
+ * — voir `MobileAccessState.codeEnrolement`.
  */
 export interface MobileAccessSecrets {
   userId: string;
   nomComplet: string;
   codeEnrolement: string;
-  codeExpireLe: string;
+  /** Nul : la validité tient désormais à la révocation, plus au temps. */
+  codeExpireLe: string | null;
   pin: string;
 }
 
@@ -57,4 +68,13 @@ export const mobileAccessApi = {
   /** Coupe un seul appareil, sans toucher au droit ni au PIN. */
   revokeDevice: (deviceId: string) =>
     apiClient.post(`/mobile/devices/${deviceId}/revoke`),
+
+  /**
+   * Éteint le code d'enrôlement : le QR cesse de rattacher des téléphones.
+   *
+   * Les appareils déjà enrôlés continuent de fonctionner — c'est la porte qu'on
+   * ferme, pas les clés déjà remises.
+   */
+  revokeCode: (userId: string) =>
+    apiClient.delete(`/mobile/enrollment-codes/${userId}`),
 };
