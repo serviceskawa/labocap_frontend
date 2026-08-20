@@ -23,6 +23,14 @@ export interface AssignmentDetail {
   id: string;
   testOrderId: string;
   testOrderCode: string;
+  /**
+   * Étiquettes physiques des prélèvements affectés — « L1 », « L2 »…
+   *
+   * Une demande regroupe parfois plusieurs prélèvements, et ils ne partent pas
+   * toujours ensemble. Vides pour les affectations antérieures à leur
+   * enregistrement.
+   */
+  labels?: string[];
   note?: string;
 }
 
@@ -34,6 +42,7 @@ export interface AssignmentRequest {
 
 export interface AssignmentDetailRequest {
   testOrderId: string;
+  labels?: string[];
   note?: string;
   date?: string;
 }
@@ -66,6 +75,16 @@ export const assignmentsApi = {
 
   update: (id: string, data: AssignmentRequest) =>
     apiClient.put<Assignment>(`/test-order-assignments/${id}`, data),
+
+  /**
+   * Le vocabulaire d'étiquettes déjà employé par la branche.
+   *
+   * Alimenté par l'usage côté serveur : une étiquette saisie sur un lot est
+   * proposée sur les suivants, ici comme sur le mobile. Une liste figée dans le
+   * code n'aurait convenu qu'à un seul laboratoire.
+   */
+  labels: () =>
+    apiClient.get<string[]>("/test-order-assignments/labels"),
 
   addDetail: (assignmentId: string, data: AssignmentDetailRequest) =>
     apiClient.post<AssignmentDetail>(
