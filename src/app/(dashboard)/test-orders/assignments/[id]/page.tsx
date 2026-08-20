@@ -428,10 +428,18 @@ export default function AssignmentDetailsPage() {
                     Étiquette(s)
                   </label>
                   <div className="flex flex-wrap items-center gap-2">
+                    {/*
+                      Retenue : aplat de cyan profond (#006786, blue-600), le
+                      bleu du logo. C'est celui de la charte qui porte du texte
+                      — 6,39:1 avec du blanc, là où le cyan clair tombe à 2,79.
+                      Le pâle d'avant se confondait avec les propositions ; ici
+                      le contraste ne tient pas qu'à la couleur, l'aplat et le
+                      contour se distinguent aussi à l'œil daltonien.
+                    */}
                     {etiquettes.map((e) => (
                       <span
                         key={e}
-                        className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2.5 py-1 text-sm font-medium text-blue-800"
+                        className="inline-flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1 text-sm font-medium text-white"
                       >
                         {e}
                         <button
@@ -439,7 +447,7 @@ export default function AssignmentDetailsPage() {
                           onClick={() =>
                             setEtiquettes((liste) => liste.filter((x) => x !== e))
                           }
-                          className="text-blue-500 transition-colors hover:text-blue-800"
+                          className="text-white/70 transition-colors hover:text-white"
                           aria-label={`Retirer ${e}`}
                         >
                           ×
