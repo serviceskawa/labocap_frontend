@@ -558,6 +558,12 @@ export function Sidebar() {
               {can(PERMISSIONS.VIEW_TEST_ORDER_ASSIGNMENTS) && (
                 <SubItem href="/reports/suivi" label="Suivi des demandes" />
               )}
+              {/* Le catalogue des étiquettes se remplit à l'usage ; cet écran
+                  n'existe que pour corriger une faute de frappe ou retirer un
+                  marquage abandonné. D'où la permission d'écriture. */}
+              {can(PERMISSIONS.MANAGE_TEST_ORDER_ASSIGNMENTS) && (
+                <SubItem href="/test-orders/etiquettes" label="Étiquettes" />
+              )}
               <SubItem href="/search" label="Rechercher" />
             </CollapseItem>
           )}
