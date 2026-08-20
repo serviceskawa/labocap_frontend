@@ -199,6 +199,19 @@ export default function AssignmentDetailsPage() {
     queryFn: () => assignmentsApi.labels().then((r) => r.data),
   });
 
+  /**
+   * Une étiquette nouvelle rejoint le catalogue dès sa saisie.
+   *
+   * Attendre l'ajout de la demande la ferait perdre si l'on renonce, et
+   * empêcherait d'en déclarer une à l'avance — alors que le vocabulaire d'un
+   * laboratoire se pose souvent avant qu'on s'en serve.
+   */
+  const addLabelMutation = useMutation({
+    mutationFn: (valeur: string) => assignmentsApi.addLabel(valeur),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["etiquettes-prelevements"] }),
+  });
+
   const addDetailMutation = useMutation({
     mutationFn: (data: {
       testOrderId: string;
@@ -458,6 +471,7 @@ export default function AssignmentDetailsPage() {
                         if (!valeur || etiquettes.includes(valeur)) return;
                         setEtiquettes((liste) => [...liste, valeur]);
                         setEtiquetteLibre("");
+                        addLabelMutation.mutate(valeur);
                       }}
                       placeholder="autre… (Entrée)"
                       className="w-36 rounded-md border border-dashed border-gray-300 px-2.5 py-1 text-sm focus:border-blue-500 focus:outline-none"

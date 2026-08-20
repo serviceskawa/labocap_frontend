@@ -58,6 +58,14 @@ export interface AssignmentPrint {
 // API
 // ---------------------------------------------------------------------------
 
+/** Une étiquette de prélèvement, vue depuis l'écran qui l'administre. */
+export interface Etiquette {
+  id: string;
+  value: string;
+  /** Nombre de demandes déjà étiquetées ainsi. */
+  usages: number;
+}
+
 export const assignmentsApi = {
   findAll: (params?: { page?: number; size?: number }) =>
     apiClient.get<PageResponse<Assignment>>("/test-order-assignments", {
@@ -85,6 +93,32 @@ export const assignmentsApi = {
    */
   labels: () =>
     apiClient.get<string[]>("/test-order-assignments/labels"),
+
+  /**
+   * Verse une étiquette au catalogue sans attendre qu'une demande soit
+   * affectée.
+   *
+   * Sans cela, une étiquette saisie puis abandonnée était perdue, et rien ne
+   * permettait d'en déclarer une à l'avance. Renvoie le catalogue complet.
+   */
+  addLabel: (value: string) =>
+    apiClient.post<string[]>("/test-order-assignments/labels", { value }),
+
+  /**
+   * Le catalogue tel qu'on l'administre.
+   *
+   * Distinct de `labels()`, qui ne sert que des chaînes aux sélecteurs : ici on
+   * a besoin de désigner une ligne — donc son identifiant — et de savoir
+   * combien de demandes la portent avant d'y toucher.
+   */
+  labelCatalogue: () =>
+    apiClient.get<Etiquette[]>("/test-order-assignments/labels/catalogue"),
+
+  renameLabel: (id: string, value: string) =>
+    apiClient.put<Etiquette>(`/test-order-assignments/labels/${id}`, { value }),
+
+  removeLabel: (id: string) =>
+    apiClient.delete<void>(`/test-order-assignments/labels/${id}`),
 
   addDetail: (assignmentId: string, data: AssignmentDetailRequest) =>
     apiClient.post<AssignmentDetail>(
