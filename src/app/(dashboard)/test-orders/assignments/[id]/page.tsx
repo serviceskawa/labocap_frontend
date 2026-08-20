@@ -96,6 +96,9 @@ export default function AssignmentDetailsPage() {
     null
   );
   const [detailNote, setDetailNote] = useState("");
+  /** Étiquettes retenues pour la demande qu'on s'apprête à ajouter. */
+  const [etiquettes, setEtiquettes] = useState<string[]>([]);
+  const [etiquetteLibre, setEtiquetteLibre] = useState("");
 
   // ---- Modal suppression
   const [detailToDelete, setDetailToDelete] = useState<AssignmentDetail | null>(
@@ -185,15 +188,31 @@ export default function AssignmentDetailsPage() {
     },
   });
 
+  /**
+   * Le vocabulaire du laboratoire, alimenté par l'usage.
+   *
+   * Chargé depuis le serveur plutôt que figé ici : chaque site marque ses
+   * contenants à sa façon, et le mobile propose exactement la même liste.
+   */
+  const { data: catalogueEtiquettes } = useQuery({
+    queryKey: ["etiquettes-prelevements"],
+    queryFn: () => assignmentsApi.labels().then((r) => r.data),
+  });
+
   const addDetailMutation = useMutation({
-    mutationFn: (data: { testOrderId: string; note?: string }) =>
-      assignmentsApi.addDetail(id as string, data),
+    mutationFn: (data: {
+      testOrderId: string;
+      labels?: string[];
+      note?: string;
+    }) => assignmentsApi.addDetail(id as string, data),
     onSuccess: () => {
       toast.success("Demande d'examen ajoutée");
       queryClient.invalidateQueries({ queryKey: ["assignment", id] });
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
       setSelectedOrder(null);
       setDetailNote("");
+      setEtiquettes([]);
+      setEtiquetteLibre("");
     },
     onError: (err: AxiosError<ApiError>) => {
       const status = err.response?.status;
@@ -239,6 +258,7 @@ export default function AssignmentDetailsPage() {
     }
     addDetailMutation.mutate({
       testOrderId: selectedOrder.value,
+      labels: etiquettes.length > 0 ? etiquettes : undefined,
       note: detailNote || undefined,
     });
   };
@@ -381,6 +401,70 @@ export default function AssignmentDetailsPage() {
                   />
                 </div>
 
+                {/*
+                  Les étiquettes physiques des prélèvements. Une demande en
+                  regroupe parfois plusieurs, et ils ne partent pas toujours
+                  ensemble : sans elles, l'affectation dit « la demande 26-0188 »
+                  là où la paillasse manipule « L1 et L2 de 26-0188 ».
+
+                  Le vocabulaire vient du serveur et s'enrichit de ce qu'on y
+                  ajoute — la même liste sert au mobile.
+                */}
+                <div className="md:col-span-12">
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Étiquette(s)
+                  </label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {etiquettes.map((e) => (
+                      <span
+                        key={e}
+                        className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2.5 py-1 text-sm font-medium text-blue-800"
+                      >
+                        {e}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setEtiquettes((liste) => liste.filter((x) => x !== e))
+                          }
+                          className="text-blue-500 transition-colors hover:text-blue-800"
+                          aria-label={`Retirer ${e}`}
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+
+                    {(catalogueEtiquettes ?? [])
+                      .filter((e) => !etiquettes.includes(e))
+                      .map((e) => (
+                        <button
+                          key={e}
+                          type="button"
+                          onClick={() => setEtiquettes((liste) => [...liste, e])}
+                          className="rounded-md border border-gray-300 px-2.5 py-1 text-sm text-gray-700 transition-colors hover:border-blue-400 hover:text-blue-700"
+                        >
+                          {e}
+                        </button>
+                      ))}
+
+                    <input
+                      type="text"
+                      value={etiquetteLibre}
+                      onChange={(ev) => setEtiquetteLibre(ev.target.value)}
+                      onKeyDown={(ev) => {
+                        if (ev.key !== "Enter") return;
+                        ev.preventDefault();
+                        const valeur = etiquetteLibre.trim();
+                        if (!valeur || etiquettes.includes(valeur)) return;
+                        setEtiquettes((liste) => [...liste, valeur]);
+                        setEtiquetteLibre("");
+                      }}
+                      placeholder="autre… (Entrée)"
+                      className="w-36 rounded-md border border-dashed border-gray-300 px-2.5 py-1 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
                 <div className="md:col-span-4">
                   <label
                     htmlFor="detail-note"
@@ -458,6 +542,27 @@ export default function AssignmentDetailsPage() {
                             <span className="font-mono text-sm font-medium text-gray-800">
                               {d.testOrderCode}
                             </span>
+                          </td>
+                          {/*
+                            Rendues comme des étiquettes et non comme du texte :
+                            on les repère ainsi du premier coup d'œil parmi des
+                            colonnes de codes et de notes.
+                          */}
+                          <td className="px-4 py-3">
+                            {(d.labels ?? []).length === 0 ? (
+                              <span className="text-gray-400">—</span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {d.labels!.map((e) => (
+                                  <span
+                                    key={e}
+                                    className="rounded bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-700"
+                                  >
+                                    {e}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-gray-700">
                             {d.note ?? "—"}
