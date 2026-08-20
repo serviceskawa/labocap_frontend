@@ -85,6 +85,8 @@ export default function AssignmentsPage() {
     useState<SelectOption | null>(null);
   const [doctorFilter, setDoctorFilter] = useState("");
   const [search, setSearch] = useState("");
+  /** Code de l'affectation elle-même — « AF26-0004 », lu sur un bordereau. */
+  const [codeFilter, setCodeFilter] = useState("");
 
   // ---- Formulaire création
   const [newUserId, setNewUserId] = useState("");
@@ -126,15 +128,19 @@ export default function AssignmentsPage() {
   const filteredAssignments = useMemo(() => {
     const list = data?.content ?? [];
     const term = search.trim().toLowerCase();
+    const code = codeFilter.trim().toLowerCase();
     return list.filter((a) => {
       if (doctorFilter && a.userId !== doctorFilter) return false;
       if (term && !(a.note ?? "").toLowerCase().includes(term)) return false;
+      // Sous-chaîne, non égalité : on tape « 0004 » en tenant le bordereau,
+      // rarement « AF26-0004 » en entier.
+      if (code && !(a.code ?? "").toLowerCase().includes(code)) return false;
       // Filtre "Demande d'examen" : l'affectation doit contenir le code sélectionné
       if (testOrderFilter && !(a.detailCodes ?? []).includes(testOrderFilter))
         return false;
       return true;
     });
-  }, [data, doctorFilter, search, testOrderFilter]);
+  }, [data, doctorFilter, search, testOrderFilter, codeFilter]);
 
   // ---- Mutation : créer une nouvelle affectation ---------------------------
 
@@ -355,9 +361,29 @@ export default function AssignmentsPage() {
           Liste des affectations
         </h2>
 
-        {/* Filtres (3 filtres comme Laravel) */}
-        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          {/* 1. Demande d'examen */}
+        {/* Les trois filtres de Laravel, plus le code de l'affectation :
+            c'est par là qu'on entre quand on tient un bordereau en main, et
+            la recherche libre ne parcourait que les notes. */}
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+          {/* 1. Code d'affectation */}
+          <div>
+            <label
+              htmlFor="filter-code"
+              className="mb-1 block text-xs font-medium text-gray-600"
+            >
+              Code d&apos;affectation
+            </label>
+            <input
+              id="filter-code"
+              type="text"
+              placeholder="ex. AF26-0004"
+              value={codeFilter}
+              onChange={(e) => setCodeFilter(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+
+          {/* 2. Demande d'examen */}
           <div>
             <label
               htmlFor="filter-test-order"
@@ -379,7 +405,7 @@ export default function AssignmentsPage() {
             />
           </div>
 
-          {/* 2. Docteur */}
+          {/* 3. Docteur */}
           <div>
             <label
               htmlFor="filter-doctor"
@@ -401,7 +427,7 @@ export default function AssignmentsPage() {
             </NativeSelect>
           </div>
 
-          {/* 3. Rechercher */}
+          {/* 4. Rechercher */}
           <div>
             <label
               htmlFor="filter-search"
