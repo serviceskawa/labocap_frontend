@@ -31,7 +31,7 @@ import {
 import { prestationsApi } from "@/lib/api/prestations";
 import { patientsApi } from "@/lib/api/patients";
 import type { PageResponse, ApiError } from "@/types/api";
-import { formatCFA, formatDate } from "@/lib/utils";
+import { formatCFA, formatDate, nomComplet } from "@/lib/utils";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
@@ -128,7 +128,7 @@ function OrderForm({
       .then((r) =>
         r.data.content.map((p) => ({
           value: p.id,
-          label: `${p.code} - ${p.firstname} ${p.lastname}`.trim(),
+          label: `${p.code} - ${nomComplet(p.lastname, p.firstname)}`,
         })),
       );
 

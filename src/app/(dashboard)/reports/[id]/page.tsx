@@ -26,7 +26,7 @@ import {
 } from "@/components/common/TablePagination";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatDate } from "@/lib/utils";
+import { formatDate, nomComplet } from "@/lib/utils";
 import { reportsApi, type ReportDetail } from "@/lib/api/reports";
 import { reportTemplatesApi } from "@/lib/api/reportTemplates";
 import { titleReportsApi } from "@/lib/api/reportSettings";
@@ -875,7 +875,7 @@ export default function ReportDetailPage({
               <p>
                 <span className="font-semibold">Nom :</span>{" "}
                 {patient
-                  ? `${patient.lastname} ${patient.firstname}`.trim()
+                  ? nomComplet(patient.lastname, patient.firstname)
                   : report.patientName ?? "—"}
               </p>
               <p>

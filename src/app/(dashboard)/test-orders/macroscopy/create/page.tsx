@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { SelectField } from "@/components/ui/SelectField";
 import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
+import { nomComplet } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Page — Ajouter une macroscopie (réplique exact du formulaire Laravel)
@@ -113,7 +114,7 @@ export default function AddMacroscopyPage() {
                   };
                   const fn = e.firstName ?? e.firstname ?? "";
                   const ln = e.lastName ?? e.lastname ?? "";
-                  return { value: emp.id, label: `${fn} ${ln}`.trim() };
+                  return { value: emp.id, label: nomComplet(ln, fn) };
                 })}
                 value={employeeId || null}
                 onChange={(v) => setEmployeeId(v ?? "")}

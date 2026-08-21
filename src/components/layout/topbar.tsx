@@ -19,6 +19,7 @@ import { useBranchStore } from "@/stores/branch.store";
 import { useBranding } from "@/hooks/useBranding";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/Button";
+import { nomComplet } from "@/lib/utils";
 
 export function Topbar() {
   const { toggleSidebar, toggleMobileSidebar } = useUIStore();
@@ -41,9 +42,9 @@ export function Topbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const initials = user
-    ? `${user.firstname.charAt(0)}${user.lastname.charAt(0)}`.toUpperCase()
+    ? `${user.lastname.charAt(0)}${user.firstname.charAt(0)}`.toUpperCase()
     : "?";
-  const fullName = user ? `${user.firstname} ${user.lastname}`.trim() : "";
+  const fullName = user ? nomComplet(user.lastname, user.firstname) : "";
   const roleName = user?.roles?.[0]?.name ?? "";
 
   const handleLogout = async () => {

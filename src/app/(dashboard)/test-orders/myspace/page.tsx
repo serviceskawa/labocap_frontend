@@ -19,7 +19,7 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { StatCard } from "@/components/ui/StatCard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatDate } from "@/lib/utils";
+import { formatDate, nomComplet } from "@/lib/utils";
 import {
   testOrdersApi,
   type TestOrder,
@@ -406,7 +406,7 @@ export default function MySpacePage() {
   // ---------------------------------------------------------------------------
 
   const fullName = user
-    ? `${user.firstname ?? ""} ${user.lastname ?? ""}`.trim()
+    ? nomComplet(user.lastname, user.firstname)
     : "";
 
   return (

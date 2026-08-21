@@ -26,7 +26,7 @@ import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RHFCreatableSelect } from "@/components/ui/RHFCreatableSelect";
 import { usePermissions } from "@/hooks/usePermissions";
-import { formatCFA, generatePatientCode } from "@/lib/utils";
+import { formatCFA, generatePatientCode, nomComplet } from "@/lib/utils";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { patientsApi, Patient, PatientRequest } from "@/lib/api/patients";
 import type { PageResponse, ApiError } from "@/types/api";
@@ -485,11 +485,11 @@ export default function PatientsPage() {
     {
       header: "Nom & Prénoms",
       id: "fullname",
-      accessorFn: (row) => `${row.lastname ?? ""} ${row.firstname ?? ""}`.trim(),
+      accessorFn: (row) => nomComplet(row.lastname, row.firstname),
       enableSorting: true,
       cell: ({ row }) => (
         <span className="font-medium text-gray-900">
-          {row.original.lastname} {row.original.firstname}
+          {nomComplet(row.original.lastname, row.original.firstname)}
         </span>
       ),
     },
@@ -672,7 +672,7 @@ export default function PatientsPage() {
         title="Supprimer ce patient"
         message={
           deleteConfirm
-            ? `Voulez-vous vraiment supprimer ${deleteConfirm.lastname} ${deleteConfirm.firstname} ? Cette action est irréversible.`
+            ? `Voulez-vous vraiment supprimer ${nomComplet(deleteConfirm.lastname, deleteConfirm.firstname)} ? Cette action est irréversible.`
             : ""
         }
         confirmLabel="Supprimer"

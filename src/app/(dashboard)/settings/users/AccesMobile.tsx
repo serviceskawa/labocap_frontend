@@ -13,7 +13,7 @@ import {
   type MobileAccessSecrets,
 } from "@/lib/api/mobileAccess";
 import type { User } from "@/lib/api/users";
-import { formatDate } from "@/lib/utils";
+import { formatDate, nomComplet } from "@/lib/utils";
 
 interface Props {
   utilisateur: User;
@@ -107,7 +107,7 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
         }
         onClose();
       }}
-      title={`Accès mobile — ${utilisateur.firstname} ${utilisateur.lastname}`}
+      title={`Accès mobile — ${nomComplet(utilisateur.lastname, utilisateur.firstname)}`}
       size="lg"
     >
       {etat.isLoading ? (
@@ -171,7 +171,7 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
             <div className="rounded-xl border-2 border-blue-600 bg-blue-50 p-4">
               <p className="text-sm font-semibold text-blue-900">
                 Code d&apos;enrôlement — à scanner par{" "}
-                {utilisateur.firstname} {utilisateur.lastname}
+                {nomComplet(utilisateur.lastname, utilisateur.firstname)}
               </p>
               <p className="mt-1 text-xs text-blue-800">
                 Valable jusqu&apos;à sa révocation, pour autant de téléphones
@@ -190,7 +190,7 @@ export function AccesMobile({ utilisateur, onClose }: Props) {
                     // Le nom sert à baptiser l'appareil dans la liste ci-dessous.
                     // L'agent ne le saisit plus : c'est le seul libellé que
                     // l'administrateur cherchait de toute façon en révoquant.
-                    nom: `${utilisateur.firstname} ${utilisateur.lastname}`,
+                    nom: nomComplet(utilisateur.lastname, utilisateur.firstname),
                   })}
                   size={196}
                   level="M"

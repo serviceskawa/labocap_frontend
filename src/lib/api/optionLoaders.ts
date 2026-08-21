@@ -4,6 +4,7 @@ import { patientsApi, type Patient } from "./patients";
 import { doctorsApi, type Doctor } from "./doctors";
 import { hospitalsApi, type Hospital } from "./hospitals";
 import { testOrdersApi, type TestOrder } from "./testOrders";
+import { nomComplet } from "@/lib/utils";
 
 /**
  * Chargeurs d'options pour `RemoteSelectField` : la recherche est envoyée à
@@ -36,7 +37,7 @@ function dedupeByLabel(options: SelectOption[]): SelectOption[] {
 export function patientToOption(p: Patient): SelectOption {
   return {
     value: p.id,
-    label: `${p.code} - ${p.firstname} ${p.lastname}`.trim(),
+    label: `${p.code} - ${nomComplet(p.lastname, p.firstname)}`,
   };
 }
 

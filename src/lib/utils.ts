@@ -79,3 +79,24 @@ export function generatePatientCode(): string {
   }
   return code.slice(0, 10);
 }
+
+/**
+ * Le nom d'une personne, dans l'ordre où on le lit ici : **nom puis prénoms**.
+ *
+ * L'écran composait ces deux champs à la main, dix-sept fois en prénom-nom et
+ * huit fois en nom-prénom. La même personne changeait donc d'ordre d'une page à
+ * l'autre — et le compte rendu imprimé, lui, suit l'usage français. Un seul
+ * point de décision, comme `NomComplet.de` côté serveur.
+ *
+ * L'ordre de stockage ne dit rien de l'ordre d'affichage : la base garde
+ * `firstname` puis `lastname`, ce qui n'oblige à rien à l'écran.
+ *
+ * Tolère les champs manquants — un patient sans prénom ne doit pas laisser une
+ * espace en suspens dans une liste.
+ */
+export function nomComplet(
+  nom?: string | null,
+  prenoms?: string | null,
+): string {
+  return [nom?.trim(), prenoms?.trim()].filter(Boolean).join(" ");
+}

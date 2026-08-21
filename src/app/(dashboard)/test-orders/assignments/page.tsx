@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatDate } from "@/lib/utils";
+import { formatDate, nomComplet } from "@/lib/utils";
 import {
   assignmentsApi,
   type Assignment,
@@ -335,7 +335,7 @@ export default function AssignmentsPage() {
                 <option value="">Sélectionner un docteur</option>
                 {doctors.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.firstname} {d.lastname}
+                    {nomComplet(d.lastname, d.firstname)}
                   </option>
                 ))}
               </NativeSelect>
@@ -421,7 +421,7 @@ export default function AssignmentsPage() {
               <option value="">Tous les docteurs</option>
               {doctors.map((d) => (
                 <option key={d.id} value={d.id}>
-                  {d.firstname} {d.lastname}
+                  {nomComplet(d.lastname, d.firstname)}
                 </option>
               ))}
             </NativeSelect>

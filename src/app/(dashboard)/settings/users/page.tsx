@@ -29,6 +29,7 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import { usersApi, User, UserRequest } from "@/lib/api/users";
 import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
+import { nomComplet } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Zod — calque exact du formulaire Laravel users/create & users/edit :
@@ -37,8 +38,8 @@ import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 // ---------------------------------------------------------------------------
 
 const userSchema = z.object({
-  firstname: z.string().min(1, "Le nom est requis"),
-  lastname: z.string().min(1, "Les prénoms sont requis"),
+  firstname: z.string().min(1, "Les prénoms sont requis"),
+  lastname: z.string().min(1, "Le nom est requis"),
   email: z.string().min(1, "L'email est requis").email("Email invalide"),
   roleIds: z.array(z.string()).optional(),
   /**
@@ -243,7 +244,7 @@ export default function UsersPage() {
       id: "fullname",
       cell: ({ row }) => (
         <span className="font-medium text-gray-900">
-          {row.original.firstname} {row.original.lastname}
+          {nomComplet(row.original.lastname, row.original.firstname)}
         </span>
       ),
     },
@@ -404,7 +405,7 @@ export default function UsersPage() {
           if (selectedUser) deleteMutation.mutate(selectedUser.id);
         }}
         title="Supprimer cet utilisateur"
-        message={`Voulez-vous vraiment supprimer l'utilisateur "${selectedUser?.firstname ?? ""} ${selectedUser?.lastname ?? ""}" ? Cette action est irréversible.`}
+        message={`Voulez-vous vraiment supprimer l'utilisateur "${nomComplet(selectedUser?.lastname, selectedUser?.firstname)}" ? Cette action est irréversible.`}
         confirmLabel="Supprimer"
         confirmVariant="danger"
         isLoading={deleteMutation.isPending}
@@ -457,12 +458,18 @@ function UserForm({ form, roleOptions, onSignature, withPassword = false }: User
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <FormField label="Nom" required error={errors.firstname?.message}>
-        <input type="text" {...register("firstname")} className={inputClass} />
+      {/* Les deux champs étaient croisés : « Nom » écrivait dans `firstname` et
+          « Prénoms » dans `lastname`. Partout ailleurs — l'entité User, le
+          compte rendu imprimé, l'application mobile — `lastname` est le nom.
+          Les personnes saisies ici depuis le 22 juillet 2026 ont donc leurs
+          deux champs intervertis en base ; la correction ci-dessous ne vaut
+          que pour les suivantes. */}
+      <FormField label="Nom" required error={errors.lastname?.message}>
+        <input type="text" {...register("lastname")} className={inputClass} />
       </FormField>
 
-      <FormField label="Prénoms" required error={errors.lastname?.message}>
-        <input type="text" {...register("lastname")} className={inputClass} />
+      <FormField label="Prénoms" required error={errors.firstname?.message}>
+        <input type="text" {...register("firstname")} className={inputClass} />
       </FormField>
 
       <FormField label="Email" required error={errors.email?.message}>

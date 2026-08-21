@@ -14,7 +14,7 @@ import {
   TablePaginationFooter,
   useTablePagination,
 } from "@/components/common/TablePagination";
-import { formatCFA, formatDate } from "@/lib/utils";
+import { formatCFA, formatDate, nomComplet } from "@/lib/utils";
 import { patientsApi, PatientProfile } from "@/lib/api/patients";
 
 // ---------------------------------------------------------------------------
@@ -129,7 +129,7 @@ export default function PatientProfilePage({ params: paramsPromise }: { params: 
                 {initials}
               </div>
               <h4 className="text-base font-semibold text-gray-900 text-center">
-                {patient.lastname} {patient.firstname}
+                {nomComplet(patient.lastname, patient.firstname)}
               </h4>
             </div>
 
