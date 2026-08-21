@@ -62,8 +62,11 @@ export function VeilleDeSession() {
 
   const [resteAvantFermeture, setResteAvantFermeture] = useState<number | null>(null);
 
-  const derniereActivite = useRef(Date.now());
-  const dernierRafraichissement = useRef(Date.now());
+  // Initialisés à zéro, non à `Date.now()` : lire l'heure pendant le rendu le
+  // rend imprévisible, et la valeur serait de toute façon celle du serveur au
+  // rendu initial. L'effet les pose au montage, quand l'horloge est la bonne.
+  const derniereActivite = useRef(0);
+  const dernierRafraichissement = useRef(0);
   const fermetureEnCours = useRef(false);
 
   /** Note l'activité, ici et pour les autres onglets. */
@@ -123,6 +126,7 @@ export function VeilleDeSession() {
     if (!isAuthenticated) return;
 
     marquer(Date.now());
+    dernierRafraichissement.current = Date.now();
 
     let dernierEnregistrement = 0;
     const surGeste = () => {
