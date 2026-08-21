@@ -6,6 +6,7 @@ import { AppSettingsEffects } from "@/components/layout/AppSettingsEffects";
 import { TimeoffRequestModal } from "@/components/hr/TimeoffRequestModal";
 import { HyperTooltip } from "@/components/common/HyperTooltip";
 import { AutoPlaceholders } from "@/components/common/AutoPlaceholders";
+import { VeilleDeSession } from "@/components/layout/VeilleDeSession";
 
 export default function DashboardLayout({
   children,
@@ -34,6 +35,10 @@ export default function DashboardLayout({
           </div>
         </div>
       </div>
+      {/* Ferme la session après quinze minutes sans activité, et le dit une
+          minute avant plutôt que de la laisser tomber en pleine rédaction. */}
+      <VeilleDeSession />
+
       {/* Modal global « Ajouter un congé » — ouvrable depuis n'importe quelle page. */}
       <TimeoffRequestModal />
 
