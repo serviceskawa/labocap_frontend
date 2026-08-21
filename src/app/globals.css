@@ -746,54 +746,96 @@ textarea::placeholder {
 /* ---------------------------------------------------------------------------
    RichTextEditor — rendu du contenu HTML (titres, listes, alignements)
    pour l'éditeur « Word-like » des comptes rendus.
+
+   ## Ce bloc a un jumeau
+
+   Les mêmes règles existent dans `templates/pdf/rapport.html` du backend, sous
+   `.content`. Ce qu'un médecin met en forme ici doit sortir tel quel à
+   l'impression : deux moteurs différents, un seul jeu de valeurs. Toute
+   modification faite ici doit l'être là-bas.
+
+   ## Pourquoi tout est en `em`
+
+   L'éditeur compose en 14 px, le compte rendu imprimé en 13 px — un corps
+   choisi pour coïncider avec le document Laravel de référence, qu'on ne
+   touche pas. Des tailles absolues auraient donc divergé. En `em`, chaque
+   moteur part de sa propre base et les proportions restent identiques.
+
+   ## Les six niveaux de titre
+
+   Seuls `h2` et `h3` étaient stylés. Le reset de Tailwind ramenant les titres
+   à la taille du texte, un médecin qui choisissait « Titre 1 » obtenait un
+   paragraphe ordinaire — et le PDF, lui, appliquait les défauts du moteur,
+   soit un troisième rendu encore. Les six sont désormais posés.
 --------------------------------------------------------------------------- */
-.rte-content h2 {
-  font-size: 1.15rem;
+.rte-content h1,
+.rte-content h2,
+.rte-content h3,
+.rte-content h4,
+.rte-content h5,
+.rte-content h6 {
   font-weight: 700;
-  margin: 0.5rem 0;
+  margin: 0.55em 0 0.3em;
+  line-height: 1.25;
 }
-.rte-content h3 {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0.4rem 0;
-}
+.rte-content h1 { font-size: 1.6em; }
+.rte-content h2 { font-size: 1.32em; }
+.rte-content h3 { font-size: 1.15em; }
+.rte-content h4 { font-size: 1.05em; font-weight: 600; }
+.rte-content h5 { font-size: 1em; font-weight: 600; }
+.rte-content h6 { font-size: 0.92em; font-weight: 600; }
 .rte-content ul {
   list-style: disc;
-  padding-left: 1.5rem;
-  margin: 0.4rem 0;
+  padding-left: 1.7em;
+  margin: 0.45em 0;
 }
 .rte-content ol {
   list-style: decimal;
-  padding-left: 1.5rem;
-  margin: 0.4rem 0;
+  padding-left: 1.7em;
+  margin: 0.45em 0;
 }
+.rte-content li { margin: 0.1em 0; }
 .rte-content a {
   color: #2563eb;
   text-decoration: underline;
 }
 .rte-content p {
-  margin: 0.25rem 0;
+  margin: 0.3em 0;
 }
 .rte-content blockquote {
   border-left: 3px solid #d1d5db;
-  padding-left: 0.75rem;
+  padding-left: 0.85em;
   color: #4b5563;
   font-style: italic;
-  margin: 0.5rem 0;
+  /* Les marges latérales sont annulées : le moteur PDF en pose 40 px de chaque
+     côté par défaut, le navigateur aussi. Le filet gauche suffit à dire la
+     citation, et 40 px sur une page A4 déplacent le texte visiblement. */
+  margin: 0.55em 0;
 }
 .rte-content pre {
   background: #f3f4f6;
   border-radius: 0.375rem;
-  padding: 0.5rem 0.75rem;
+  padding: 0.55em 0.85em;
   font-family: ui-monospace, monospace;
-  font-size: 0.8125rem;
+  font-size: 0.93em;
+  /* `pre-wrap` et non `pre` : sur une feuille, une ligne préformatée longue
+     sortirait de la page sans possibilité de faire défiler. */
   white-space: pre-wrap;
-  margin: 0.5rem 0;
+  margin: 0.55em 0;
 }
 .rte-content hr {
   border: none;
   border-top: 1px solid #d1d5db;
-  margin: 0.75rem 0;
+  margin: 0.85em 0;
+}
+.rte-content table {
+  border-collapse: collapse;
+  margin: 0.55em 0;
+}
+.rte-content th,
+.rte-content td {
+  border: 1px solid #d1d5db;
+  padding: 0.25em 0.5em;
 }
 
 /* ---------------------------------------------------------------------------
