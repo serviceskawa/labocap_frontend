@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authApi } from "@/lib/api/auth";
+import { MentionSessionExpiree } from "./MentionSessionExpiree";
 import { resolvePostLoginRoute } from "@/lib/auth-flow";
 import { beginPending2fa, hasPending2fa } from "@/lib/auth-2fa";
 import { AuthCard } from "@/components/ui/AuthCard";
@@ -27,16 +28,6 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  /**
-   * Lu de `window` et non de `useSearchParams` : ce dernier impose d'envelopper
-   * la page dans un `<Suspense>` au rendu statique, pour une simple mention.
-   */
-  const [sessionExpiree, setSessionExpiree] = useState(false);
-  useEffect(() => {
-    setSessionExpiree(
-      new URLSearchParams(window.location.search).get("session") === "expiree",
-    );
-  }, []);
   const setUser = useAuthStore((state) => state.setUser);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -123,15 +114,11 @@ export default function LoginPage() {
         </a>
       }
     >
-      {/* Dire pourquoi on est revenu ici. Sans cela, une session fermée pour
-          inactivité se lit comme une panne, et l'agent réessaie ses
-          identifiants en croyant s'être trompé. */}
-      {sessionExpiree && (
-        <div className="mb-4 rounded-[var(--radius-control)] border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          Votre session s&apos;est fermée après quinze minutes sans activité.
-          Reconnectez-vous pour reprendre.
-        </div>
-      )}
+      {/* Rien à afficher hors d'un retour pour inactivité : le repli est vide,
+          et la frontière ne coûte donc aucune attente perceptible. */}
+      <Suspense fallback={null}>
+        <MentionSessionExpiree />
+      </Suspense>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         {/* Email */}
