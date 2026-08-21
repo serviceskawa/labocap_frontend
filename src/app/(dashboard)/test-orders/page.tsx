@@ -22,7 +22,7 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { FormSelect } from "@/components/ui/FormSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatCFA, formatDate } from "@/lib/utils";
+import { formatCFA, formatDate, nomComplet } from "@/lib/utils";
 import { testOrdersApi, type TestOrder } from "@/lib/api/testOrders";
 import { reportsApi } from "@/lib/api/reports";
 import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
@@ -313,7 +313,7 @@ export default function TestOrdersPage() {
             )
             .map((u) => ({
               id: u.id,
-              name: `${u.firstname} ${u.lastname}`.trim(),
+              name: nomComplet(u.lastname, u.firstname),
             }))
         ),
   });

@@ -34,6 +34,7 @@ import {
 import { usersApi, type User } from "@/lib/api/users";
 import type { ApiError } from "@/types/api";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
+import { nomComplet } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -343,7 +344,7 @@ export default function AssignmentDetailsPage() {
               required
               options={doctors.map((d) => ({
                 value: d.id,
-                label: `${d.firstname} ${d.lastname}`,
+                label: nomComplet(d.lastname, d.firstname),
               }))}
               placeholder="Sélectionner le docteur"
               isDisabled={!canManage}

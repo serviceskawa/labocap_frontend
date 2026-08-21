@@ -20,7 +20,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useAuthStore } from "@/stores/auth.store";
 import { dashboardApi, DoctorStat } from "@/lib/api/dashboard";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatCFA } from "@/lib/utils";
+import { formatCFA, nomComplet } from "@/lib/utils";
 import { CHART_STATUS } from "@/lib/ui/chartColors";
 
 /**
@@ -432,7 +432,7 @@ export default function StatistiquesPage() {
                             {idx + 1}
                           </td>
                           <td className="py-2 px-3 text-gray-700">
-                            {u.lastname} {u.firstname}
+                            {nomComplet(u.lastname, u.firstname)}
                             {u.id === user?.id && (
                               <span className="ml-1 text-xs text-gray-400">
                                 (Vous)

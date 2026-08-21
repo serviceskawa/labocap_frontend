@@ -46,6 +46,7 @@ import { fileUrl } from "@/lib/api/client";
 import { useUIStore } from "@/stores/ui.store";
 import type { ApiError } from "@/types/api";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
+import { nomComplet } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Constantes & helpers
@@ -794,7 +795,7 @@ export default function EmployeeDetailPage({
               <option value="">Associer à un utilisateur</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>
-                  {u.firstname} {u.lastname}
+                  {nomComplet(u.lastname, u.firstname)}
                 </option>
               ))}
             </NativeSelect>

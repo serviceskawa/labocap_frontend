@@ -25,6 +25,7 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import { hrApi, Employee, EmployeeRequest } from "@/lib/api/hr";
 import { usersApi, User } from "@/lib/api/users";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
+import { nomComplet } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Zod — calque du formulaire Laravel employees/create (Nom, Prénoms, Email,
@@ -288,7 +289,7 @@ function EmployeeForm({ form, users }: EmployeeFormProps) {
           <option value="">Associer à un utilisateur</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
-              {u.firstname} {u.lastname}
+              {nomComplet(u.lastname, u.firstname)}
             </option>
           ))}
         </NativeSelect>

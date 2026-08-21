@@ -21,7 +21,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatCFA, formatDate } from "@/lib/utils";
+import { formatCFA, formatDate, nomComplet } from "@/lib/utils";
 import { testOrdersApi, type TestOrder } from "@/lib/api/testOrders";
 import { usersApi } from "@/lib/api/users";
 import apiClient from "@/lib/api/client";
@@ -221,7 +221,7 @@ export default function TestOrdersImmunoPage() {
             )
             .map((u) => ({
               id: u.id,
-              name: `${u.firstname} ${u.lastname}`.trim(),
+              name: nomComplet(u.lastname, u.firstname),
             }))
         ),
   });

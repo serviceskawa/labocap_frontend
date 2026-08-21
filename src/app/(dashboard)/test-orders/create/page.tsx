@@ -691,21 +691,9 @@ export default function TestOrderCreatePage() {
         isSubmitting={createPatientMutation.isPending}
       >
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {/* Prénom */}
-          <FormField
-            label="Prénom"
-            required
-            error={patientErrors.firstname?.message}
-          >
-            <input
-              type="text"
-              {...registerPatient("firstname")}
-              placeholder="Prénom du patient..."
-              className={inputClass}
-            />
-          </FormField>
-
-          {/* Nom */}
+          {/* Nom d'abord, comme sur le bon d'examen qu'on recopie et comme sur
+              le compte rendu qui sortira. Saisir dans un ordre et relire dans
+              l'autre est la façon la plus sûre d'intervertir les deux. */}
           <FormField
             label="Nom"
             required
@@ -715,6 +703,19 @@ export default function TestOrderCreatePage() {
               type="text"
               {...registerPatient("lastname")}
               placeholder="Nom du patient..."
+              className={inputClass}
+            />
+          </FormField>
+
+          <FormField
+            label="Prénom"
+            required
+            error={patientErrors.firstname?.message}
+          >
+            <input
+              type="text"
+              {...registerPatient("firstname")}
+              placeholder="Prénom du patient..."
               className={inputClass}
             />
           </FormField>

@@ -13,7 +13,7 @@ import { NativeSelect } from "@/components/ui/NativeSelect";
 import { RemoteMultiSelectField } from "@/components/ui/RemoteSelectField";
 import { MAX_VISIBLE_OPTIONS } from "@/components/ui/LimitedSelect";
 import { DataTable } from "@/components/common/DataTable";
-import { formatDate } from "@/lib/utils";
+import { formatDate, nomComplet } from "@/lib/utils";
 import {
   reportsApi,
   type ReportGlobalSearchRow,
@@ -49,7 +49,7 @@ const loadPatientFilterOptions = (input: string): Promise<PatientOption[]> =>
     .then((r) =>
       r.data.content.map((p) => ({
         value: p.id,
-        label: `${p.code ?? ""} - ${p.firstname ?? ""} ${p.lastname ?? ""}`.trim(),
+        label: `${p.code ?? ""} - ${nomComplet(p.lastname, p.firstname)}`,
         code: p.code,
         firstname: p.firstname,
         lastname: p.lastname,
@@ -458,7 +458,7 @@ export default function SearchPage() {
                   </span>
                   {" — "}
                   <span>
-                    {opt.firstname ?? ""} {opt.lastname ?? ""}
+                    {nomComplet(opt.lastname, opt.firstname)}
                   </span>
                 </span>
               )}

@@ -32,6 +32,7 @@ import type { User } from "@/types/auth";
 import type { ApiError as ApiErrorType } from "@/types/api";
 import apiClient from "@/lib/api/client";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
+import { nomComplet } from "@/lib/utils";
 
 /** « Affecter à » = utilisateur ayant le rôle docteur (signataire), comme Laravel. */
 function isDoctorRole(name?: string): boolean {
@@ -209,7 +210,7 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
       .filter((u) => (u.roles ?? []).some((r) => isDoctorRole(r.name)))
       .map((u) => ({
         value: u.id,
-        label: `${u.lastname ?? ""} ${u.firstname ?? ""}`.trim(),
+        label: nomComplet(u.lastname, u.firstname),
       })) ?? [];
 
   // Options React Select

@@ -24,7 +24,7 @@ import { PermissionGate } from "@/components/common/PermissionGate";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
-import { formatCFA, formatDate } from "@/lib/utils";
+import { formatCFA, formatDate, nomComplet } from "@/lib/utils";
 import {
   consultationsApi,
   getConsultationFileUrl,
@@ -350,7 +350,7 @@ export default function ConsultationsPage() {
   const editPatientOption: SelectOption | null = selectedConsultation?.patient
     ? {
         value: selectedConsultation.patientId,
-        label: `${selectedConsultation.patient.code} - ${selectedConsultation.patient.firstname} ${selectedConsultation.patient.lastname}`.trim(),
+        label: `${selectedConsultation.patient.code} - ${nomComplet(selectedConsultation.patient.lastname, selectedConsultation.patient.firstname)}`,
       }
     : null;
 
@@ -358,7 +358,7 @@ export default function ConsultationsPage() {
     selectedConsultation?.doctorId && selectedConsultation.doctor
       ? {
           value: selectedConsultation.doctorId,
-          label: `${selectedConsultation.doctor.firstname} ${selectedConsultation.doctor.lastname}`.trim(),
+          label: nomComplet(selectedConsultation.doctor.lastname, selectedConsultation.doctor.firstname),
         }
       : null;
 
@@ -477,7 +477,7 @@ export default function ConsultationsPage() {
       cell: ({ row }) => {
         const p = row.original.patient;
         if (!p) return "—";
-        return `${p.code} — ${p.lastname} ${p.firstname}`;
+        return `${p.code} — ${nomComplet(p.lastname, p.firstname)}`;
       },
     },
     {
@@ -486,7 +486,7 @@ export default function ConsultationsPage() {
       cell: ({ row }) => {
         const d = row.original.doctor;
         if (!d) return "—";
-        return `${d.lastname} ${d.firstname}`;
+        return nomComplet(d.lastname, d.firstname);
       },
     },
     {

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { branchesApi, UserBranch } from "@/lib/api/branches";
 import { useAuthStore } from "@/stores/auth.store";
 import { useBranchStore } from "@/stores/branch.store";
+import { nomComplet } from "@/lib/utils";
 
 /**
  * Écran de sélection de la branche (agence/site) active — portage de la page
@@ -96,7 +97,7 @@ export default function SelectBranchPage() {
     <AuthCard
       // Plus large que les autres écrans : la grille des agences y respire.
       className="max-w-3xl"
-      title={`Bienvenue${user ? ` ${user.firstname} ${user.lastname}` : ""}`}
+      title={`Bienvenue${user ? ` ${nomComplet(user.lastname, user.firstname)}` : ""}`}
       subtitle="Sélectionnez l'agence avec laquelle vous souhaitez travailler."
       footer={
         <Button
