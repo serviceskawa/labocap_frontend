@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/optionLoaders";
 import type { AxiosError } from "axios";
 
+import { NativeSelect } from "@/components/ui/NativeSelect";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RHFSelect } from "@/components/ui/RHFSelect";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
@@ -28,6 +29,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import {
   assignmentsApi,
+  LIBELLE_DOCTEUR_STATUS,
+  type DocteurStatus,
   type AssignmentDetail,
   type AssignmentPrint,
 } from "@/lib/api/assignments";
@@ -207,6 +210,22 @@ export default function AssignmentDetailsPage() {
    * empêcherait d'en déclarer une à l'avance — alors que le vocabulaire d'un
    * laboratoire se pose souvent avant qu'on s'en serve.
    */
+  /**
+   * Change où en est le médecin sur une demande.
+   *
+   * Le seul endroit d'où ce statut bouge — l'application mobile lit cette file
+   * sans y toucher, la maquette le pose ainsi.
+   */
+  const statutMutation = useMutation({
+    mutationFn: ({ detailId, statut }: { detailId: string; statut: DocteurStatus }) =>
+      assignmentsApi.setDocteurStatus(detailId, statut),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["assignment", id] });
+      toast.success("Suivi du médecin mis à jour.");
+    },
+    onError: () => toast.error("Le suivi n'a pas pu être changé."),
+  });
+
   const addLabelMutation = useMutation({
     mutationFn: (valeur: string) => assignmentsApi.addLabel(valeur),
     onSuccess: () =>
@@ -537,6 +556,13 @@ export default function AssignmentDetailsPage() {
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
                         Note
                       </th>
+                      {/* Où en est le médecin — à ne pas confondre avec l'état
+                          du compte rendu, qui avance à son propre rythme.
+                          C'est le seul endroit d'où ce statut bouge : sur le
+                          téléphone, le médecin lit sa file sans y toucher. */}
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        Suivi du médecin
+                      </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
                         Actions
                       </th>
@@ -589,6 +615,35 @@ export default function AssignmentDetailsPage() {
                           </td>
                           <td className="px-4 py-3 text-gray-700">
                             {d.note ?? "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {canManage ? (
+                              <NativeSelect
+                                aria-label={`Suivi du médecin — ${d.testOrderCode}`}
+                                value={d.docteurStatus ?? "a_traiter"}
+                                disabled={statutMutation.isPending}
+                                onChange={(e) =>
+                                  statutMutation.mutate({
+                                    detailId: d.id,
+                                    statut: e.target.value as DocteurStatus,
+                                  })
+                                }
+                              >
+                                {(
+                                  Object.keys(LIBELLE_DOCTEUR_STATUS) as DocteurStatus[]
+                                ).map((s) => (
+                                  <option key={s} value={s}>
+                                    {LIBELLE_DOCTEUR_STATUS[s]}
+                                  </option>
+                                ))}
+                              </NativeSelect>
+                            ) : (
+                              <span className="text-gray-700">
+                                {LIBELLE_DOCTEUR_STATUS[
+                                  d.docteurStatus ?? "a_traiter"
+                                ]}
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             {canManage && (

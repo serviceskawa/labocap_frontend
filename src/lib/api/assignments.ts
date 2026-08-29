@@ -32,7 +32,28 @@ export interface AssignmentDetail {
    */
   labels?: string[];
   note?: string;
+  /**
+   * Où en est le médecin sur cette demande.
+   *
+   * `a_traiter` | `pris_en_charge` | `termine`. À ne pas confondre avec le
+   * statut du compte rendu, qui dit où en est le document : les deux avancent
+   * à des rythmes différents, et prendre « j'ai fini de lire » pour « le compte
+   * rendu est validé » ferait disparaître de la file un dossier encore à
+   * écrire.
+   *
+   * Il ne se change qu'ici : sur le téléphone, le médecin lit sa file.
+   */
+  docteurStatus?: DocteurStatus;
 }
+
+/** Les trois états d'une demande dans la file d'un médecin. */
+export type DocteurStatus = "a_traiter" | "pris_en_charge" | "termine";
+
+export const LIBELLE_DOCTEUR_STATUS: Record<DocteurStatus, string> = {
+  a_traiter: "À traiter",
+  pris_en_charge: "Pris en charge",
+  termine: "Terminé",
+};
 
 export interface AssignmentRequest {
   userId: string;
@@ -93,6 +114,19 @@ export const assignmentsApi = {
    */
   labels: () =>
     apiClient.get<string[]>("/test-order-assignments/labels"),
+
+  /**
+   * Change où en est le médecin sur une demande.
+   *
+   * Le seul endroit d'où ce statut bouge. L'application mobile lit cette file
+   * sans y toucher : on referme un dossier sur un poste de travail, pas en le
+   * consultant entre deux couloirs.
+   */
+  setDocteurStatus: (detailId: string, statut: DocteurStatus) =>
+    apiClient.put(
+      `/test-order-assignments/details/${detailId}/statut-medecin`,
+      { statut },
+    ),
 
   /**
    * Verse une étiquette au catalogue sans attendre qu'une demande soit
