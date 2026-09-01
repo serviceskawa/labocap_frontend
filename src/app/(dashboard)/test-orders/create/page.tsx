@@ -63,7 +63,14 @@ const createOrderSchema = z.object({
   typeOrderId: z.string().min(1, "Le type d'examen est requis"),
   contratId: z.string().min(1, "Le contrat est requis"),
   patientId: z.string().min(1, "Le patient est requis"),
-  doctorId: z.string().min(1, "Le médecin est requis"),
+  // Le médecin traitant peut être renseigné plus tard.
+  //
+  // Au comptoir, le bon arrive parfois sans que le prescripteur soit
+  // identifiable sur-le-champ — écriture illisible, médecin absent de la liste,
+  // patient qui ne sait plus. L'exiger ici obligeait à inventer un nom pour
+  // pouvoir enregistrer, et un nom inventé ne se corrige jamais. Le serveur ne
+  // l'a jamais exigé ; seul ce formulaire le faisait.
+  doctorId: z.string().optional(),
   hospitalId: z.string().min(1, "L'hôpital est requis"),
   referenceHopital: z.string().optional(),
   examenReferenceInput: z.string().optional(),
@@ -308,7 +315,9 @@ export default function TestOrderCreatePage() {
       isUrgent: data.isUrgent,
       typeOrderId: data.typeOrderId,
       contratId: data.contratId,
-      doctorId: data.doctorId,
+      // Omis plutôt qu'envoyé vide : une chaîne vide n'est pas un identifiant,
+      // et le serveur la refuserait au lieu de comprendre « pas encore connu ».
+      ...(data.doctorId ? { doctorId: data.doctorId } : {}),
       hospitalId: data.hospitalId,
     };
 
@@ -531,7 +540,10 @@ export default function TestOrderCreatePage() {
             {/* 4. Médecin traitant */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">
-                Médecin traitant <span className="text-red-500">*</span>
+                Médecin traitant{" "}
+                <span className="font-normal text-gray-500">
+                  — peut être renseigné plus tard
+                </span>
               </label>
               <Controller
                 name="doctorId"

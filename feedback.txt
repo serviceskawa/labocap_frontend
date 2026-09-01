@@ -1,0 +1,26 @@
+piece jointe, must have label and each label can be linked to many files
+
+label can be predefined or added manually : scan macro, scan bon d'examen
+
+AI powered bon de commande verification - to plan
+
+Integrated file printing from the app
+
+No scan for the lab technicians
+
+For affectations : we should make it possible for technicians to add all the exams at once : maybe a multistep form
+
+
+Upon invoice validation -> deliver a sms to the client with a link to download the invoice
+
+sms
+
+Caisse de depense for sms and call quota
+
+Invoice subscription - 30 days 5 before 5after shut off
+
+FluidInvoice - api subscription management
+
+Addon management - services : sms, call, invoice with their settings
+
+Integrated call in-app - on-on / group

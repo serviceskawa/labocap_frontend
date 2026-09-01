@@ -69,7 +69,10 @@ const editOrderSchema = z.object({
   typeOrderId: z.string().min(1, "Le type d'examen est requis"),
   contratId: z.string().min(1, "Le contrat est requis"),
   patientId: z.string().min(1, "Le patient est requis"),
-  doctorId: z.string().min(1, "Le médecin est requis"),
+  // Facultatif, comme à la création : une demande enregistrée sans médecin
+  // doit pouvoir être rouverte et complétée. L'exiger ici aurait rendu
+  // impossible la correction même des demandes qu'on venait d'autoriser.
+  doctorId: z.string().optional(),
   hospitalId: z.string().min(1, "L'hôpital est requis"),
   referenceHopital: z.string().optional(),
   examenReferenceInput: z.string().optional(),
@@ -485,7 +488,10 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
             {/* 4. Médecin traitant */}
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700">
-                Médecin traitant <span className="text-red-500">*</span>
+                Médecin traitant{" "}
+                <span className="font-normal text-gray-500">
+                  — peut être renseigné plus tard
+                </span>
               </label>
               <Controller
                 name="doctorId"
