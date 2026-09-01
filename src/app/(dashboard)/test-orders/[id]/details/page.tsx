@@ -554,7 +554,15 @@ export default function TestOrderDetailsPage({ params }: Props) {
           </div>
           <div className="flex items-start gap-2">
             <dt className="font-medium text-gray-500 w-40 flex-shrink-0">Médecin :</dt>
-            <dd className="text-gray-800">{order.doctorName ?? "—"}</dd>
+            {/*
+              Un tiret ne se distingue pas d'une donnée absente sans importance.
+              Or le médecin traitant peut désormais manquer volontairement, le
+              temps de le retrouver — il faut donc que ce manque se voie et
+              appelle le geste, sinon il reste vide pour toujours.
+            */}
+            <dd className={order.doctorName ? "text-gray-800" : "text-amber-700"}>
+              {order.doctorName ?? "à renseigner"}
+            </dd>
           </div>
           <div className="flex items-start gap-2">
             <dt className="font-medium text-gray-500 w-40 flex-shrink-0">Hôpital :</dt>
