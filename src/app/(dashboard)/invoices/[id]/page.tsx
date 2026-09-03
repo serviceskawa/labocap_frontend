@@ -382,6 +382,20 @@ export default function InvoiceDetailPage({
    */
   const isNormalized = Boolean(invoice.normalizedUrl);
 
+  /**
+   * La facture a-t-elle été déclarée, par l'un ou l'autre parcours ?
+   *
+   * Deux chemins coexistent : la saisie manuelle héritée de Laravel, qui pose
+   * `codeNormalise`, et la passerelle, qui pose `normalizedUrl` et `codeMecef`.
+   * Ne regarder que le second retirerait le bouton d'avoir aux milliers de
+   * factures déclarées avant la bascule — alors que le serveur, lui, les
+   * accepte. L'écran serait plus strict que la règle, sans le dire.
+   */
+  const estDeclaree =
+    isNormalized ||
+    Boolean(invoice.codeMecef?.trim()) ||
+    Boolean(invoice.codeNormalise?.trim());
+
   // Le geste n'est offert ni sur un avoir — dont la ligne n'a pas
   // d'identifiant — ni sur une facture déjà déclarée : le papier et la
   // déclaration à la DGI portent le même libellé, et les faire diverger après
@@ -453,8 +467,14 @@ export default function InvoiceDetailPage({
               )
             )}
 
-            {/* L'avoir contrepasse une vente : il n'a pas de sens sur un avoir. */}
-            {!isAvoir && canEditInvoices && (
+            {/* L'avoir contrepasse une déclaration.
+                Il n'a pas de sens sur un avoir, ni sur une facture que la DGI
+                n'a jamais vue : tant que rien n'est déclaré, il n'y a rien à
+                contrepasser, et l'on corrige plutôt qu'on émet un second
+                document fiscal répondant à un premier inexistant.
+                Le serveur le refuse aussi — le bouton caché n'est que la
+                moitié du travail. */}
+            {!isAvoir && estDeclaree && canEditInvoices && (
               <Button
                 variant="secondary"
                 icon={<FileMinus className="h-4 w-4" />}
