@@ -295,7 +295,12 @@ export default function InvoiceDetailPage({
   });
 
   const normalizeMutation = useMutation({
-    mutationFn: () => invoicesApi.normalize(id).then((r) => r.data),
+    mutationFn: () =>
+      invoicesApi
+        // Un avoir n'encaisse pas : lui envoyer un mode n'aurait aucun sens.
+        // Une facture déjà réglée garde le sien, le serveur ignore celui-ci.
+        .normalize(id, isAvoir ? undefined : payment)
+        .then((r) => r.data),
     onSuccess: (normalized: Invoice) => {
       queryClient.invalidateQueries({ queryKey: ["invoice", id] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
@@ -506,6 +511,33 @@ export default function InvoiceDetailPage({
             Vérifiez ces informations : une facture normalisée ne peut plus
             l&apos;être une seconde fois.
           </p>
+          {/* Le mode part avec la déclaration : le serveur encaisse d'abord,
+              puis déclare. Sans lui, la DGI recevrait une facture annoncée non
+              réglée — et un encaissement ultérieur ne la corrigerait pas. */}
+          {!isAvoir && !invoice.paid && (
+            <div>
+              <label
+                htmlFor="mode-normalisation"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Mode de paiement
+              </label>
+              <NativeSelect
+                id="mode-normalisation"
+                value={payment}
+                onChange={(e) => setPayment(e.target.value as InvoicePayment)}
+              >
+                <option value="ESPECES">ESPECES</option>
+                <option value="MOBILEMONEY">MOBILE MONEY</option>
+                <option value="CHEQUES">CHEQUES</option>
+                <option value="VIREMENT">VIREMENT</option>
+              </NativeSelect>
+              <p className="mt-1 text-xs text-gray-500">
+                La facture sera encaissée puis déclarée : la caisse de vente est
+                créditée du montant total.
+              </p>
+            </div>
+          )}
           <dl className="divide-y divide-gray-100 rounded-lg border border-gray-200">
             <RecapRow label="Type" value={isAvoir ? "Facture d'avoir" : "Facture de vente"} />
             <RecapRow label="Code" value={invoice.code ?? ""} />
