@@ -211,8 +211,15 @@ export const invoicesApi = {
       { customTestName },
     ),
 
-  normalize: (id: string) =>
-    apiClient.post<Invoice>(`/invoices/${id}/normalize`),
+  /**
+   * Déclare la facture à la DGI, en l'encaissant d'abord si elle ne l'est pas.
+   *
+   * Le mode de paiement part avec la déclaration : le serveur le lit sur la
+   * facture, et sans lui la DGI recevrait un document annoncé non réglé.
+   * Inutile sur un avoir — il contrepasse, il n'encaisse rien.
+   */
+  normalize: (id: string, payment?: InvoicePayment) =>
+    apiClient.post<Invoice>(`/invoices/${id}/normalize`, payment ? { payment } : {}),
 
   /**
    * Télécharge le document de la facture normalisée.
