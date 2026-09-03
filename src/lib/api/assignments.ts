@@ -55,6 +55,13 @@ export interface AssignmentDetail {
    * rouverte, et c'est précisément ce qu'on veut voir.
    */
   statutDemande?: string;
+  /**
+   * Le moment où la demande a quitté ce lot pour un autre médecin.
+   *
+   * Non nul : la ligne reste dans le lot — c'est ce qui a été remis ce jour-là
+   * — mais elle ne dit plus rien du travail à faire ici.
+   */
+  remplaceeLe?: string | null;
 }
 
 /**
@@ -83,6 +90,36 @@ export const LIBELLE_DOCTEUR_STATUS: Record<DocteurStatus, string> = {
   termine: "Terminé",
 };
 
+/**
+ * Une prise en charge d'une demande par un médecin.
+ *
+ * `remplaceeLe` non nul signifie que le dossier est passé à quelqu'un d'autre :
+ * l'étape reste, elle ne vaut plus. C'est le seul champ qui distingue le
+ * médecin actuel de ses prédécesseurs, et on le lit plutôt que de se fier au
+ * rang dans la liste — une liste peut être triée à l'envers par mégarde.
+ */
+export interface EtapeAffectation {
+  detailId: string;
+  affectationId: string | null;
+  codeAffectation: string | null;
+  dateAffectation: string | null;
+  medecinId: string | null;
+  medecin: string | null;
+  /** Qui a composé le lot, quand le compte existe encore. */
+  confieePar: string | null;
+  confieeLe: string | null;
+  remplaceeLe: string | null;
+  statutDuMedecin: string | null;
+}
+
+/** À qui une demande a été confiée, de la première fois à aujourd'hui. */
+export interface HistoriqueAffectation {
+  demandeId: string;
+  code: string;
+  /** De la plus ancienne à la plus récente ; vide si jamais affectée. */
+  etapes: EtapeAffectation[];
+}
+
 export interface AssignmentRequest {
   userId: string;
   date?: string;
@@ -94,6 +131,14 @@ export interface AssignmentDetailRequest {
   labels?: string[];
   note?: string;
   date?: string;
+  /**
+   * L'accord pour retirer la demande au médecin qui l'a déjà.
+   *
+   * Le serveur refuse sans lui et nomme le médecin en place dans son message :
+   * c'est ce message qu'on montre pour faire confirmer, plutôt que de
+   * redemander ici qui détient le dossier.
+   */
+  confirmerReaffectation?: boolean;
 }
 
 export interface AssignmentPrint {
@@ -186,6 +231,17 @@ export const assignmentsApi = {
     apiClient.post<AssignmentDetail>(
       `/test-order-assignments/${assignmentId}/details`,
       data
+    ),
+
+  /**
+   * À qui la demande a été confiée, dans l'ordre.
+   *
+   * Sous la permission de lecture des affectations : savoir qui détient un
+   * dossier n'est pas composer des lots.
+   */
+  historique: (demandeId: string) =>
+    apiClient.get<HistoriqueAffectation>(
+      `/test-order-assignments/demandes/${demandeId}/historique`,
     ),
 
   deleteDetail: (detailId: string) =>
