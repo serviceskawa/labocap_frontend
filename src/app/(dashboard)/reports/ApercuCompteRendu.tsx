@@ -8,14 +8,6 @@ import { SidePanel } from "@/components/ui/SidePanel";
 import { formatDate } from "@/lib/utils";
 import { reportsApi, type ReportListItem } from "@/lib/api/reports";
 
-/**
- * Nombre de caractères montrés par section.
- *
- * Assez pour reconnaître un dossier — les premières lignes d'un compte rendu
- * portent le type de prélèvement et les renseignements cliniques —, trop peu
- * pour se substituer à sa lecture. C'est un repère, pas une consultation.
- */
-const LONGUEUR_EXTRAIT = 400;
 
 /**
  * Texte lisible tiré du HTML de l'éditeur.
@@ -41,15 +33,24 @@ function extrait(html?: string | null): string {
 
 function Section({ titre, texte }: { titre: string; texte: string }) {
   if (!texte) return null;
-  const tronque = texte.length > LONGUEUR_EXTRAIT;
   return (
     <div className="mb-4">
       <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
         {titre}
       </h3>
+      {/*
+        Le texte entier, sans coupure.
+
+        Il était tronqué à quatre cents caractères, avec « […] » en bout : de
+        quoi reconnaître un dossier, pas de quoi lire un résultat. Or c'est
+        pour lire qu'on ouvre ce panneau — et un compte rendu coupé au milieu
+        d'une phrase oblige à rouvrir l'écran complet, ce que le panneau était
+        censé éviter.
+
+        Le corps du panneau défile déjà : la longueur ne le déborde pas.
+      */}
       <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">
-        {texte.slice(0, LONGUEUR_EXTRAIT)}
-        {tronque && <span className="text-gray-400"> […]</span>}
+        {texte}
       </p>
     </div>
   );
@@ -84,11 +85,18 @@ export function ApercuCompteRendu({ ligne, onClose }: Props) {
     ? `${ligne.patientFirstname ?? ""} ${ligne.patientLastname ?? ""}`.trim()
     : "";
 
+  // Les six parties du compte rendu, chacune suivie de son complément.
+  //
+  // Deux manquaient — le complément de microscopie et celui du commentaire.
+  // Un pathologiste qui y avait écrit ne le retrouvait nulle part dans
+  // l'aperçu, et rien ne signalait l'absence : le panneau paraissait complet.
   const sections = [
     { titre: "Macroscopie", texte: extrait(detail?.content) },
+    { titre: "Macroscopie — complément", texte: extrait(detail?.descriptionSupplementaire) },
     { titre: "Microscopie", texte: extrait(detail?.contentMicro) },
-    { titre: "Complément", texte: extrait(detail?.descriptionSupplementaire) },
+    { titre: "Microscopie — complément", texte: extrait(detail?.descriptionSupplementaireMicro) },
     { titre: "Commentaire", texte: extrait(detail?.comment) },
+    { titre: "Commentaire — complément", texte: extrait(detail?.commentSup) },
   ].filter((s) => s.texte);
 
   return (
