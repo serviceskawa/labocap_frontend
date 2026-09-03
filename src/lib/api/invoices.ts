@@ -16,6 +16,14 @@ export interface InvoiceDetail {
   id: string;
   labTestId: string;
   testName: string;
+
+  /**
+   * Libellé choisi à la main, s'il y en a un.
+   *
+   * Rendu à côté de `testName` et non à sa place : l'écran doit pouvoir montrer
+   * ce qui a été substitué, sinon on ne saurait plus quel acte a été rendu.
+   */
+  customTestName?: string | null;
   price: number;
   discount: number;
   quantity: number;
@@ -186,6 +194,23 @@ export const invoicesApi = {
    * Renvoie la facture enrichie de son code MECeF et de `normalizedUrl`, le lien
    * du document que la page ouvre dans un nouvel onglet.
    */
+  /**
+   * Change le libellé d'une ligne, sans toucher au nom du catalogue.
+   *
+   * Une chaîne vide défait la personnalisation. Le serveur refuse sur une
+   * facture déjà normalisée : le papier et la déclaration à la DGI portent le
+   * même mot, et les faire diverger après coup ne se rattrape que par un avoir.
+   */
+  changerLibelleDeLigne: (
+    invoiceId: string,
+    detailId: string,
+    customTestName: string,
+  ) =>
+    apiClient.put<Invoice>(
+      `/invoices/${invoiceId}/details/${detailId}/libelle`,
+      { customTestName },
+    ),
+
   normalize: (id: string) =>
     apiClient.post<Invoice>(`/invoices/${id}/normalize`),
 
