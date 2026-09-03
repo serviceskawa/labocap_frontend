@@ -6,13 +6,15 @@ import { toast } from "sonner";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { BadgeCheck, ExternalLink, FileMinus, ShieldCheck, Wallet } from "lucide-react";
+import { BadgeCheck, ExternalLink, FileMinus, Pencil, ShieldCheck, Wallet } from "lucide-react";
 
 import { CrudModal } from "@/components/common/CrudModal";
 import { DataTable } from "@/components/common/DataTable";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
+import { IconButton } from "@/components/ui/IconButton";
+import { TextInput } from "@/components/ui/TextInput";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
@@ -70,12 +72,23 @@ function removeHyphen(code?: string): string {
 interface InvoiceLine {
   id: string;
   designation: string;
+  /**
+   * Le nom du catalogue, quand un libellé personnalisé l'a remplacé.
+   *
+   * Montré en second sous la désignation : sans lui, on ne saurait plus quel
+   * acte a réellement été rendu, et la ligne deviendrait indéchiffrable pour
+   * qui la relit six mois plus tard.
+   */
+  nomDuCatalogue?: string;
   prix: string;
   remise: string;
   total: string;
 }
 
-const lineColumns: ColumnDef<InvoiceLine>[] = [
+function buildLineColumns(
+  onRenommer?: (ligne: InvoiceLine) => void,
+): ColumnDef<InvoiceLine>[] {
+  return [
   {
     header: "#",
     id: "index",
@@ -85,7 +98,16 @@ const lineColumns: ColumnDef<InvoiceLine>[] = [
   {
     header: "Désignation",
     accessorKey: "designation",
-    cell: ({ row }) => <b>{row.original.designation}</b>,
+    cell: ({ row }) => (
+      <div>
+        <b>{row.original.designation}</b>
+        {row.original.nomDuCatalogue && (
+          <div className="text-xs text-gray-500">
+            au catalogue&nbsp;: {row.original.nomDuCatalogue}
+          </div>
+        )}
+      </div>
+    ),
   },
   {
     header: "Quantité",
@@ -101,7 +123,28 @@ const lineColumns: ColumnDef<InvoiceLine>[] = [
     accessorKey: "total",
     cell: ({ row }) => <span className="block text-right">{row.original.total}</span>,
   },
-];
+  // La colonne n'existe que si le geste est offert : une colonne d'actions
+  // vide sur une facture déjà normalisée laisserait croire à une panne.
+  ...(onRenommer
+    ? [
+        {
+          header: "",
+          id: "actions",
+          enableSorting: false,
+          cell: ({ row }: { row: { original: InvoiceLine } }) => (
+            <IconButton
+              variant="edit"
+              title="Modifier le libellé"
+              aria-label="Modifier le libellé"
+              onClick={() => onRenommer(row.original)}
+              icon={<Pencil className="h-4 w-4" />}
+            />
+          ),
+        } as ColumnDef<InvoiceLine>,
+      ]
+    : []),
+  ];
+}
 
 /**
  * Longueur exacte du code de la facture normalisée (MECeF/DGI).
@@ -148,6 +191,10 @@ export default function InvoiceDetailPage({
   const [showNormalizeModal, setShowNormalizeModal] = useState(false);
   /** Récapitulatif de confirmation, avant création de l'avoir. */
   const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
+
+  /** La ligne dont on change le libellé, si une modale est ouverte. */
+  const [ligneRenommee, setLigneRenommee] = useState<InvoiceLine | null>(null);
+  const [libelleSaisi, setLibelleSaisi] = useState("");
 
   const { data: invoice, isLoading } = useQuery<Invoice>({
     queryKey: ["invoice", id],
@@ -231,6 +278,22 @@ export default function InvoiceDetailPage({
    * déclenchée. On le dit alors explicitement : le bouton « Voir la facture
    * normalisée », désormais présent, reste le chemin d'accès au document.
    */
+  const renommerMutation = useMutation({
+    mutationFn: () =>
+      invoicesApi
+        .changerLibelleDeLigne(id, ligneRenommee!.id, libelleSaisi)
+        .then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      setLigneRenommee(null);
+      toast.success("Libellé mis à jour");
+    },
+    onError: (err: AxiosError<ApiError>) => {
+      const apiMessage = err.response?.data?.message;
+      toast.error(apiMessage ?? err.message ?? "Erreur lors de la mise à jour");
+    },
+  });
+
   const normalizeMutation = useMutation({
     mutationFn: () => invoicesApi.normalize(id).then((r) => r.data),
     onSuccess: (normalized: Invoice) => {
@@ -318,6 +381,13 @@ export default function InvoiceDetailPage({
    * Il commande le basculement « Normaliser » → « Voir la facture normalisée ».
    */
   const isNormalized = Boolean(invoice.normalizedUrl);
+
+  // Le geste n'est offert ni sur un avoir — dont la ligne n'a pas
+  // d'identifiant — ni sur une facture déjà déclarée : le papier et la
+  // déclaration à la DGI portent le même libellé, et les faire diverger après
+  // coup ne se rattrape que par un avoir.
+  const peutRenommer =
+    !isAvoir && !isNormalized && can(PERMISSIONS.EDIT_INVOICES);
   const canEditInvoices = can(PERMISSIONS.EDIT_INVOICES);
 
   /**
@@ -336,7 +406,8 @@ export default function InvoiceDetailPage({
       ]
     : (invoice.details ?? []).map((item: InvoiceDetail) => ({
         id: item.id,
-        designation: item.testName,
+        designation: item.customTestName?.trim() || item.testName,
+        nomDuCatalogue: item.customTestName?.trim() ? item.testName : undefined,
         prix: formatDouble(item.price),
         remise: formatDouble(item.discount),
         total: formatDecimal2(item.total),
@@ -558,7 +629,18 @@ export default function InvoiceDetailPage({
         {/* Lignes de la facture — rendu par le DataTable de l'application */}
         <div className="mt-4">
           <DataTable
-            columns={lineColumns}
+            columns={buildLineColumns(
+              peutRenommer
+                ? (ligne) => {
+                    setLigneRenommee(ligne);
+                    // On repart du libellé affiché : corriger une faute de
+                    // frappe ne doit pas obliger à tout retaper.
+                    setLibelleSaisi(
+                      ligne.nomDuCatalogue ? ligne.designation : "",
+                    );
+                  }
+                : undefined,
+            )}
             data={lines}
             hideToolbar
             hideToolbarSearch
@@ -640,6 +722,43 @@ export default function InvoiceDetailPage({
           <p className="mt-8 text-center text-xs text-gray-600">{reportFooter}</p>
         ) : null}
       </div>
+        <CrudModal
+          isOpen={ligneRenommee !== null}
+          onClose={() => setLigneRenommee(null)}
+          title="Libellé de la ligne"
+          size="md"
+          onSubmit={() => renommerMutation.mutateAsync()}
+          submitLabel="Enregistrer"
+          isSubmitting={renommerMutation.isPending}
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
+              Ce libellé remplace le nom du catalogue sur la facture imprimée et
+              dans la déclaration à la DGI. Le nom du catalogue reste enregistré.
+            </p>
+            <div>
+              <label
+                htmlFor="libelle-ligne"
+                className="mb-1 block text-sm font-medium text-gray-700"
+              >
+                Libellé{" "}
+                <span className="font-normal text-gray-500">
+                  — vide pour revenir au nom du catalogue
+                </span>
+              </label>
+              <TextInput
+                id="libelle-ligne"
+                value={libelleSaisi}
+                maxLength={100}
+                placeholder={
+                  ligneRenommee?.nomDuCatalogue ?? ligneRenommee?.designation ?? ""
+                }
+                onChange={(e) => setLibelleSaisi(e.target.value)}
+              />
+            </div>
+          </div>
+        </CrudModal>
     </div>
+
   );
 }
