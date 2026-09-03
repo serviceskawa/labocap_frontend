@@ -15,6 +15,7 @@ import {
 } from "@/lib/api/optionLoaders";
 import type { AxiosError } from "axios";
 
+import { Badge } from "@/components/ui/Badge";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { RHFSelect } from "@/components/ui/RHFSelect";
@@ -30,6 +31,7 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import {
   assignmentsApi,
   LIBELLE_DOCTEUR_STATUS,
+  STATUT_DEMANDE,
   type DocteurStatus,
   type AssignmentDetail,
   type AssignmentPrint,
@@ -554,7 +556,15 @@ export default function AssignmentDetailsPage() {
                         Demande d&apos;examen
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        Étiquettes
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
                         Note
+                      </th>
+                      {/* Où en est le dossier — lecture seule ici : il avance
+                          par la validation et la remise, jamais par cet écran. */}
+                      <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        Statut
                       </th>
                       {/* Où en est le médecin — à ne pas confondre avec l'état
                           du compte rendu, qui avance à son propre rythme.
@@ -572,7 +582,7 @@ export default function AssignmentDetailsPage() {
                     {details.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={4}
+                          colSpan={7}
                           className="px-4 py-8 text-center text-sm text-gray-500"
                         >
                           Aucune demande d&apos;examen affectée
@@ -615,6 +625,21 @@ export default function AssignmentDetailsPage() {
                           </td>
                           <td className="px-4 py-3 text-gray-700">
                             {d.note ?? "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {d.statutDemande ? (
+                              <Badge
+                                variant={
+                                  STATUT_DEMANDE[d.statutDemande]?.variante ??
+                                  "secondary"
+                                }
+                              >
+                                {STATUT_DEMANDE[d.statutDemande]?.libelle ??
+                                  d.statutDemande}
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             {canManage ? (

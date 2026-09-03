@@ -1,5 +1,6 @@
 import apiClient from "./client";
 import type { PageResponse } from "@/types/api";
+import type { BadgeVariant } from "@/components/ui/Badge";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,7 +45,34 @@ export interface AssignmentDetail {
    * Il ne se change qu'ici : sur le téléphone, le médecin lit sa file.
    */
   docteurStatus?: DocteurStatus;
+  /**
+   * Où en est la demande elle-même — `PENDING` | `VALIDATED` | `DELIVERED` |
+   * `CANCELLED`.
+   *
+   * Distinct du suivi du médecin juste au-dessus : celui-là dit ce que le
+   * médecin a fait de sa file, celui-ci dit ce qu'est devenu le dossier. Un
+   * dossier annulé peut rester « à traiter » dans une file qu'on n'a pas
+   * rouverte, et c'est précisément ce qu'on veut voir.
+   */
+  statutDemande?: string;
 }
+
+/**
+ * Les statuts d'une demande, et la teinte qui va avec.
+ *
+ * Un statut inconnu — un ajout côté serveur qui n'est pas encore ici —
+ * s'affiche tel quel en gris plutôt que de disparaître : mieux vaut un libellé
+ * brut qu'une case vide qui laisse croire qu'il n'y a rien à savoir.
+ */
+export const STATUT_DEMANDE: Record<
+  string,
+  { libelle: string; variante: BadgeVariant }
+> = {
+  PENDING: { libelle: "En attente", variante: "warning" },
+  VALIDATED: { libelle: "Validée", variante: "info" },
+  DELIVERED: { libelle: "Remise", variante: "success" },
+  CANCELLED: { libelle: "Annulée", variante: "danger" },
+};
 
 /** Les trois états d'une demande dans la file d'un médecin. */
 export type DocteurStatus = "a_traiter" | "pris_en_charge" | "termine";
