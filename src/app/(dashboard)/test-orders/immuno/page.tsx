@@ -163,6 +163,9 @@ export default function TestOrdersImmunoPage() {
   const [contratFilter, setContratFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [urgentFilter, setUrgentFilter] = useState("");
+  /** Étendre l'urgence aux années révolues — voir la liste des demandes. */
+  const [inclureAnciens, setInclureAnciens] = useState(false);
+  const anneeEnCours = new Date().getFullYear();
   const [docteurFilter, setDocteurFilter] = useState("");
   const [search, setSearch] = useState("");
   const [dateBegin, setDateBegin] = useState("");
@@ -174,7 +177,7 @@ export default function TestOrdersImmunoPage() {
   const { data, isLoading } = useQuery<PageResponse<TestOrder>>({
     queryKey: [
       "test-orders-immuno",
-      { page, pageSize, contratFilter, statusFilter, urgentFilter, docteurFilter, search, dateBegin, dateEnd },
+      { page, pageSize, contratFilter, statusFilter, urgentFilter, inclureAnciens, docteurFilter, search, dateBegin, dateEnd },
     ],
     queryFn: () =>
       testOrdersApi
@@ -184,6 +187,9 @@ export default function TestOrdersImmunoPage() {
           contratId: contratFilter || undefined,
           status: statusFilter || undefined,
           isUrgent: urgentFilter === "1" ? true : undefined,
+          enCours: urgentFilter === "1" ? true : undefined,
+          annee:
+            urgentFilter === "1" && !inclureAnciens ? anneeEnCours : undefined,
           attribuateDoctorId: docteurFilter || undefined,
           search: search || undefined,
           from: dateBegin || undefined,
@@ -244,12 +250,29 @@ export default function TestOrdersImmunoPage() {
         .then((r) => r.data.totalElements),
   });
   const { data: statsUrgent } = useQuery({
-    queryKey: ["test-orders-immuno-stats-urgent"],
+    queryKey: ["test-orders-immuno-stats-urgent", anneeEnCours],
     queryFn: () =>
       testOrdersApi
-        .findAllImmuno({ page: 0, size: 1, isUrgent: true })
+        .findAllImmuno({
+          page: 0,
+          size: 1,
+          isUrgent: true,
+          enCours: true,
+          annee: anneeEnCours,
+        })
         .then((r) => r.data.totalElements),
   });
+  const { data: statsUrgentTous } = useQuery({
+    queryKey: ["test-orders-immuno-stats-urgent-tous"],
+    queryFn: () =>
+      testOrdersApi
+        .findAllImmuno({ page: 0, size: 1, isUrgent: true, enCours: true })
+        .then((r) => r.data.totalElements),
+  });
+  const urgentsAnciens =
+    statsUrgentTous !== undefined && statsUrgent !== undefined
+      ? statsUrgentTous - statsUrgent
+      : 0;
 
   /** Applique le statut, ou le retire si le compteur cliqué est déjà actif. */
   const basculerStatut = (statut: string) => {
@@ -518,6 +541,21 @@ export default function TestOrdersImmunoPage() {
           />
         </div>
 
+        {urgentFilter === "1" && urgentsAnciens > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              setInclureAnciens(!inclureAnciens);
+              setPage(0);
+            }}
+            className="mb-3 text-sm font-medium text-red-700 underline underline-offset-4 hover:text-red-800"
+          >
+            {inclureAnciens
+              ? "Masquer les années précédentes"
+              : `+ ${urgentsAnciens} des années précédentes`}
+          </button>
+        )}
+
         {/* Tableau */}
         {/* Six actions déclarées : le tableau replie uniformément. */}
         <RowActionsProvider collapse>
@@ -530,7 +568,9 @@ export default function TestOrdersImmunoPage() {
             pageSize={pageSize}
             onPageChange={setPage}
             onPageSizeChange={(size) => { setPageSize(size); setPage(0); }}
-            rowClassName={(row) => (row.isUrgent ? "bg-red-50" : "")}
+            rowClassName={(row) =>
+              row.isUrgent && !row.reportIsDelivered ? "bg-red-50" : ""
+            }
           />
         </RowActionsProvider>
       </div>

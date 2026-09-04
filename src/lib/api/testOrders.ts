@@ -112,6 +112,16 @@ export const testOrdersApi = {
     reportStatus?: string;
     typeOrderId?: string;
     isUrgent?: boolean;
+    /**
+     * L'année du dossier, telle que son code la porte — 2026 pour « 26-0155 ».
+     *
+     * L'année du code et non celle du prélèvement : un prélèvement de décembre
+     * enregistré en janvier porte le numéro de la nouvelle année, et c'est bien
+     * un dossier de l'année en cours.
+     */
+    annee?: number;
+    /** Ne garder que les dossiers ni remis ni annulés. */
+    enCours?: boolean;
     patientId?: string;
     doctorId?: string;
     attribuateDoctorId?: string;
@@ -127,6 +137,16 @@ export const testOrdersApi = {
     size?: number;
     status?: string;
     isUrgent?: boolean;
+    /**
+     * L'année du dossier, telle que son code la porte — 2026 pour « 26-0155 ».
+     *
+     * L'année du code et non celle du prélèvement : un prélèvement de décembre
+     * enregistré en janvier porte le numéro de la nouvelle année, et c'est bien
+     * un dossier de l'année en cours.
+     */
+    annee?: number;
+    /** Ne garder que les dossiers ni remis ni annulés. */
+    enCours?: boolean;
     patientId?: string;
     doctorId?: string;
     attribuateDoctorId?: string;
