@@ -68,6 +68,8 @@ type FieldDef = {
   placeholder?: string;
   options?: { value: string; label: string }[];
   center?: boolean;
+  /** Texte d'aide affiché sous le champ (jetons disponibles, contraintes…). */
+  help?: string;
 };
 
 // Onglet Général → sous-onglet « Général »
@@ -126,6 +128,24 @@ const SMS_FIELDS: FieldDef[] = [
   { key: "key_ourvoice", label: "Clé OurVoice", type: "password", placeholder: "clé API OurVoice" },
   { key: "link_ourvoice_call", label: "Lien appel OurVoice", placeholder: "https://api.getourvoice.com/v1/calls" },
   { key: "link_ourvoice_sms", label: "Lien SMS OurVoice", placeholder: "https://api.getourvoice.com/v1/messages" },
+  {
+    key: "sms_resultat_body",
+    label: "SMS « résultat disponible »",
+    type: "textarea",
+    full: true,
+    placeholder:
+      "Envoyé au patient à la validation de son compte rendu. Laisser vide pour utiliser le message par défaut.",
+    help: "Envoyé automatiquement au patient dès la validation de son compte rendu. Laisser vide conserve le message par défaut.",
+  },
+  {
+    key: "sms_facture_body",
+    label: "SMS « facture disponible »",
+    type: "textarea",
+    full: true,
+    placeholder:
+      "Envoyé au client à la normalisation de sa facture. Laisser vide pour utiliser le message par défaut.",
+    help: "Envoyé automatiquement à la normalisation de la facture. Jetons remplacés à l'envoi : {code} = numéro de la facture, {lien} = lien de téléchargement. Au-delà de 160 caractères, l'opérateur facture plusieurs SMS.",
+  },
 ];
 
 // Onglet Compte rendu → sous-onglet « Général » (réplique exacte du formulaire
@@ -635,6 +655,9 @@ function FieldsGrid({
               className={inputClass}
             />
           )}
+          {f.help ? (
+            <p className="text-xs text-gray-500">{f.help}</p>
+          ) : null}
         </div>
         )
       )}
