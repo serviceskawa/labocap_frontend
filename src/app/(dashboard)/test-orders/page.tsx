@@ -254,13 +254,24 @@ export default function TestOrdersPage() {
   const [dateBegin, setDateBegin] = useState("");
   const [dateEnd, setDateEnd] = useState("");
 
+  /**
+   * Étendre l'urgence aux années précédentes.
+   *
+   * Fermé par défaut. Sur les 57 dossiers marqués urgents et non remis, 54
+   * datent d'années révolues — ils n'appellent plus le geste que le compteur
+   * est censé déclencher, et les afficher d'emblée noyait les trois qui le
+   * réclament. Ils restent à un tap, jamais perdus.
+   */
+  const [inclureAnciens, setInclureAnciens] = useState(false);
+  const anneeEnCours = new Date().getFullYear();
+
   const [deleteTarget, setDeleteTarget] = useState<TestOrder | null>(null);
 
   // --- Queries données
   const { data, isLoading } = useQuery<PageResponse<TestOrder>>({
     queryKey: [
       "test-orders",
-      { page, pageSize, contratFilter, statusFilter, typeFilter, urgentFilter, docteurFilter, search, dateBegin, dateEnd },
+      { page, pageSize, contratFilter, statusFilter, typeFilter, urgentFilter, inclureAnciens, docteurFilter, search, dateBegin, dateEnd },
     ],
     queryFn: () =>
       testOrdersApi
@@ -271,6 +282,12 @@ export default function TestOrdersPage() {
           reportStatus: statusFilter || undefined,
           typeOrderId: typeFilter || undefined,
           isUrgent: urgentFilter === "1" ? true : undefined,
+          // L'urgence ne vaut que sur un dossier encore ouvert, et d'abord sur
+          // ceux de l'année. Les deux restrictions n'accompagnent que le filtre
+          // d'urgence : ailleurs, la liste doit rester complète.
+          enCours: urgentFilter === "1" ? true : undefined,
+          annee:
+            urgentFilter === "1" && !inclureAnciens ? anneeEnCours : undefined,
           attribuateDoctorId: docteurFilter || undefined,
           search: search || undefined,
           from: dateBegin || undefined,
@@ -336,12 +353,36 @@ export default function TestOrdersPage() {
         .then((r) => r.data.totalElements),
   });
   const { data: statsUrgent } = useQuery({
-    queryKey: ["test-orders-stats-urgent"],
+    queryKey: ["test-orders-stats-urgent", anneeEnCours],
     queryFn: () =>
       testOrdersApi
-        .findAll({ page: 0, size: 1, isUrgent: true })
+        .findAll({
+          page: 0,
+          size: 1,
+          isUrgent: true,
+          enCours: true,
+          annee: anneeEnCours,
+        })
         .then((r) => r.data.totalElements),
   });
+  /**
+   * Les urgents encore ouverts, toutes années confondues.
+   *
+   * Sert uniquement à chiffrer ce que le compteur laisse de côté : annoncer
+   * « + 54 des années précédentes » plutôt qu'un « voir plus » qui n'engage à
+   * rien et que personne n'ouvre.
+   */
+  const { data: statsUrgentTous } = useQuery({
+    queryKey: ["test-orders-stats-urgent-tous"],
+    queryFn: () =>
+      testOrdersApi
+        .findAll({ page: 0, size: 1, isUrgent: true, enCours: true })
+        .then((r) => r.data.totalElements),
+  });
+  const urgentsAnciens =
+    statsUrgentTous !== undefined && statsUrgent !== undefined
+      ? statsUrgentTous - statsUrgent
+      : 0;
 
   /** Applique le statut, ou le retire si le compteur cliqué est déjà actif. */
   const basculerStatut = (statut: string) => {
@@ -667,6 +708,24 @@ export default function TestOrdersPage() {
             couleur="red"
           />
         </div>
+
+        {/* Le reste de l'urgence, à un tap. Affiché seulement quand le filtre
+            est actif : hors de ce contexte, la ligne parlerait d'une liste
+            qu'on ne regarde pas. */}
+        {urgentFilter === "1" && urgentsAnciens > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              setInclureAnciens(!inclureAnciens);
+              setPage(0);
+            }}
+            className="mb-3 text-sm font-medium text-red-700 underline underline-offset-4 hover:text-red-800"
+          >
+            {inclureAnciens
+              ? "Masquer les années précédentes"
+              : `+ ${urgentsAnciens} des années précédentes`}
+          </button>
+        )}
 
         {/* Tableau */}
         {/* Cet écran déclare huit actions : certaines lignes dépassent le
