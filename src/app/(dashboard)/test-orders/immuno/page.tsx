@@ -189,7 +189,9 @@ export default function TestOrdersImmunoPage() {
           isUrgent: urgentFilter === "1" ? true : undefined,
           enCours: urgentFilter === "1" ? true : undefined,
           annee:
-            urgentFilter === "1" && !inclureAnciens ? anneeEnCours : undefined,
+            (urgentFilter === "1" || statusFilter) && !inclureAnciens
+              ? anneeEnCours
+              : undefined,
           attribuateDoctorId: docteurFilter || undefined,
           search: search || undefined,
           from: dateBegin || undefined,
@@ -236,14 +238,28 @@ export default function TestOrdersImmunoPage() {
   // Ils restaient à zéro sur « Livré » tant que l'historique migré de Laravel
   // n'avait pas été repris ; cf. migration V62 côté backend.
   const { data: statsLivre } = useQuery({
-    queryKey: ["test-orders-immuno-stats-livre"],
+    queryKey: ["test-orders-immuno-stats-livre", anneeEnCours],
+    queryFn: () =>
+      testOrdersApi
+        .findAllImmuno({ page: 0, size: 1, status: "DELIVERED", annee: anneeEnCours })
+        .then((r) => r.data.totalElements),
+  });
+  const { data: statsLivreTous } = useQuery({
+    queryKey: ["test-orders-immuno-stats-livre-tous"],
     queryFn: () =>
       testOrdersApi
         .findAllImmuno({ page: 0, size: 1, status: "DELIVERED" })
         .then((r) => r.data.totalElements),
   });
   const { data: statsValide } = useQuery({
-    queryKey: ["test-orders-immuno-stats-valide"],
+    queryKey: ["test-orders-immuno-stats-valide", anneeEnCours],
+    queryFn: () =>
+      testOrdersApi
+        .findAllImmuno({ page: 0, size: 1, status: "VALIDATED", annee: anneeEnCours })
+        .then((r) => r.data.totalElements),
+  });
+  const { data: statsValideTous } = useQuery({
+    queryKey: ["test-orders-immuno-stats-valide-tous"],
     queryFn: () =>
       testOrdersApi
         .findAllImmuno({ page: 0, size: 1, status: "VALIDATED" })
@@ -269,10 +285,15 @@ export default function TestOrdersImmunoPage() {
         .findAllImmuno({ page: 0, size: 1, isUrgent: true, enCours: true })
         .then((r) => r.data.totalElements),
   });
-  const urgentsAnciens =
-    statsUrgentTous !== undefined && statsUrgent !== undefined
-      ? statsUrgentTous - statsUrgent
-      : 0;
+  /** Ce que la pastille active laisse de côté — voir la liste des demandes. */
+  const restePrecedent = (() => {
+    const ecart = (tous?: number, annee?: number) =>
+      tous !== undefined && annee !== undefined ? tous - annee : 0;
+    if (urgentFilter === "1") return ecart(statsUrgentTous, statsUrgent);
+    if (statusFilter === "DELIVERED") return ecart(statsLivreTous, statsLivre);
+    if (statusFilter === "VALIDATED") return ecart(statsValideTous, statsValide);
+    return 0;
+  })();
 
   /** Applique le statut, ou le retire si le compteur cliqué est déjà actif. */
   const basculerStatut = (statut: string) => {
@@ -541,7 +562,7 @@ export default function TestOrdersImmunoPage() {
           />
         </div>
 
-        {urgentFilter === "1" && urgentsAnciens > 0 && (
+        {(urgentFilter === "1" || statusFilter) && restePrecedent > 0 && (
           <button
             type="button"
             onClick={() => {
@@ -552,7 +573,7 @@ export default function TestOrdersImmunoPage() {
           >
             {inclureAnciens
               ? "Masquer les années précédentes"
-              : `+ ${urgentsAnciens} des années précédentes`}
+              : `+ ${restePrecedent} des années précédentes`}
           </button>
         )}
 

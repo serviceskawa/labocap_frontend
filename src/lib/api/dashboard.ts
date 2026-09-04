@@ -33,17 +33,26 @@ export interface AdminStats {
  * nom, deux questions différentes — ne pas les intervertir.
  */
 export interface SecretariatStats {
+  /** Cumuls depuis toujours — ils répondent à « combien en tout ». */
   patients: number;
   contrats: number;
   tests: number;
   testOrdersCount: number;
-  /** Comptes rendus remis au client. */
+  /**
+   * Les quatre suivants portent sur l'ANNÉE EN COURS, à la différence des
+   * cumuls ci-dessus.
+   *
+   * Ils comptaient tout l'historique et disaient donc l'arriéré plutôt que la
+   * charge : 331 bons sans compte rendu dont 237 ouverts avant cette année, et
+   * un chiffre qui ne peut plus redescendre cesse d'être regardé.
+   */
+  /** Comptes rendus remis au client, cette année. */
   finishTest: number;
-  /** Comptes rendus non remis. */
+  /** Comptes rendus non remis, cette année. */
   noFinishTest: number;
-  /** Bons d'examen sans aucun compte rendu — le travail pas encore commencé. */
+  /** Bons sans aucun compte rendu, cette année — le travail pas commencé. */
   noSaveTest: number;
-  /** Bons d'examen en attente depuis plus de trois semaines — les retards. */
+  /** Bons en attente depuis plus de trois semaines, cette année. */
   noFinishWeek: number;
 }
 
