@@ -733,6 +733,19 @@ export default function HomePage() {
                   pastille. Des repères, pas des signaux.
           ════════════════════════════════════════════════════════════════ */}
           <Card className="overflow-hidden">
+            {/* Le périmètre, dit une fois pour les quatre.
+                Ces chiffres portent sur l'année en cours : ils comptaient
+                jusqu'ici tout l'historique et disaient surtout l'arriéré —
+                331 bons sans compte rendu, dont 237 antérieurs à cette année.
+                Le suffixe répété sur chaque titre aurait allongé quatre
+                libellés pour une seule information. */}
+            <div className="flex items-baseline justify-between border-b border-gray-100 px-5 py-3">
+              <h2 className="text-sm font-semibold text-gray-800">À traiter</h2>
+              <span className="text-xs font-medium text-gray-500">
+                Année {new Date().getFullYear()}
+              </span>
+            </div>
+
             {/* Rangée « à traiter » */}
             <div className="grid grid-cols-1 gap-px bg-gray-100 sm:grid-cols-2 xl:grid-cols-4">
               {opStatsLoading || statsLoading

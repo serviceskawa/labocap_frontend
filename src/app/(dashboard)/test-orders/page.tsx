@@ -282,12 +282,15 @@ export default function TestOrdersPage() {
           reportStatus: statusFilter || undefined,
           typeOrderId: typeFilter || undefined,
           isUrgent: urgentFilter === "1" ? true : undefined,
-          // L'urgence ne vaut que sur un dossier encore ouvert, et d'abord sur
-          // ceux de l'année. Les deux restrictions n'accompagnent que le filtre
-          // d'urgence : ailleurs, la liste doit rester complète.
+          // L'urgence ne vaut que sur un dossier encore ouvert.
           enCours: urgentFilter === "1" ? true : undefined,
+          // L'année ne borne la liste que lorsqu'on arrive par une pastille :
+          // le chiffre annoncé et les lignes affichées doivent concorder. Une
+          // recherche libre, elle, doit continuer d'atteindre 2023.
           annee:
-            urgentFilter === "1" && !inclureAnciens ? anneeEnCours : undefined,
+            (urgentFilter === "1" || statusFilter) && !inclureAnciens
+              ? anneeEnCours
+              : undefined,
           attribuateDoctorId: docteurFilter || undefined,
           search: search || undefined,
           from: dateBegin || undefined,
@@ -339,14 +342,28 @@ export default function TestOrdersPage() {
   // pastille de la colonne Compte rendu. Ils interrogeaient le statut du BON,
   // un troisième axe qui affichait « Livrer : 0 » à côté de lignes « Livré ».
   const { data: statsLivre } = useQuery({
-    queryKey: ["test-orders-stats-livre"],
+    queryKey: ["test-orders-stats-livre", anneeEnCours],
+    queryFn: () =>
+      testOrdersApi
+        .findAll({ page: 0, size: 1, reportStatus: "DELIVERED", annee: anneeEnCours })
+        .then((r) => r.data.totalElements),
+  });
+  const { data: statsLivreTous } = useQuery({
+    queryKey: ["test-orders-stats-livre-tous"],
     queryFn: () =>
       testOrdersApi
         .findAll({ page: 0, size: 1, reportStatus: "DELIVERED" })
         .then((r) => r.data.totalElements),
   });
   const { data: statsValide } = useQuery({
-    queryKey: ["test-orders-stats-valide"],
+    queryKey: ["test-orders-stats-valide", anneeEnCours],
+    queryFn: () =>
+      testOrdersApi
+        .findAll({ page: 0, size: 1, reportStatus: "VALIDATED", annee: anneeEnCours })
+        .then((r) => r.data.totalElements),
+  });
+  const { data: statsValideTous } = useQuery({
+    queryKey: ["test-orders-stats-valide-tous"],
     queryFn: () =>
       testOrdersApi
         .findAll({ page: 0, size: 1, reportStatus: "VALIDATED" })
@@ -379,10 +396,21 @@ export default function TestOrdersPage() {
         .findAll({ page: 0, size: 1, isUrgent: true, enCours: true })
         .then((r) => r.data.totalElements),
   });
-  const urgentsAnciens =
-    statsUrgentTous !== undefined && statsUrgent !== undefined
-      ? statsUrgentTous - statsUrgent
-      : 0;
+  /**
+   * Ce que le compteur actif laisse de côté, en nombre.
+   *
+   * Chaque pastille ne compte que l'année en cours : sur 336 dossiers en
+   * attente, 242 traînent depuis 2023 et n'appellent plus le geste que la
+   * pastille déclenche. Ils restent accessibles, jamais mis en avant.
+   */
+  const restePrecedent = (() => {
+    const ecart = (tous?: number, annee?: number) =>
+      tous !== undefined && annee !== undefined ? tous - annee : 0;
+    if (urgentFilter === "1") return ecart(statsUrgentTous, statsUrgent);
+    if (statusFilter === "DELIVERED") return ecart(statsLivreTous, statsLivre);
+    if (statusFilter === "VALIDATED") return ecart(statsValideTous, statsValide);
+    return 0;
+  })();
 
   /** Applique le statut, ou le retire si le compteur cliqué est déjà actif. */
   const basculerStatut = (statut: string) => {
@@ -709,10 +737,10 @@ export default function TestOrdersPage() {
           />
         </div>
 
-        {/* Le reste de l'urgence, à un tap. Affiché seulement quand le filtre
-            est actif : hors de ce contexte, la ligne parlerait d'une liste
-            qu'on ne regarde pas. */}
-        {urgentFilter === "1" && urgentsAnciens > 0 && (
+        {/* Le reste de l'arriéré, à un clic. Affiché seulement quand une
+            pastille est active : hors de ce contexte, la ligne parlerait d'une
+            liste qu'on ne regarde pas. */}
+        {(urgentFilter === "1" || statusFilter) && restePrecedent > 0 && (
           <button
             type="button"
             onClick={() => {
@@ -723,7 +751,7 @@ export default function TestOrdersPage() {
           >
             {inclureAnciens
               ? "Masquer les années précédentes"
-              : `+ ${urgentsAnciens} des années précédentes`}
+              : `+ ${restePrecedent} des années précédentes`}
           </button>
         )}
 
