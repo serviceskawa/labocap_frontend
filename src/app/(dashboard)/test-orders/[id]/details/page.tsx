@@ -29,6 +29,7 @@ import type { ApiError } from "@/types/api";
 import { getApiErrorMessage } from "@/lib/api/errorMessages";
 import { openDocFile } from "@/lib/api/docs";
 import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
+import { PriseEnCharge } from "./PriseEnCharge";
 
 // ---------------------------------------------------------------------------
 // Types locaux
@@ -629,7 +630,12 @@ export default function TestOrderDetailsPage({ params }: Props) {
       </div>
 
       {/* ===================================================================
-          Section 3 — Galerie des images
+          Section 3 — Prise en charge
+      =================================================================== */}
+      <PriseEnCharge demandeId={orderId} />
+
+      {/* ===================================================================
+          Section 4 — Galerie des images
       =================================================================== */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -700,7 +706,7 @@ export default function TestOrderDetailsPage({ params }: Props) {
       </div>
 
       {/* ===================================================================
-          Section 4 — Examens demandés
+          Section 5 — Examens demandés
       =================================================================== */}
       <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">

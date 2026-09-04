@@ -34,6 +34,7 @@ import {
   STATUT_DEMANDE,
   type DocteurStatus,
   type AssignmentDetail,
+  type AssignmentDetailRequest,
   type AssignmentPrint,
 } from "@/lib/api/assignments";
 import { usersApi, type User } from "@/lib/api/users";
@@ -107,6 +108,18 @@ export default function AssignmentDetailsPage() {
   const [etiquetteLibre, setEtiquetteLibre] = useState("");
 
   // ---- Modal suppression
+  /**
+   * Le transfert que le serveur refuse tant qu'on ne l'a pas voulu.
+   *
+   * Porte le message du serveur plutôt qu'un texte reconstruit ici : c'est lui
+   * qui sait à quel médecin la demande est confiée, et le redemander à l'écran
+   * ferait afficher un nom pendant que le serveur en retire un autre.
+   */
+  const [reaffectation, setReaffectation] = useState<{
+    message: string;
+    donnees: AssignmentDetailRequest;
+  } | null>(null);
+
   const [detailToDelete, setDetailToDelete] = useState<AssignmentDetail | null>(
     null
   );
@@ -235,13 +248,15 @@ export default function AssignmentDetailsPage() {
   });
 
   const addDetailMutation = useMutation({
-    mutationFn: (data: {
-      testOrderId: string;
-      labels?: string[];
-      note?: string;
-    }) => assignmentsApi.addDetail(id as string, data),
-    onSuccess: () => {
-      toast.success("Demande d'examen ajoutée");
+    mutationFn: (data: AssignmentDetailRequest) =>
+      assignmentsApi.addDetail(id as string, data),
+    onSuccess: (_donnees, variables) => {
+      toast.success(
+        variables.confirmerReaffectation
+          ? "Demande d'examen réaffectée"
+          : "Demande d'examen ajoutée",
+      );
+      setReaffectation(null);
       queryClient.invalidateQueries({ queryKey: ["assignment", id] });
       queryClient.invalidateQueries({ queryKey: ["assignments"] });
       setSelectedOrder(null);
@@ -249,15 +264,20 @@ export default function AssignmentDetailsPage() {
       setEtiquettes([]);
       setEtiquetteLibre("");
     },
-    onError: (err: AxiosError<ApiError>) => {
-      const status = err.response?.status;
-      if (status === 409) {
-        toast.error("Cette demande d'examen est déjà affectée");
-      } else {
-        toast.error(
-          err.response?.data?.message ?? "Erreur lors de l'ajout"
-        );
+    onError: (err: AxiosError<ApiError>, variables) => {
+      // 409 : la demande est chez un autre médecin. Ce n'est pas un échec mais
+      // une question — on la pose, au lieu d'afficher un refus sec devant
+      // lequel l'utilisateur n'avait aucun recours.
+      if (err.response?.status === 409) {
+        setReaffectation({
+          message:
+            err.response?.data?.message ??
+            "Cette demande d'examen est déjà affectée à un autre médecin.",
+          donnees: variables,
+        });
+        return;
       }
+      toast.error(err.response?.data?.message ?? "Erreur lors de l'ajout");
     },
   });
 
@@ -592,15 +612,32 @@ export default function AssignmentDetailsPage() {
                       detailsPagination.pageRows.map((d, idx) => (
                         <tr
                           key={d.id}
-                          className="border-b border-gray-100 hover:bg-gray-50"
+                          className={`border-b border-gray-100 hover:bg-gray-50 ${
+                            d.remplaceeLe ? "bg-gray-50/60 text-gray-400" : ""
+                          }`}
                         >
                           <td className="px-4 py-3 text-gray-700">
                             {detailsPagination.offset + idx + 1}
                           </td>
                           <td className="px-4 py-3">
-                            <span className="font-mono text-sm font-medium text-gray-800">
-                              {d.testOrderCode}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`font-mono text-sm font-medium ${
+                                  d.remplaceeLe
+                                    ? "text-gray-500 line-through"
+                                    : "text-gray-800"
+                                }`}
+                              >
+                                {d.testOrderCode}
+                              </span>
+                              {/* La demande a changé de médecin depuis. La
+                                  ligne reste — le bordereau du jour dit ce
+                                  qu'on a remis — mais rien ici n'est plus à
+                                  faire. */}
+                              {d.remplaceeLe && (
+                                <Badge variant="secondary">Transférée</Badge>
+                              )}
+                            </div>
                           </td>
                           {/*
                             Rendues comme des étiquettes et non comme du texte :
@@ -642,7 +679,9 @@ export default function AssignmentDetailsPage() {
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            {canManage ? (
+                            {d.remplaceeLe ? (
+                              <span className="text-gray-400">—</span>
+                            ) : canManage ? (
                               <NativeSelect
                                 aria-label={`Suivi du médecin — ${d.testOrderCode}`}
                                 value={d.docteurStatus ?? "a_traiter"}
@@ -704,6 +743,27 @@ export default function AssignmentDetailsPage() {
       </form>
 
       {/* Modal de confirmation */}
+      {/* Le transfert d'un dossier d'un médecin à un autre. Confirmé ici, il
+          repart avec l'accord explicite que le serveur exige. */}
+      <ConfirmModal
+        isOpen={!!reaffectation}
+        onClose={() => setReaffectation(null)}
+        onConfirm={() =>
+          reaffectation &&
+          addDetailMutation.mutate({
+            ...reaffectation.donnees,
+            confirmerReaffectation: true,
+          })
+        }
+        title="Réaffecter cette demande d'examen"
+        message={
+          reaffectation
+            ? `${reaffectation.message} L'ancienne prise en charge sera conservée dans l'historique.`
+            : ""
+        }
+        confirmLabel="Réaffecter"
+      />
+
       <ConfirmModal
         isOpen={!!detailToDelete}
         onClose={() => setDetailToDelete(null)}
