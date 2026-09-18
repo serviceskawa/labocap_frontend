@@ -47,6 +47,7 @@ export interface Invoice {
   patientId: string;
   patientName?: string;
   patientCode?: string;
+  patientAddress?: string;
   contratId?: string;
   contratName?: string;
   clientName?: string;

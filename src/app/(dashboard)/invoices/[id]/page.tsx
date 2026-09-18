@@ -637,12 +637,13 @@ export default function InvoiceDetailPage({
               <strong>Adressée à:</strong>
             </p>
             <p>
-              <strong>Nom: </strong> {invoice.clientName ?? ""}
+              {/* Nom du patient en direct s'il existe (jamais figé), sinon le nom client stocké. */}
+              <strong>Nom: </strong> {invoice.patientName ?? invoice.clientName ?? ""}
             </p>
             <p>
-              {/* Laravel affiche ici le patient s'il existe, sinon l'adresse client. */}
+              {/* Adresse du patient en direct s'il existe, sinon l'adresse client. */}
               <strong>Adresse: </strong>
-              <span>{invoice.patientName ?? invoice.clientAddress ?? ""}</span>
+              <span>{invoice.patientAddress ?? invoice.clientAddress ?? ""}</span>
             </p>
             <p>
               <strong>Code client: </strong>
