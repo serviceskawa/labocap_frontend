@@ -24,6 +24,7 @@ import {
   invoicesApi,
   type Invoice,
   type InvoiceDetail,
+  type InvoiceClientInfoHistory,
   type InvoicePayment,
 } from "@/lib/api/invoices";
 import { getApiErrorMessageFromBlob } from "@/lib/api/errorMessages";
@@ -191,6 +192,8 @@ export default function InvoiceDetailPage({
   const [showNormalizeModal, setShowNormalizeModal] = useState(false);
   /** Récapitulatif de confirmation, avant création de l'avoir. */
   const [showCreditNoteModal, setShowCreditNoteModal] = useState(false);
+  /** Historique des actualisations du nom/adresse client. */
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   /** La ligne dont on change le libellé, si une modale est ouverte. */
   const [ligneRenommee, setLigneRenommee] = useState<InvoiceLine | null>(null);
@@ -200,6 +203,14 @@ export default function InvoiceDetailPage({
     queryKey: ["invoice", id],
     queryFn: () => invoicesApi.findById(id).then((r) => r.data),
     enabled: !!id,
+  });
+
+  const { data: clientInfoHistory, isLoading: isHistoryLoading } = useQuery<
+    InvoiceClientInfoHistory[]
+  >({
+    queryKey: ["invoice", id, "client-info-history"],
+    queryFn: () => invoicesApi.getClientInfoHistory(id).then((r) => r.data),
+    enabled: !!id && showHistoryModal,
   });
 
   const { data: appSettings } = useAppSettings();
@@ -332,6 +343,24 @@ export default function InvoiceDetailPage({
     },
   });
 
+  /**
+   * Réécrit le nom/adresse client de la facture avec les informations
+   * courantes du patient rattaché. Déclenchement volontaire uniquement : la
+   * facture ne se met jamais à jour toute seule.
+   */
+  const refreshClientInfoMutation = useMutation({
+    mutationFn: () => invoicesApi.refreshClientInfo(id).then((r) => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Informations client actualisées");
+    },
+    onError: (err: Error) => {
+      const apiMessage = (err as AxiosError<ApiError>).response?.data?.message;
+      toast.error(apiMessage ?? err.message ?? "Erreur lors de l'actualisation");
+    },
+  });
+
   /** « Voir tout » : ouvre le document complet en PDF. */
   const pdfAction = useAsyncAction(async () => {
     try {
@@ -408,6 +437,36 @@ export default function InvoiceDetailPage({
   const peutRenommer =
     !isAvoir && !isNormalized && can(PERMISSIONS.EDIT_INVOICES);
   const canEditInvoices = can(PERMISSIONS.EDIT_INVOICES);
+
+  /**
+   * Le nom/adresse client de la facture sont figés au moment de l'émission
+   * (voir InvoicePdfServiceImpl côté backend). `patientName`/`patientAddress`,
+   * eux, sont recalculés en direct depuis le patient rattaché à chaque
+   * lecture : leur divergence signale que le patient a été modifié depuis.
+   */
+  const nameChanged = Boolean(
+    invoice.patientId && invoice.patientName && invoice.patientName !== invoice.clientName,
+  );
+  const addressChanged = Boolean(
+    invoice.patientId && invoice.patientAddress && invoice.patientAddress !== invoice.clientAddress,
+  );
+  const clientInfoOutdated = nameChanged || addressChanged;
+
+  /** Phrase d'alerte, accordée : "Le nom a été modifié" / "L'adresse a été
+   * modifiée" / "Le nom et l'adresse ont été modifiés". */
+  const champsModifies = [
+    ...(nameChanged ? ["le nom"] : []),
+    ...(addressChanged ? ["l'adresse"] : []),
+  ];
+  const sujetPhrase = champsModifies.length
+    ? champsModifies.join(" et ").replace(/^./, (c) => c.toUpperCase())
+    : "";
+  const verbeModifie =
+    champsModifies.length > 1
+      ? "ont été modifiés"
+      : addressChanged
+        ? "a été modifiée"
+        : "a été modifié";
 
   /**
    * Lignes du tableau. Un avoir n'en porte qu'une, reprenant la raison du
@@ -496,6 +555,59 @@ export default function InvoiceDetailPage({
         }
       />
 
+      {/* Le nom/adresse client de la facture sont figés à l'émission ; ce
+          bandeau signale que le patient a changé depuis, sans jamais mettre
+          la facture à jour tout seul — seul le bouton Actualiser le fait. */}
+      {clientInfoOutdated && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-blue-300 bg-blue-100 p-4 text-sm text-blue-900">
+          <div>
+            <p className="font-medium">
+              {sujetPhrase} du patient {verbeModifie}, depuis l&apos;émission
+              de cette facture.
+            </p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {nameChanged && (
+                <li>
+                  Nom : <strong>{invoice.clientName || "—"}</strong> →{" "}
+                  <strong>{invoice.patientName}</strong>
+                </li>
+              )}
+              {addressChanged && (
+                <li>
+                  Adresse : <strong>{invoice.clientAddress || "—"}</strong> →{" "}
+                  <strong>{invoice.patientAddress}</strong>
+                </li>
+              )}
+            </ul>
+            <p className="mt-1">
+              Voulez-vous actualiser{" "}
+              {champsModifies.length > 1 ? "ces informations" : "cette information"}{" "}
+              sur la facture ?
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {canEditInvoices && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => refreshClientInfoMutation.mutateAsync()}
+              >
+                Actualiser
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowHistoryModal(true)}
+            >
+              Voir l&apos;historique
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Récapitulatif avant envoi à la DGI. La normalisation est irréversible :
           l'utilisateur doit voir ce qu'il engage avant de confirmer. */}
       <CrudModal
@@ -578,6 +690,64 @@ export default function InvoiceDetailPage({
         </div>
       </CrudModal>
 
+      {/* Historique des actualisations du nom/adresse client, depuis la
+          table d'audit `invoice_client_info_history` : qui, quand, avant/après. */}
+      <CrudModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        title="Historique des actualisations"
+        size="lg"
+        footer={
+          <div className="flex justify-end">
+            <Button variant="secondary" onClick={() => setShowHistoryModal(false)}>
+              Fermer
+            </Button>
+          </div>
+        }
+      >
+        {isHistoryLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-4 animate-pulse rounded bg-gray-200" />
+            ))}
+          </div>
+        ) : !clientInfoHistory || clientInfoHistory.length === 0 ? (
+          <p className="text-sm text-gray-500">
+            Aucune actualisation n&apos;a encore été effectuée sur cette
+            facture.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-left text-xs font-medium uppercase text-gray-500">
+                  <th className="pb-2 pr-4">Date</th>
+                  <th className="pb-2 pr-4">Par</th>
+                  <th className="pb-2 pr-4">Nom</th>
+                  <th className="pb-2">Adresse</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {clientInfoHistory.map((h) => (
+                  <tr key={h.id}>
+                    <td className="py-2 pr-4 whitespace-nowrap text-gray-500">
+                      {formatDateTimeSql(h.createdAt)}
+                    </td>
+                    <td className="py-2 pr-4">{h.userFullName ?? "—"}</td>
+                    <td className="py-2 pr-4">
+                      {h.oldClientName || "—"} → {h.newClientName || "—"}
+                    </td>
+                    <td className="py-2">
+                      {h.oldClientAddress || "—"} → {h.newClientAddress || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CrudModal>
+
       {/* ---- Document ---- */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         {/* Filet de tête (comme le <hr> du reçu Laravel) */}
@@ -637,13 +807,15 @@ export default function InvoiceDetailPage({
               <strong>Adressée à:</strong>
             </p>
             <p>
-              {/* Nom du patient en direct s'il existe (jamais figé), sinon le nom client stocké. */}
-              <strong>Nom: </strong> {invoice.patientName ?? invoice.clientName ?? ""}
+              {/* Nom figé au moment de l'émission : un document comptable ne
+                  change pas tout seul. Voir le bandeau en haut de page s'il a
+                  divergé du patient actuel. */}
+              <strong>Nom: </strong> {invoice.clientName ?? ""}
             </p>
             <p>
-              {/* Adresse du patient en direct s'il existe, sinon l'adresse client. */}
+              {/* Adresse figée au moment de l'émission, idem. */}
               <strong>Adresse: </strong>
-              <span>{invoice.patientAddress ?? invoice.clientAddress ?? ""}</span>
+              <span>{invoice.clientAddress ?? ""}</span>
             </p>
             <p>
               <strong>Code client: </strong>

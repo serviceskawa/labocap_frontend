@@ -32,6 +32,18 @@ export interface InvoiceDetail {
 }
 
 /** Remboursement rattaché à une facture d'avoir (statusInvoice = 1). */
+/** Une ligne de l'historique des actualisations du nom/adresse client d'une facture. */
+export interface InvoiceClientInfoHistory {
+  id: string;
+  userId?: string;
+  userFullName?: string;
+  oldClientName?: string;
+  newClientName?: string;
+  oldClientAddress?: string;
+  newClientAddress?: string;
+  createdAt: string;
+}
+
 export interface InvoiceRefund {
   code?: string;
   reasonDescription?: string;
@@ -235,6 +247,18 @@ export const invoicesApi = {
   /** Crée la facture d'avoir contrepassant cette facture de vente. */
   createCreditNote: (id: string) =>
     apiClient.post<Invoice>(`/invoices/${id}/credit-note`),
+
+  /**
+   * Réécrit le nom/adresse client de la facture avec les informations
+   * courantes du patient rattaché. Action volontaire et tracée : la facture
+   * ne se met jamais à jour toute seule.
+   */
+  refreshClientInfo: (id: string) =>
+    apiClient.post<Invoice>(`/invoices/${id}/refresh-client-info`),
+
+  /** Historique des actualisations du nom/adresse client de cette facture. */
+  getClientInfoHistory: (id: string) =>
+    apiClient.get<InvoiceClientInfoHistory[]>(`/invoices/${id}/client-info-history`),
 
   confirmMecef: (id: string, uid: string) =>
     apiClient.post<Invoice>(`/invoices/${id}/confirm-mecef`, { uid }),
