@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
 
-import { BadgeCheck, ExternalLink, FileMinus, Pencil, ShieldCheck, Wallet } from "lucide-react";
+import { BadgeCheck, ExternalLink, FileMinus, Pencil, ShieldCheck } from "lucide-react";
 
 import { CrudModal } from "@/components/common/CrudModal";
 import { DataTable } from "@/components/common/DataTable";
@@ -154,7 +154,8 @@ function buildLineColumns(
  * `maxlength="24"`, et `updateStatus()` refuse la saisie avec « Code normalisé
  * doit être 24 caractères » dès que `code.length < 24 || code.length > 24`.
  */
-const CODE_NORMALISE_LENGTH = 24;
+// Encaissement manuel mis hors service — voir le bloc commenté dans le rendu.
+// const CODE_NORMALISE_LENGTH = 24;
 
 /** Une ligne du récapitulatif présenté avant confirmation. */
 function RecapRow({ label, value }: { label: string; value: string }) {
@@ -186,7 +187,8 @@ export default function InvoiceDetailPage({
   const { can } = usePermissions();
 
   const [payment, setPayment] = useState<InvoicePayment>("ESPECES");
-  const [codeNormalise, setCodeNormalise] = useState("");
+  // Encaissement manuel mis hors service — voir le bloc commenté dans le rendu.
+  // const [codeNormalise, setCodeNormalise] = useState("");
 
   /** Récapitulatif de confirmation, avant tout envoi à la DGI. */
   const [showNormalizeModal, setShowNormalizeModal] = useState(false);
@@ -216,38 +218,39 @@ export default function InvoiceDetailPage({
   const { data: appSettings } = useAppSettings();
   const reportFooter = appSettings?.report_footer?.trim() || DEFAULT_REPORT_FOOTER;
 
-  const markPaidMutation = useMutation({
-    mutationFn: async () => {
-      // Contrôles identiques à `updateStatus()` de Laravel, dans le même ordre :
-      // code obligatoire, exactement 24 caractères, puis unicité vérifiée par
-      // l'API (route `invoices/checkCode`) avant d'encaisser.
-      const code = codeNormalise.trim();
-      if (!code) {
-        throw new Error("Code normalisé requis");
-      }
-      if (code.length !== CODE_NORMALISE_LENGTH) {
-        throw new Error(
-          `Code normalisé doit être ${CODE_NORMALISE_LENGTH} caractères`,
-        );
-      }
-      const { data: check } = await invoicesApi.checkCode(code);
-      if (check?.exists) {
-        throw new Error("Ce Code normalisé existe déjà");
-      }
-      return invoicesApi.markAsPaid(id, { payment, code });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
-      queryClient.invalidateQueries({ queryKey: ["invoices"] });
-      toast.success("Facture marquée comme payée");
-    },
-    onError: (err: Error) => {
-      // Les refus de saisie sont levés ici même (message déjà formulé) ; les
-      // erreurs d'API portent le leur dans la réponse.
-      const apiMessage = (err as AxiosError<ApiError>).response?.data?.message;
-      toast.error(apiMessage ?? err.message ?? "Erreur lors du paiement");
-    },
-  });
+  // Encaissement manuel mis hors service — voir le bloc commenté dans le rendu.
+  // const markPaidMutation = useMutation({
+  //   mutationFn: async () => {
+  //     // Contrôles identiques à `updateStatus()` de Laravel, dans le même ordre :
+  //     // code obligatoire, exactement 24 caractères, puis unicité vérifiée par
+  //     // l'API (route `invoices/checkCode`) avant d'encaisser.
+  //     const code = codeNormalise.trim();
+  //     if (!code) {
+  //       throw new Error("Code normalisé requis");
+  //     }
+  //     if (code.length !== CODE_NORMALISE_LENGTH) {
+  //       throw new Error(
+  //         `Code normalisé doit être ${CODE_NORMALISE_LENGTH} caractères`,
+  //       );
+  //     }
+  //     const { data: check } = await invoicesApi.checkCode(code);
+  //     if (check?.exists) {
+  //       throw new Error("Ce Code normalisé existe déjà");
+  //     }
+  //     return invoicesApi.markAsPaid(id, { payment, code });
+  //   },
+  //   onSuccess: () => {
+  //     queryClient.invalidateQueries({ queryKey: ["invoice", id] });
+  //     queryClient.invalidateQueries({ queryKey: ["invoices"] });
+  //     toast.success("Facture marquée comme payée");
+  //   },
+  //   onError: (err: Error) => {
+  //     // Les refus de saisie sont levés ici même (message déjà formulé) ; les
+  //     // erreurs d'API portent le leur dans la réponse.
+  //     const apiMessage = (err as AxiosError<ApiError>).response?.data?.message;
+  //     toast.error(apiMessage ?? err.message ?? "Erreur lors du paiement");
+  //   },
+  // });
 
   /**
    * Ouvre le document de la facture normalisée.
@@ -497,7 +500,8 @@ export default function InvoiceDetailPage({
     (invoice.testOrderCode ? ` de ${invoice.testOrderCode}` : "");
 
   // Le bloc d'encaissement n'apparaît que sur une facture impayée.
-  const showPaymentBlock = !invoice.paid && can(PERMISSIONS.VIEW_CASHIER);
+  // Encaissement manuel mis hors service — voir le bloc commenté dans le rendu.
+  // const showPaymentBlock = !invoice.paid && can(PERMISSIONS.VIEW_CASHIER);
 
   return (
     <div className="space-y-6">
@@ -886,7 +890,13 @@ export default function InvoiceDetailPage({
           </div>
         </div>
 
-        {/* Encaissement — uniquement sur une facture impayée */}
+        {/* Encaissement manuel — mis hors service.
+
+            La normalisation encaisse elle-même et enregistre le code rendu
+            par FluidInvoice : ressaisir ici ce que le serveur sait déjà ne
+            servait plus. Conservé en commentaire le temps de vérifier
+            qu'aucun cas ne l'exige encore ; à supprimer ensuite.
+
         {showPaymentBlock && (
           <div className="mt-4 grid grid-cols-1 items-end gap-4 md:grid-cols-3">
             <div>
@@ -934,6 +944,7 @@ export default function InvoiceDetailPage({
             </div>
           </div>
         )}
+        */}
 
         {/* Note importante */}
         <div className="mt-10 border border-black">
