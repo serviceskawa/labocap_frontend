@@ -5,6 +5,7 @@ import { doctorsApi, type Doctor } from "./doctors";
 import { hospitalsApi, type Hospital } from "./hospitals";
 import { testOrdersApi, type TestOrder } from "./testOrders";
 import { nomComplet } from "@/lib/utils";
+import type { Discipline } from "@/types/api";
 
 /**
  * Chargeurs d'options pour `RemoteSelectField` : la recherche est envoyée à
@@ -96,7 +97,15 @@ export function testOrderToOption(o: TestOrder): TestOrderOption {
  * ensuite des résultats (ex. demandes déjà affectées) et veut garder 6 lignes.
  */
 export const loadTestOrderOptions =
-  (filters: { status?: string; patientId?: string; size?: number } = {}) =>
+  (
+    filters: {
+      status?: string;
+      patientId?: string;
+      size?: number;
+      /** `PATHOLOGY` par défaut (cf. `testOrdersApi.findAll`). */
+      discipline?: Discipline;
+    } = {},
+  ) =>
   (input: string): Promise<TestOrderOption[]> =>
     testOrdersApi
       .findAll({ size: SIZE, search: input || undefined, ...filters })

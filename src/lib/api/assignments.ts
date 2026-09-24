@@ -1,5 +1,5 @@
 import apiClient from "./client";
-import type { PageResponse } from "@/types/api";
+import type { Discipline, PageResponse } from "@/types/api";
 import type { BadgeVariant } from "@/components/ui/Badge";
 
 // ---------------------------------------------------------------------------
@@ -146,6 +146,12 @@ export interface AssignmentPrint {
   details: AssignmentDetail[];
   branchName?: string;
   branchAddress?: string;
+  /**
+   * Discipline des demandes du lot, lue par le serveur sur ses lignes ; nulle
+   * pour un lot encore vide. Décide de l'intitulé du destinataire imprimé —
+   * « Docteur » ou « Biologiste ».
+   */
+  discipline?: Discipline | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -161,7 +167,12 @@ export interface Etiquette {
 }
 
 export const assignmentsApi = {
-  findAll: (params?: { page?: number; size?: number }) =>
+  /**
+   * Les lots de la branche. Sans `discipline`, ceux d'anatomie pathologique
+   * (défaut serveur) : les écrans d'anatomie pathologique n'envoient pas le
+   * paramètre, pour garder leur requête d'origine à l'identique.
+   */
+  findAll: (params?: { page?: number; size?: number; discipline?: Discipline }) =>
     apiClient.get<PageResponse<Assignment>>("/test-order-assignments", {
       params,
     }),

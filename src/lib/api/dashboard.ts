@@ -1,4 +1,38 @@
 import apiClient from "./client";
+import type { Discipline } from "@/types/api";
+
+/**
+ * Répartition par discipline des compteurs d'une carte.
+ *
+ * Le backend ne l'ajoute que quand le module Biologie est actif ; sans elle,
+ * la réponse est exactement celle d'avant la biologie, et les compteurs de
+ * premier niveau portent sur l'anatomie pathologique (défaut serveur). L'écran
+ * en tire la vue séparée ou cumulée selon le réglage `bio_dashboard_mode`.
+ */
+export type ParDiscipline<T> = Partial<Record<Discipline, T>>;
+
+/** Part d'une discipline dans les cartes admin (`CompteursAdmin`). */
+export interface CompteursAdmin {
+  valeurTestOrder: number;
+  crTestOrder: number;
+  finishTest: number;
+  noFinishTest: number;
+}
+
+/** Part d'une discipline dans les cartes du secrétariat (`CompteursSecretariat`). */
+export interface CompteursSecretariat {
+  testOrdersCount: number;
+  finishTest: number;
+  noFinishTest: number;
+  noSaveTest: number;
+  noFinishWeek: number;
+}
+
+/** Part d'une discipline dans le graphique d'un médecin (`CompteursExamens`). */
+export interface CompteursExamens {
+  termine: number;
+  enAttente: number;
+}
 
 /**
  * `/dashboard/stats` — profil administrateur (`DashboardDto.AdminStats`).
@@ -21,6 +55,8 @@ export interface AdminStats {
   finishTest: number;
   /** Comptes rendus en brouillon ou en relecture — donc à traiter. */
   noFinishTest: number;
+  /** Présent seulement quand le module Biologie est actif côté serveur. */
+  parDiscipline?: ParDiscipline<CompteursAdmin>;
 }
 
 /**
@@ -54,6 +90,8 @@ export interface SecretariatStats {
   noSaveTest: number;
   /** Bons en attente depuis plus de trois semaines, cette année. */
   noFinishWeek: number;
+  /** Présent seulement quand le module Biologie est actif côté serveur. */
+  parDiscipline?: ParDiscipline<CompteursSecretariat>;
 }
 
 export interface ReportToday {
@@ -116,6 +154,8 @@ export interface InvoiceStatusData {
 export interface ExamStatusChart {
   termine: number;
   enAttente: number;
+  /** Présent seulement quand le module Biologie est actif côté serveur. */
+  parDiscipline?: ParDiscipline<CompteursExamens>;
 }
 
 export interface AppointmentItem {

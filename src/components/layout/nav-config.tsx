@@ -25,6 +25,7 @@ import {
   TestTubes,
   ClipboardList,
   ClipboardCheck,
+  Send,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/constants/permissions";
 import type { AppModule } from "@/lib/modules";
@@ -245,6 +246,16 @@ export const NAV: NavSection[] = [
         label: "Demandes",
         icon: <ClipboardList className="w-5 h-5" />,
         gate: { permission: PERMISSIONS.VIEW_TEST_ORDERS, module: "biology" },
+      },
+
+      // Lots d'affectation de biologie — même permission que l'entrée
+      // « Affectation » de l'anatomie pathologique.
+      {
+        kind: "link",
+        href: "/biologie/affectations",
+        label: "Affectations",
+        icon: <Send className="w-5 h-5" />,
+        gate: { permission: PERMISSIONS.VIEW_TEST_ORDER_ASSIGNMENTS, module: "biology" },
       },
 
       // Saisie des résultats — liste de travail puis feuille de saisie par bon.

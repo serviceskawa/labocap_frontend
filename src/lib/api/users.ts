@@ -18,6 +18,12 @@ export interface User {
   roles?: Role[];
   branches?: Branch[];
   permissions?: string[];
+  /**
+   * Permissions données à l'utilisateur hors de ses rôles (`GET /users`).
+   * Avec `roles[].permissions`, c'est ce qui dit ce qu'il peut faire — les
+   * destinataires d'un lot de biologie se choisissent ainsi.
+   */
+  directPermissions?: PermissionResponseDto[];
   signature?: string;
   isActive: boolean;
   createdAt: string;

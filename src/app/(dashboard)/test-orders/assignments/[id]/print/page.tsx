@@ -58,6 +58,10 @@ export default function AssignmentPrintPage() {
   }
 
   const { assignment, details, branchName, branchAddress } = data;
+  // Page commune aux deux disciplines : c'est la discipline du lot, lue par le
+  // serveur sur ses demandes, qui intitule le destinataire. Absente (serveur
+  // d'avant la biologie) ou nulle (lot vide) : « Docteur », comme avant.
+  const assigneeLabel = data.discipline === "BIOLOGY" ? "Biologiste" : "Docteur";
 
   return (
     <>
@@ -101,7 +105,7 @@ export default function AssignmentPrintPage() {
         {/* Infos */}
         <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
           <div>
-            <span className="font-semibold text-gray-800">Docteur :</span>{" "}
+            <span className="font-semibold text-gray-800">{assigneeLabel} :</span>{" "}
             <span className="text-gray-700">
               {assignment.userName ?? "—"}
             </span>

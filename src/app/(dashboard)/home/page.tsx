@@ -47,6 +47,14 @@ import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { IconButton } from "@/components/ui/IconButton";
 
 import { usePermissions } from "@/hooks/usePermissions";
+import { useModules } from "@/hooks/useModules";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import {
+  BiologyStatsBlock,
+  parseBioDashboardMode,
+  sumDisciplines,
+} from "@/components/dashboard/BiologyDashboard";
+import { BIOLOGY_SETTING_KEYS } from "@/lib/api/biologyReports";
 import { cn, formatCFA, formatDate } from "@/lib/utils";
 import {
   dashboardApi,
@@ -535,6 +543,19 @@ export default function HomePage() {
   const isSecretary = can(PERMISSIONS.VIEW_SECRETARIAT_DASHBOARD);
   const isPathologist = can(PERMISSIONS.VIEW_PATHOLOGIST_DASHBOARD);
 
+  // -- Biologie (module optionnel). Le réglage `bio_dashboard_mode` vit dans
+  // `setting_apps`, déjà chargé par la coque (même clé de cache : aucune
+  // requête de plus) ; illisible sans `view-settings` → vue séparée.
+  const { has } = useModules();
+  const biologyOn = has("biology");
+  const { data: appSettings } = useAppSettings();
+  const bioMode = parseBioDashboardMode(
+    can(PERMISSIONS.VIEW_SETTINGS)
+      ? appSettings?.[BIOLOGY_SETTING_KEYS.dashboardMode]
+      : undefined,
+  );
+  const combined = bioMode === "COMBINED";
+
   // -- Admin stats
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["dashboard", "stats"],
@@ -562,6 +583,29 @@ export default function HomePage() {
     refetchInterval: 5 * 60 * 1000,
     enabled: isSecretary || isAdmin,
   });
+
+  // Répartition par discipline — seulement si le module est actif des deux
+  // côtés (front et serveur). Sinon `undefined`, et tout reste comme avant.
+  const adminPar = biologyOn ? stats?.parDiscipline : undefined;
+  const opPar = biologyOn ? opStats?.parDiscipline : undefined;
+
+  /**
+   * Valeur d'une carte existante : en vue cumulée, la somme des deux
+   * disciplines ; sinon (ou sans répartition), la valeur d'origine.
+   */
+  const shown = <T, K extends keyof T>(
+    par: Partial<Record<"PATHOLOGY" | "BIOLOGY", T>> | undefined,
+    key: K,
+    original: number,
+  ): number => (combined ? sumDisciplines(par, key) : undefined) ?? original;
+
+  // Une croissance mensuelle ne s'additionne pas : en vue cumulée, la carte
+  // « Demandes d'examen » perd sa pastille plutôt que d'afficher celle de la
+  // seule anatomie pathologique à côté d'un total des deux disciplines.
+  const testOrderTrend =
+    combined && sumDisciplines(adminPar, "valeurTestOrder") !== undefined
+      ? undefined
+      : stats?.crTestOrder;
 
   const reportsDelivered = useMemo(
     () => reportsToday.filter((r) => r.isDeliver),
@@ -660,17 +704,24 @@ export default function HomePage() {
     enabled: isPathologist,
   });
 
+  // En vue cumulée, les deux disciplines ; sinon les compteurs d'origine.
+  const examPar = biologyOn ? doctorExamStatus?.parDiscipline : undefined;
+  const examStatus = doctorExamStatus && {
+    termine: shown(examPar, "termine", doctorExamStatus.termine),
+    enAttente: shown(examPar, "enAttente", doctorExamStatus.enAttente),
+  };
+
   // ExamStatusChart ne renvoie que deux compteurs (termine / enAttente) :
   // on alimente le donut avec ces deux valeurs réelles, sans segment factice.
   const doctorPieData = [
     {
       name: "Terminé",
-      value: doctorExamStatus?.termine ?? 0,
+      value: examStatus?.termine ?? 0,
       color: CHART_STATUS.good,
     },
     {
       name: "En attente",
-      value: doctorExamStatus?.enAttente ?? 0,
+      value: examStatus?.enAttente ?? 0,
       color: CHART_STATUS.critical,
     },
   ];
@@ -689,10 +740,10 @@ export default function HomePage() {
   // Calculée à partir des compteurs réels déjà chargés (doctorExamStatus) ;
   // affiche "—" si aucune donnée n'est disponible (plutôt qu'un "0 ↑" trompeur).
   const doctorExamsTotal =
-    (doctorExamStatus?.termine ?? 0) + (doctorExamStatus?.enAttente ?? 0);
+    (examStatus?.termine ?? 0) + (examStatus?.enAttente ?? 0);
   const doctorProductivite =
     doctorExamsTotal > 0
-      ? Math.round(((doctorExamStatus?.termine ?? 0) / doctorExamsTotal) * 100)
+      ? Math.round(((examStatus?.termine ?? 0) / doctorExamsTotal) * 100)
       : null;
 
   // ---------------------------------------------------------------------------
@@ -758,7 +809,7 @@ export default function HomePage() {
                 : [
                     {
                       title: "Bons sans compte rendu",
-                      value: opStats?.noSaveTest ?? 0,
+                      value: shown(opPar, "noSaveTest", opStats?.noSaveTest ?? 0),
                       href: "/test-orders",
                       icon: <FileText className="h-5 w-5" />,
                       alert: false,
@@ -769,7 +820,7 @@ export default function HomePage() {
                       ? [
                           {
                             title: "Comptes rendus à valider",
-                            value: stats?.noFinishTest ?? 0,
+                            value: shown(adminPar, "noFinishTest", stats?.noFinishTest ?? 0),
                             href: "/reports",
                             icon: <FlaskConical className="h-5 w-5" />,
                             alert: false,
@@ -778,7 +829,7 @@ export default function HomePage() {
                       : []),
                     {
                       title: "À remettre au client",
-                      value: opStats?.noFinishTest ?? 0,
+                      value: shown(opPar, "noFinishTest", opStats?.noFinishTest ?? 0),
                       href: "/reports/suivi",
                       icon: <Folder className="h-5 w-5" />,
                       alert: false,
@@ -788,7 +839,7 @@ export default function HomePage() {
                       // anomalie. Teinté seulement s'il y en a : un écran où
                       // tout est rouge n'alerte plus.
                       title: "En retard (> 3 semaines)",
-                      value: opStats?.noFinishWeek ?? 0,
+                      value: shown(opPar, "noFinishWeek", opStats?.noFinishWeek ?? 0),
                       href: "/test-orders",
                       icon: <AlertTriangle className="h-5 w-5" />,
                       alert: true,
@@ -843,7 +894,7 @@ export default function HomePage() {
                   : [
                       { title: "Patients", value: (stats?.valeurPatient ?? 0).toLocaleString("fr-FR"), trend: stats?.crPatient },
                       { title: "Clients pro.", value: (stats?.valeurClient ?? 0).toLocaleString("fr-FR"), trend: stats?.crClient },
-                      { title: "Demandes d'examen", value: (stats?.valeurTestOrder ?? 0).toLocaleString("fr-FR"), trend: stats?.crTestOrder },
+                      { title: "Demandes d'examen", value: shown(adminPar, "valeurTestOrder", stats?.valeurTestOrder ?? 0).toLocaleString("fr-FR"), trend: testOrderTrend },
                       { title: "Chiffre d'affaires", value: formatCFA(stats?.valeurInvoice ?? 0), trend: stats?.crInvoice },
                     ].map((kpi) => (
                       <div key={kpi.title} className="bg-gray-50/60 p-4">
@@ -877,6 +928,15 @@ export default function HomePage() {
               </div>
             )}
           </Card>
+
+          {/* Vue séparée : les cartes ci-dessus restent celles de l'anatomie
+              pathologique, la biologie a son propre bloc. */}
+          {!combined && (
+            <BiologyStatsBlock
+              admin={isAdmin ? adminPar?.BIOLOGY : undefined}
+              secretariat={opPar?.BIOLOGY}
+            />
+          )}
         </>
       )}
 
@@ -1111,6 +1171,16 @@ export default function HomePage() {
             </div>
           </Card>
 
+          {/* Vue séparée : le graphique ci-dessous reste celui de l'anatomie
+              pathologique ; les analyses de biologie ont leurs cartes. */}
+          {!combined && (
+            <BiologyStatsBlock
+              exams={examPar?.BIOLOGY}
+              title="Biologie — analyses"
+              headingId="dashboard-biologie-analyses"
+            />
+          )}
+
           {/* LIGNE 8 : Status d'examens + Demande affectées */}
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Gauche col-4 : Status d'examens */}
@@ -1122,13 +1192,13 @@ export default function HomePage() {
                   <div className="flex justify-around mt-3">
                     <div className="text-center">
                       <p className="text-green-600 font-semibold text-lg">
-                        ↑ {doctorExamStatus?.termine ?? 0}
+                        ↑ {examStatus?.termine ?? 0}
                       </p>
                       <p className="text-xs text-gray-500">Terminé</p>
                     </div>
                     <div className="text-center">
                       <p className="text-red-600 font-semibold text-lg">
-                        ↓ {doctorExamStatus?.enAttente ?? 0}
+                        ↓ {examStatus?.enAttente ?? 0}
                       </p>
                       <p className="text-xs text-gray-500">En attente</p>
                     </div>
