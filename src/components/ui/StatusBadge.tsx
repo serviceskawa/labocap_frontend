@@ -9,7 +9,14 @@ interface StatusBadgeProps {
    * qui ment sur la donnée déplace simplement l'erreur à l'exécution.
    */
   status: string | null | undefined;
-  domain: "invoice" | "report" | "testOrder" | "contract" | "general";
+  domain:
+    | "invoice"
+    | "report"
+    | "testOrder"
+    | "contract"
+    | "general"
+    | "biologyAnalysis"
+    | "biologyReport";
 }
 
 interface StatusConfig {
@@ -44,6 +51,22 @@ const domainMappings: Record<
     INACTIF: { label: "Inactif", variant: "secondary" },
     "CLÔTURER": { label: "Clôturé", variant: "danger" },
     CLOTURE: { label: "Clôturé", variant: "danger" },
+  },
+  // Saisie d'une analyse de biologie (`biology_analysis_results.status`).
+  biologyAnalysis: {
+    PENDING: { label: "À saisir", variant: "secondary" },
+    ENTERED: { label: "Saisie", variant: "warning" },
+    TECH_VALIDATED: { label: "Validée techniquement", variant: "success" },
+  },
+  // Compte-rendu de biologie. Domaine distinct de `report` : en biologie,
+  // PENDING_REVIEW est un état ordinaire (toutes les analyses sont prêtes,
+  // le biologiste doit valider), et DRAFT signifie « saisie en cours » —
+  // les libellés d'anatomie pathologique restent inchangés.
+  biologyReport: {
+    DRAFT: { label: "Saisie en cours", variant: "secondary" },
+    PENDING_REVIEW: { label: "À valider par le biologiste", variant: "warning" },
+    VALIDATED: { label: "Validé", variant: "success" },
+    DELIVERED: { label: "Livré", variant: "success" },
   },
   general: {
     // « Inactif » en rouge (danger) ; « Actif » conserve le fond gris actuel (secondary).

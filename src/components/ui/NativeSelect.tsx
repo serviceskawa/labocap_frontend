@@ -126,6 +126,9 @@ export function NativeSelect({
 
     const commonProps = {
       inputId: id,
+      // Le nom accessible d'un champ sans étiquette visible (cellule de grille)
+      // doit suivre en mode enrichi, où les autres props natives sont ignorées.
+      "aria-label": props["aria-label"],
       name,
       options,
       value: selected,

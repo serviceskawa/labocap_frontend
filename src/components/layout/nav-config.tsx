@@ -24,6 +24,7 @@ import {
   CalendarDays,
   TestTubes,
   ClipboardList,
+  ClipboardCheck,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/constants/permissions";
 import type { AppModule } from "@/lib/modules";
@@ -244,6 +245,15 @@ export const NAV: NavSection[] = [
         label: "Demandes",
         icon: <ClipboardList className="w-5 h-5" />,
         gate: { permission: PERMISSIONS.VIEW_TEST_ORDERS, module: "biology" },
+      },
+
+      // Saisie des résultats — liste de travail puis feuille de saisie par bon.
+      {
+        kind: "link",
+        href: "/biologie/resultats",
+        label: "Résultats",
+        icon: <ClipboardCheck className="w-5 h-5" />,
+        gate: { permission: PERMISSIONS.VIEW_BIOLOGY_RESULTS, module: "biology" },
       },
     ],
   },
