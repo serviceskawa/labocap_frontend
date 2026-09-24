@@ -10,6 +10,7 @@
     "csp:hashes": "node scripts/check-csp-hashes.mjs"
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.21",
     "@fullcalendar/daygrid": "^6.1.21",
     "@fullcalendar/interaction": "^6.1.21",
     "@fullcalendar/list": "^6.1.21",

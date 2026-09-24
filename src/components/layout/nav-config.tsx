@@ -21,6 +21,7 @@ import {
   FlaskConical,
   Syringe,
   BarChart3,
+  CalendarDays,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/constants/permissions";
 import type { AppModule } from "@/lib/modules";
@@ -101,6 +102,15 @@ export const NAV: NavSection[] = [
         label: "Statistiques",
         icon: <BarChart3 className="w-5 h-5" />,
         gate: { permission: PERMISSIONS.VIEW_ADMIN_DASHBOARD },
+      },
+      // Rendez-vous — module optionnel, absent des laboratoires qui ne
+      // reçoivent pas de patients sur rendez-vous (cf. docs/modules.md).
+      {
+        kind: "link",
+        href: "/agenda",
+        label: "Agenda",
+        icon: <CalendarDays className="w-5 h-5" />,
+        gate: { permission: PERMISSIONS.VIEW_APPOINTMENTS, module: "agenda" },
       },
     ],
   },

@@ -190,6 +190,12 @@ export const PERMISSIONS = {
   DELETE_CONSULTATIONS: "delete-consultations",
   VIEW_TYPE_CONSULTATIONS: "view-type-consultations",
 
+  // Agenda (rendez-vous) — module optionnel `agenda`
+  VIEW_APPOINTMENTS: "view-appointments",
+  CREATE_APPOINTMENTS: "create-appointments",
+  EDIT_APPOINTMENTS: "edit-appointments",
+  DELETE_APPOINTMENTS: "delete-appointments",
+
   // Prestations
   VIEW_PRESTATIONS: "view-prestations",
   CREATE_PRESTATIONS: "create-prestations",

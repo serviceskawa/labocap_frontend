@@ -68,13 +68,20 @@ export default async function RootLayout({
       translate="no"
       className={`h-full notranslate ${serif.variable} ${plexSans.variable}`}
     >
-      {/* styled-jsx ne lit pas le nonce dans l'en-tête CSP : il le cherche
-          exclusivement dans cette balise (`document.querySelector(
-          'meta[property="csp-nonce"]')`) avant d'injecter ses `<style>` côté
-          client. Sans elle, les styles d'impression de la feuille de route
-          (test-orders/assignments/[id]/print) seraient bloqués par
-          style-src-elem. React 19 la remonte automatiquement dans <head>. */}
-      {nonce ? <meta property="csp-nonce" content={nonce} /> : null}
+      {/* Nonce relayé aux librairies qui injectent des `<style>` côté client
+          sans passer par React. Deux lecteurs, deux sélecteurs — d'où les
+          deux attributs sur la même balise :
+            - styled-jsx cherche `meta[property="csp-nonce"]` (styles
+              d'impression de test-orders/assignments/[id]/print) ;
+            - FullCalendar v6 (agenda) cherche `meta[name="csp-nonce"]`
+              (queryNonceValue, @fullcalendar/core/internal-common.js) pour son
+              `<style data-fullcalendar>`, et ne retombe sur `script[nonce]`
+              qu'à défaut.
+          Sans elle, ces styles seraient bloqués par style-src-elem. React 19
+          remonte la balise automatiquement dans <head>. */}
+      {nonce ? (
+        <meta name="csp-nonce" property="csp-nonce" content={nonce} />
+      ) : null}
       {/* `bg-gray-50` vient de main : le fond passe par le token de la palette
           plutôt que par la valeur hexadécimale qu'il portait auparavant. */}
       <body className="h-full bg-gray-50 antialiased font-serif">

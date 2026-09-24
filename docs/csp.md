@@ -9,7 +9,7 @@ requête.
 | [`src/lib/security/csp.ts`](../src/lib/security/csp.ts) | Politique, directive par directive — source unique de vérité |
 | [`src/proxy.ts`](../src/proxy.ts) | Génère le nonce, pose les en-têtes sur chaque réponse |
 | [`src/app/api/csp-report/route.ts`](../src/app/api/csp-report/route.ts) | Collecte les violations |
-| [`src/app/layout.tsx`](../src/app/layout.tsx) | Relaie le nonce à Emotion et à styled-jsx |
+| [`src/app/layout.tsx`](../src/app/layout.tsx) | Relaie le nonce à Emotion, à styled-jsx et à FullCalendar |
 | [`scripts/check-csp-hashes.mjs`](../scripts/check-csp-hashes.mjs) | Garde-fou contre la dérive des hashes |
 
 ## 1. Inventaire des ressources
@@ -38,6 +38,7 @@ proviennent tous du framework ou de librairies, et sont classés ainsi :
 | Scripts Next.js (runtime React, chunks, flight data) | dynamique | **nonce** — apposé automatiquement par Next.js, qui relit la politique dans l'en-tête de requête |
 | Styles Emotion (react-select, 23 écrans) | dynamique | **nonce** — via le `NonceProvider` de react-select ([`providers.tsx`](../src/components/providers.tsx)) |
 | Styles styled-jsx (feuille de route imprimable) | dynamique | **nonce** — lu dans `<meta property="csp-nonce">`, seul canal que styled-jsx sait lire |
+| Styles FullCalendar (agenda) | dynamique | **nonce** — lu dans `<meta name="csp-nonce">` (même balise, second attribut) pour son `<style data-fullcalendar>` |
 | CSS de sonner | **statique** | **hash SHA-256** — la librairie n'accepte aucun nonce |
 | Attributs `style="…"` (Radix UI, recharts) | dynamique | `style-src-attr 'unsafe-inline'` — voir ci-dessous |
 
@@ -105,6 +106,9 @@ Parcours à exercer, console ouverte, avant de passer en mode bloquant :
       hash désynchronisé (`npm run csp:hashes`).
 - [ ] **Impression** — feuille de route d'une assignation : la mise en page
       d'impression dépend de styled-jsx et donc de la balise `<meta csp-nonce>`.
+- [ ] **Agenda** (module `agenda`) — le calendrier doit être stylé (grille,
+      couleurs de priorité). Un calendrier brut signale que le nonce n'atteint
+      pas le `<style data-fullcalendar>`.
 - [ ] **Popovers, menus, tooltips** (Radix) — positionnement correct.
 - [ ] **Authentification** — connexion, challenge 2FA, sélection de branche,
       réinitialisation de mot de passe.
