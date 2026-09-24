@@ -1,5 +1,6 @@
 import apiClient from "./client";
-import type { PageResponse } from "@/types/api";
+import type { Discipline, PageResponse } from "@/types/api";
+import { DEFAULT_DISCIPLINE, withDiscipline } from "./discipline";
 
 export interface CategoryTest {
   id: string;
@@ -32,8 +33,10 @@ export interface TypeOrder {
 }
 
 export const categoryTestsApi = {
-  findAll: (params?: { page?: number; size?: number }) =>
-    apiClient.get<PageResponse<CategoryTest>>("/category-tests", { params }),
+  findAll: (params?: { page?: number; size?: number; discipline?: Discipline }) =>
+    apiClient.get<PageResponse<CategoryTest>>("/category-tests", {
+      params: withDiscipline(params),
+    }),
   create: (data: { code: string; name: string }) =>
     apiClient.post<CategoryTest>("/category-tests", data),
   update: (id: string, data: { code: string; name: string }) =>
@@ -47,7 +50,12 @@ export const labTestsApi = {
     size?: number;
     search?: string;
     status?: string;
-  }) => apiClient.get<PageResponse<LabTest>>("/lab-tests", { params }),
+    /** `PATHOLOGY` par défaut. */
+    discipline?: Discipline;
+  }) =>
+    apiClient.get<PageResponse<LabTest>>("/lab-tests", {
+      params: withDiscipline(params),
+    }),
   create: (data: {
     name: string;
     price: number;
@@ -59,7 +67,8 @@ export const labTestsApi = {
     data: { name: string; price: number; categoryTestId: string; status: string }
   ) => apiClient.put<LabTest>(`/lab-tests/${id}`, data),
   delete: (id: string) => apiClient.delete(`/lab-tests/${id}`),
-  findAllSimple: () => apiClient.get<LabTest[]>("/lab-tests/all"),
+  findAllSimple: (discipline: Discipline = DEFAULT_DISCIPLINE) =>
+    apiClient.get<LabTest[]>("/lab-tests/all", { params: { discipline } }),
 };
 
 export const unitesMesureApi = {

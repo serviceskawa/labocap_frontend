@@ -31,3 +31,9 @@ export interface PageParams {
   size?: number;
   sort?: string;
 }
+
+/**
+ * Discipline d'une analyse, d'une catégorie, d'un bon d'examen ou d'un compte
+ * rendu — réplique de l'enum backend `com.labo.anapath.common.Discipline`.
+ */
+export type Discipline = "PATHOLOGY" | "BIOLOGY";

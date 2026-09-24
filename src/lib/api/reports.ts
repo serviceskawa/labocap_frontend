@@ -1,5 +1,6 @@
 import apiClient from "./client";
-import type { PageResponse } from "@/types/api";
+import type { Discipline, PageResponse } from "@/types/api";
+import { withDiscipline } from "./discipline";
 
 export type ReportStatus = "DRAFT" | "PENDING_REVIEW" | "VALIDATED" | "DELIVERED";
 
@@ -64,6 +65,8 @@ export interface ReportDetail extends Report {
   reviewedByName?: string;
   tagIds?: string[];
   logs: ReportLog[];
+  /** Discipline du compte rendu, héritée du bon d'examen. */
+  discipline?: Discipline;
 }
 
 export interface ReportRequest {
@@ -161,6 +164,8 @@ export interface ReportSuiviListParams {
   isUrgent?: boolean;
   /** En retard : report DRAFT créé il y a plus de 21 jours */
   isLate?: boolean;
+  /** `PATHOLOGY` par défaut. */
+  discipline?: Discipline;
 }
 
 /**
@@ -184,6 +189,8 @@ export interface ReportGlobalSearchRow {
   referenceHospital?: string;
   dateCreation: string;
   isUrgent?: boolean;
+  /** La recherche générale couvre les deux disciplines. */
+  discipline?: Discipline;
 }
 
 export interface ReportGlobalSearchParams {
@@ -230,6 +237,8 @@ export interface ReportListParams {
   status?: string;
   dateBegin?: string;
   dateEnd?: string;
+  /** `PATHOLOGY` par défaut. */
+  discipline?: Discipline;
 }
 
 /**
@@ -248,13 +257,15 @@ export interface ReportPerformanceParams {
   doctorId?: string;
   month?: number;
   year?: number;
+  /** `PATHOLOGY` par défaut. */
+  discipline?: Discipline;
 }
 
 export const reportsApi = {
   findAll: (params?: Record<string, unknown>) =>
     apiClient.get<{ content: Report[]; totalElements: number; totalPages: number }>(
       "/reports",
-      { params }
+      { params: withDiscipline(params) }
     ),
 
   findById: (id: string) => apiClient.get<ReportDetail>(`/reports/${id}`),
@@ -309,11 +320,13 @@ export const reportsApi = {
       `/reports/${id}/appel`
     ),
 
-  getSuivi: (params?: { year?: number; month?: number }) =>
-    apiClient.get<ReportSuivi>("/reports/suivi", { params }),
+  getSuivi: (params?: { year?: number; month?: number; discipline?: Discipline }) =>
+    apiClient.get<ReportSuivi>("/reports/suivi", { params: withDiscipline(params) }),
 
   getSuiviList: (params?: ReportSuiviListParams) =>
-    apiClient.get<PageResponse<ReportSuiviRow>>("/reports/suivi/list", { params }),
+    apiClient.get<PageResponse<ReportSuiviRow>>("/reports/suivi/list", {
+      params: withDiscipline(params),
+    }),
 
   /**
    * Recherche avancée multi-critères des comptes-rendus (page "Recherche générale").
@@ -349,14 +362,16 @@ export const reportsApi = {
    * Réplique de l'endpoint Laravel "report.getReportsforDatatable".
    */
   getList: (params?: ReportListParams) =>
-    apiClient.get<PageResponse<ReportListItem>>("/reports/list", { params }),
+    apiClient.get<PageResponse<ReportListItem>>("/reports/list", { params: withDiscipline(params) }),
 
   /**
    * Statistiques de performance (délai respecté / hors délai) pour la
    * section "Rapports" de la page liste.
    */
   getPerformanceStats: (params?: ReportPerformanceParams) =>
-    apiClient.get<ReportPerformance>("/reports/performance-stats", { params }),
+    apiClient.get<ReportPerformance>("/reports/performance-stats", {
+      params: withDiscipline(params),
+    }),
 
   /**
    * Historique (journal) global des actions sur les comptes-rendus.

@@ -1,5 +1,6 @@
 import apiClient from "./client";
-import type { PageResponse } from "@/types/api";
+import type { Discipline, PageResponse } from "@/types/api";
+import { DEFAULT_DISCIPLINE, withDiscipline } from "./discipline";
 
 export interface DetailTestOrderDto {
   id: string;
@@ -130,7 +131,12 @@ export const testOrdersApi = {
     search?: string;
     from?: string;
     to?: string;
-  }) => apiClient.get<PageResponse<TestOrder>>("/test-orders", { params }),
+    /** `PATHOLOGY` par défaut. */
+    discipline?: Discipline;
+  }) =>
+    apiClient.get<PageResponse<TestOrder>>("/test-orders", {
+      params: withDiscipline(params),
+    }),
 
   findAllImmuno: (params?: {
     page?: number;
@@ -224,8 +230,10 @@ export const testOrdersApi = {
   deliver: (id: string) => apiClient.post(`/test-orders/${id}/deliver`),
 
   // Mon Espace
-  getMySpace: () =>
-    apiClient.get<MySpaceStats>("/test-orders/myspace/stats"),
+  getMySpace: (discipline: Discipline = DEFAULT_DISCIPLINE) =>
+    apiClient.get<MySpaceStats>("/test-orders/myspace/stats", {
+      params: { discipline },
+    }),
 
   getMyOrders: (params: {
     status: "PENDING" | "VALIDATED" | "DELIVERED" | "CANCELLED";
@@ -235,8 +243,10 @@ export const testOrdersApi = {
     to?: string;
     page?: number;
     size?: number;
+    /** `PATHOLOGY` par défaut. */
+    discipline?: Discipline;
   }) =>
     apiClient.get<PageResponse<TestOrder>>("/test-orders/myspace/orders", {
-      params,
+      params: withDiscipline(params),
     }),
 };
