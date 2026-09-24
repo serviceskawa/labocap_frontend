@@ -21,5 +21,9 @@ services:
       #   absente / false → Content-Security-Policy-Report-Only (observation)
       #   true            → Content-Security-Policy (blocage effectif)
       CSP_ENFORCE: ${CSP_ENFORCE:-false}
+      # Modules optionnels (cf. docs/modules.md), lus AU RUNTIME comme
+      # CSP_ENFORCE : liste séparée par des virgules, ex. "biology,agenda".
+      # Absente / vide → aucun module, l'application reste telle quelle.
+      APP_MODULES: ${APP_MODULES:-}
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
