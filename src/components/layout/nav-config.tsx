@@ -23,6 +23,7 @@ import {
   BarChart3,
   CalendarDays,
   TestTubes,
+  ClipboardList,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/constants/permissions";
 import type { AppModule } from "@/lib/modules";
@@ -233,6 +234,16 @@ export const NAV: NavSection[] = [
           { kind: "link", href: "/biologie/antibiotiques", label: "Antibiotiques", gate: { permission: PERMISSIONS.VIEW_TESTS } },
           { kind: "link", href: "/biologie/cultures/options", label: "Options de culture", gate: { permission: PERMISSIONS.VIEW_TESTS } },
         ],
+      },
+
+      // Demandes d'analyses — même permission que la liste des demandes
+      // d'anatomie pathologique ; le module est redit ici, par sûreté.
+      {
+        kind: "link",
+        href: "/biologie/demandes",
+        label: "Demandes",
+        icon: <ClipboardList className="w-5 h-5" />,
+        gate: { permission: PERMISSIONS.VIEW_TEST_ORDERS, module: "biology" },
       },
     ],
   },

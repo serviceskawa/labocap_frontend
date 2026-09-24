@@ -69,6 +69,8 @@ export interface TestOrder {
   invoiceId?: string;
   archive?: string;            // chemin fichier joint
   testAffiliate?: string;      // référence de l'examen (examen de référence Immuno)
+  /** Discipline du bon, fixée à sa création (PATHOLOGY ou BIOLOGY). */
+  discipline?: Discipline;
 }
 
 export interface MySpaceStats {
@@ -90,7 +92,8 @@ export interface DetailTestOrderRequestDto {
 export interface TestOrderRequest {
   patientId: string;
   prelevementDate: string;
-  typeOrderId?: string;
+  /** Anatomie pathologique uniquement : un bon de biologie envoie `null`. */
+  typeOrderId?: string | null;
   doctorId?: string;
   hospitalId?: string;
   contratId?: string;
@@ -102,6 +105,12 @@ export interface TestOrderRequest {
   option?: boolean;
   assignedToUserId?: string;
   details?: DetailTestOrderRequestDto[];
+  /**
+   * Absente = `PATHOLOGY` côté backend : les écrans d'anatomie pathologique ne
+   * l'envoient pas. Fixée à la création ; en modification, seule la valeur du
+   * bon est acceptée.
+   */
+  discipline?: Discipline;
 }
 
 export const testOrdersApi = {
