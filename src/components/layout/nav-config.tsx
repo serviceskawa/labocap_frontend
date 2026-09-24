@@ -22,6 +22,7 @@ import {
   Syringe,
   BarChart3,
   CalendarDays,
+  TestTubes,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/constants/permissions";
 import type { AppModule } from "@/lib/modules";
@@ -211,6 +212,28 @@ export const NAV: NavSection[] = [
       // NB : « Consultations » et « Prestations » sont volontairement absents du
       // menu — comme dans la navigation Laravel (app2.blade.php), qui n'expose pas
       // ces modules dans la sidebar (les routes existent mais pas l'entrée de menu).
+    ],
+  },
+
+  // ══════════════ BIOLOGIE ══════════════
+  // Module optionnel (cf. docs/modules.md) : la rubrique entière disparaît
+  // quand APP_MODULES ne contient pas « biology ».
+  {
+    label: "BIOLOGIE",
+    gate: { module: "biology" },
+    items: [
+      {
+        kind: "collapse",
+        label: "Catalogue de biologie",
+        icon: <TestTubes className="w-5 h-5" />,
+        gate: { permission: PERMISSIONS.VIEW_TESTS },
+        children: [
+          { kind: "link", href: "/biologie/examens", label: "Examens", gate: { permission: PERMISSIONS.VIEW_TESTS } },
+          { kind: "link", href: "/biologie/categories", label: "Catégories", gate: { permission: PERMISSIONS.VIEW_TESTS } },
+          { kind: "link", href: "/biologie/antibiotiques", label: "Antibiotiques", gate: { permission: PERMISSIONS.VIEW_TESTS } },
+          { kind: "link", href: "/biologie/cultures/options", label: "Options de culture", gate: { permission: PERMISSIONS.VIEW_TESTS } },
+        ],
+      },
     ],
   },
 

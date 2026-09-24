@@ -12,6 +12,19 @@ export const PERMISSIONS = {
   DELETE_TESTS: "delete-tests",
   VIEW_CATEGORY_TESTS: "view-category-tests",
 
+  // Biologie clinique (module « biology », V98). La lecture du catalogue
+  // reste sous VIEW_TESTS, les catégories et analyses sous les droits
+  // d'examens ci-dessus.
+  MANAGE_BIOLOGY_PARAMETERS: "manage-biology-parameters",
+  MANAGE_ANTIBIOTICS: "manage-antibiotics",
+  MANAGE_CULTURE_OPTIONS: "manage-culture-options",
+  VIEW_BIOLOGY_RESULTS: "view-biology-results",
+  EDIT_BIOLOGY_RESULTS: "edit-biology-results",
+  /** Validation technique d'une analyse. */
+  VALIDATE_BIOLOGY_RESULTS: "validate-biology-results",
+  /** Validation biologique du compte rendu. */
+  VALIDATE_BIOLOGY_REPORTS: "validate-biology-reports",
+
   // Test Orders / Demandes
   VIEW_TEST_ORDER_ASSIGNMENTS: "view-test-order-assignments",
   MANAGE_TEST_ORDER_ASSIGNMENTS: "manage-test-order-assignments",

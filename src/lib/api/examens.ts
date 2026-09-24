@@ -1,5 +1,5 @@
 import apiClient from "./client";
-import type { Discipline, PageResponse } from "@/types/api";
+import type { BiologyKind, Discipline, PageResponse } from "@/types/api";
 import { DEFAULT_DISCIPLINE, withDiscipline } from "./discipline";
 
 export interface CategoryTest {
@@ -7,6 +7,8 @@ export interface CategoryTest {
   code: string;
   name: string;
   branchId: string;
+  /** Renvoyée par le backend depuis le catalogue de biologie (B3). */
+  discipline?: Discipline;
 }
 
 export interface LabTest {
@@ -17,6 +19,37 @@ export interface LabTest {
   categoryTestName: string;
   status: string;
   branchId: string;
+  code?: string | null;
+  discipline?: Discipline;
+  /** Biologie uniquement : `null` en anatomie pathologique. */
+  biologyKind?: BiologyKind | null;
+  /** Biologie uniquement : type d'échantillon attendu (ex. « Sang total »). */
+  specimenType?: string | null;
+}
+
+/** Charge d'une catégorie. `discipline` n'est lue qu'à la création. */
+export interface CategoryTestRequest {
+  code?: string | null;
+  name: string;
+  /** Absente = `PATHOLOGY` côté backend (formulaires d'anapath inchangés). */
+  discipline?: Discipline;
+}
+
+/**
+ * Charge d'une analyse. Les champs de biologie sont refusés par le backend sur
+ * une analyse d'anatomie pathologique : les écrans d'anapath ne les envoient pas.
+ */
+export interface LabTestRequest {
+  name: string;
+  price: number;
+  categoryTestId: string;
+  status: string;
+  code?: string | null;
+  /** Lue à la création seulement ; absente = `PATHOLOGY`. */
+  discipline?: Discipline;
+  /** Lue à la création seulement (biologie). */
+  biologyKind?: BiologyKind;
+  specimenType?: string | null;
 }
 
 export interface UniteMesure {
@@ -37,9 +70,9 @@ export const categoryTestsApi = {
     apiClient.get<PageResponse<CategoryTest>>("/category-tests", {
       params: withDiscipline(params),
     }),
-  create: (data: { code: string; name: string }) =>
+  create: (data: CategoryTestRequest) =>
     apiClient.post<CategoryTest>("/category-tests", data),
-  update: (id: string, data: { code: string; name: string }) =>
+  update: (id: string, data: CategoryTestRequest) =>
     apiClient.put<CategoryTest>(`/category-tests/${id}`, data),
   delete: (id: string) => apiClient.delete(`/category-tests/${id}`),
 };
@@ -56,16 +89,10 @@ export const labTestsApi = {
     apiClient.get<PageResponse<LabTest>>("/lab-tests", {
       params: withDiscipline(params),
     }),
-  create: (data: {
-    name: string;
-    price: number;
-    categoryTestId: string;
-    status: string;
-  }) => apiClient.post<LabTest>("/lab-tests", data),
-  update: (
-    id: string,
-    data: { name: string; price: number; categoryTestId: string; status: string }
-  ) => apiClient.put<LabTest>(`/lab-tests/${id}`, data),
+  getById: (id: string) => apiClient.get<LabTest>(`/lab-tests/${id}`),
+  create: (data: LabTestRequest) => apiClient.post<LabTest>("/lab-tests", data),
+  update: (id: string, data: LabTestRequest) =>
+    apiClient.put<LabTest>(`/lab-tests/${id}`, data),
   delete: (id: string) => apiClient.delete(`/lab-tests/${id}`),
   findAllSimple: (discipline: Discipline = DEFAULT_DISCIPLINE) =>
     apiClient.get<LabTest[]>("/lab-tests/all", { params: { discipline } }),

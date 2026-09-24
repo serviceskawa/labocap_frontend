@@ -37,3 +37,13 @@ export interface PageParams {
  * rendu — réplique de l'enum backend `com.labo.anapath.common.Discipline`.
  */
 export type Discipline = "PATHOLOGY" | "BIOLOGY";
+
+/**
+ * Nature d'une analyse de biologie — réplique de l'enum backend
+ * `com.labo.anapath.biology.BiologyKind`. Toujours `null` en anatomie
+ * pathologique ; figée à la création.
+ *
+ *   PANEL    fiche de paramètres (NFS, ionogramme…)
+ *   CULTURE  culture bactériologique (options de culture, antibiogramme)
+ */
+export type BiologyKind = "PANEL" | "CULTURE";

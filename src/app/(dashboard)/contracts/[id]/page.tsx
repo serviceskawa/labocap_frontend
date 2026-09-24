@@ -36,7 +36,8 @@ import { FormField } from "@/components/ui/FormField";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { contractsApi, type ContractDetail } from "@/lib/api/contracts";
 import { labTestsApi } from "@/lib/api/examens";
-import type { ApiError } from "@/types/api";
+import { useModules } from "@/hooks/useModules";
+import type { ApiError, Discipline } from "@/types/api";
 import { getApiErrorMessage } from "@/lib/api/errorMessages";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
@@ -73,6 +74,13 @@ export default function ContractDetailPage({
   // Formulaire « Ajouter des examens » (inline, comme dans la vue Laravel)
   const [testId, setTestId] = useState("");
   const [remise, setRemise] = useState("");
+  // Module biologie : les prix négociés peuvent viser une analyse de
+  // biologie. Sans le module, la discipline reste figée sur l'anapath et
+  // l'écran est identique à l'existant.
+  const { has } = useModules();
+  const biologyEnabled = has("biology");
+  const [testDiscipline, setTestDiscipline] = useState<Discipline>("PATHOLOGY");
+  const discipline: Discipline = biologyEnabled ? testDiscipline : "PATHOLOGY";
 
   const [deleteDetail, setDeleteDetail] = useState<ContractDetail | null>(null);
   const [editDetail, setEditDetail] = useState<ContractDetail | null>(null);
@@ -86,10 +94,11 @@ export default function ContractDetailPage({
   });
 
   const { data: examensData } = useQuery({
-    queryKey: ["examens-all"],
+    queryKey: ["examens-all", discipline],
     // 279 examens en base : on charge tout (l'API n'expose pas de recherche
     // serveur ici), sinon les derniers seraient introuvables.
-    queryFn: () => labTestsApi.findAll({ size: 1000 }).then((r) => r.data),
+    queryFn: () =>
+      labTestsApi.findAll({ size: 1000, discipline }).then((r) => r.data),
   });
 
   const examens = examensData?.content ?? [];
@@ -446,6 +455,25 @@ export default function ContractDetailPage({
               autoComplete="off"
               className="grid grid-cols-1 items-end gap-4 md:grid-cols-12"
             >
+              {biologyEnabled && (
+                <div className="md:col-span-12">
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Discipline
+                  </label>
+                  <NativeSelect
+                    className="md:max-w-xs"
+                    value={testDiscipline}
+                    onChange={(e) => {
+                      setTestDiscipline(e.target.value as Discipline);
+                      setTestId("");
+                    }}
+                  >
+                    <option value="PATHOLOGY">Anatomie pathologique</option>
+                    <option value="BIOLOGY">Biologie</option>
+                  </NativeSelect>
+                </div>
+              )}
+
               <div className="md:col-span-4">
                 <label className="mb-1.5 block text-sm font-medium text-gray-700">
                   Examen
