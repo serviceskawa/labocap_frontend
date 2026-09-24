@@ -25,6 +25,7 @@ import { PERMISSIONS } from "@/lib/constants/permissions";
 import { formatCFA, formatDate, nomComplet } from "@/lib/utils";
 import { testOrdersApi, type TestOrder } from "@/lib/api/testOrders";
 import { reportsApi } from "@/lib/api/reports";
+import { openBiologyReportPdf } from "@/lib/api/biologyReports";
 import { typeOrdersApi, type TypeOrder } from "@/lib/api/examens";
 import { usersApi } from "@/lib/api/users";
 import apiClient from "@/lib/api/client";
@@ -132,6 +133,16 @@ function ActionButtons({
     }
   };
 
+  const handlePrintBiology = async () => {
+    if (!order.reportId) return;
+    setDownloading(true);
+    try {
+      await openBiologyReportPdf(order.reportId);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   // Les actions sont assemblées puis passées à `RowActions`, qui décide seul de
   // les poser à plat ou de les replier — le décompte se fait sur ce qui est
   // RÉELLEMENT permis pour cette ligne, pas sur les huit que l'écran déclare.
@@ -199,12 +210,13 @@ function ActionButtons({
     });
   }
 
-  // Biologie : l'impression du compte rendu de résultats arrive avec leur
-  // saisie ; le PDF d'anatomie pathologique n'a pas de sens pour ce bon.
+  // Biologie : le compte rendu de résultats a son propre rendu
+  // (`/biology-reports/{id}/pdf`) ; le PDF d'anatomie pathologique n'a pas de
+  // sens pour ce bon. L'impression provisoire reste sur la feuille de saisie.
   if (
-    !isBiology &&
     order.reportId &&
-    (order.reportStatus === "VALIDATED" || order.reportStatus === "DELIVERED")
+    (order.reportStatus === "VALIDATED" || order.reportStatus === "DELIVERED") &&
+    (!isBiology || can(PERMISSIONS.VIEW_REPORTS))
   ) {
     actions.push({
       label: "Imprimer le compte rendu",
@@ -213,7 +225,7 @@ function ActionButtons({
       ) : (
         <FileDown className="h-3.5 w-3.5" />
       ),
-      onClick: handlePrint,
+      onClick: isBiology ? handlePrintBiology : handlePrint,
       disabled: downloading,
       variant: "secondary",
     });

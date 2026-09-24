@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { LimitedSelect as Select } from "@/components/ui/LimitedSelect";
 import { Button } from "@/components/ui/Button";
-import { Pencil, Trash2, ImagePlus, Eye, FileText, Download, Loader2, FlaskConical } from "lucide-react";
+import { Pencil, Trash2, ImagePlus, Eye, FileText, Download, Loader2, FlaskConical, Printer } from "lucide-react";
 import { toast } from "sonner";
 import type { AxiosError } from "axios";
 import type { ColumnDef } from "@tanstack/react-table";
@@ -28,6 +28,7 @@ import { labTestsApi, type LabTest } from "@/lib/api/examens";
 import type { ApiError, Discipline } from "@/types/api";
 import { getApiErrorMessage } from "@/lib/api/errorMessages";
 import { openDocFile } from "@/lib/api/docs";
+import { openBiologyReportPdf } from "@/lib/api/biologyReports";
 import { SELECT_CONTROL_MIN_HEIGHT } from "@/components/ui/selectStyles";
 import { BIOLOGY_KIND_LABELS } from "@/components/biology/BiologyKindBadge";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -539,6 +540,22 @@ export function TestOrderDetailsView({
           Saisir les résultats
         </Link>
       )}
+      {/* Biologie : le compte rendu validé s'imprime d'ici, comme depuis la
+          liste — l'anatomie pathologique passe par son écran de compte rendu. */}
+      {isBiology &&
+        order.reportId &&
+        (order.reportStatus === "VALIDATED" || order.reportStatus === "DELIVERED") &&
+        can(PERMISSIONS.VIEW_REPORTS) && (
+          <div className="flex justify-end">
+            <Button
+              variant="secondary"
+              icon={<Printer className="h-4 w-4" />}
+              onClick={() => openBiologyReportPdf(order.reportId!)}
+            >
+              Imprimer le compte rendu
+            </Button>
+          </div>
+        )}
       {!isBiology && order.reportId && (
         <Link
           href={`/reports/${order.reportId}`}

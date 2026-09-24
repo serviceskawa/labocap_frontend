@@ -19,10 +19,13 @@ import {
   ChevronRight,
   Settings as SettingsIcon,
   Image as ImageIcon,
+  FlaskConical,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/ui/PageHeader";
 import { NativeSelect } from "@/components/ui/NativeSelect";
+import { FormToggle } from "@/components/ui/FormToggle";
+import { TextInput } from "@/components/ui/TextInput";
 import { CrudModal } from "@/components/common/CrudModal";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { PermissionGate } from "@/components/common/PermissionGate";
@@ -32,6 +35,7 @@ import {
   useTablePagination,
 } from "@/components/common/TablePagination";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useModules } from "@/hooks/useModules";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import { DEFAULT_REPORT_FOOTER } from "@/lib/constants/report";
 import {
@@ -49,6 +53,14 @@ import {
   settingInvoicesApi,
   type SettingInvoice,
 } from "@/lib/api/settingInvoices";
+import {
+  BIOLOGY_SETTING_KEYS,
+  DEFAULT_ANTIBIOGRAM_LABELS,
+  DEFAULT_FLAG_LABELS,
+  parseLabels,
+  serializeLabels,
+} from "@/lib/api/biologyReports";
+import { biologyResultsKeys } from "@/lib/api/biologyResults";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
 // ---------------------------------------------------------------------------
@@ -148,6 +160,30 @@ const SMS_FIELDS: FieldDef[] = [
   },
 ];
 
+// Communication Mobile, module Biologie : texte distinct de celui d'anatomie
+// pathologique, sans repli sur lui côté serveur (il nomme le cabinet
+// d'anatomie pathologique — le reprendre pour un bilan sanguin tromperait le
+// patient). N'apparaît que si le module est activé.
+const SMS_BIOLOGY_FIELD: FieldDef = {
+  key: BIOLOGY_SETTING_KEYS.smsResult,
+  label: "SMS « résultats de biologie disponibles »",
+  type: "textarea",
+  full: true,
+  placeholder:
+    "Envoyé au patient à la validation biologique de ses résultats. Laisser vide pour utiliser le message par défaut.",
+  help: "Envoyé automatiquement au patient dès la validation biologique de son compte rendu (et à chaque nouvelle validation après réouverture). Laisser vide conserve le message par défaut. Au-delà de 160 caractères, l'opérateur facture plusieurs SMS.",
+};
+
+// Onglet Biologie : clés `setting_apps` amorcées par V98. Chargées avec les
+// autres ; leur formulaire (BiologySettingsSection) gère lui-même le format.
+const BIOLOGY_KEYS: string[] = [
+  BIOLOGY_SETTING_KEYS.validationMode,
+  BIOLOGY_SETTING_KEYS.dashboardMode,
+  BIOLOGY_SETTING_KEYS.printProvisional,
+  BIOLOGY_SETTING_KEYS.antibiogramLabels,
+  BIOLOGY_SETTING_KEYS.flagLabels,
+];
+
 // Onglet Compte rendu → sous-onglet « Général » (réplique exacte du formulaire
 // Laravel settings/app/setting #general3 : footer, revue, entête (fichier),
 // préfixe, afficher la signature).
@@ -183,6 +219,8 @@ const ALL_KV_FIELDS = [
   ...EMAIL_FIELDS,
   ...SMS_FIELDS,
   ...REPORT_FIELDS,
+  SMS_BIOLOGY_FIELD,
+  ...BIOLOGY_KEYS.map((key) => ({ key }) as FieldDef),
   { key: "token_payment" } as FieldDef,
   { key: "services" } as FieldDef,
 ];
@@ -198,7 +236,8 @@ type TabKey =
   | "report"
   | "banks"
   | "payment"
-  | "invoice";
+  | "invoice"
+  | "biology";
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "general", label: "Général", icon: <Building2 className="h-4 w-4" /> },
@@ -208,6 +247,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "banks", label: "Banques", icon: <Landmark className="h-4 w-4" /> },
   { key: "payment", label: "Paramètres de paiements", icon: <CreditCard className="h-4 w-4" /> },
   { key: "invoice", label: "Paramètres de factures", icon: <Receipt className="h-4 w-4" /> },
+  { key: "biology", label: "Biologie", icon: <FlaskConical className="h-4 w-4" /> },
 ];
 
 // ===========================================================================
@@ -218,6 +258,9 @@ export default function SettingsPage() {
   const { can } = usePermissions();
   const queryClient = useQueryClient();
   const canManage = can(PERMISSIONS.MANAGE_SETTINGS);
+  const biology = useModules().has("biology");
+  const tabs = biology ? TABS : TABS.filter((t) => t.key !== "biology");
+  const smsFields = biology ? [...SMS_FIELDS, SMS_BIOLOGY_FIELD] : SMS_FIELDS;
 
   const [tab, setTab] = useState<TabKey>("general");
   const [generalSub, setGeneralSub] = useState<"general" | "logos">("general");
@@ -301,7 +344,7 @@ export default function SettingsPage() {
                 </span>
               </div>
               <div className="p-2">
-                {TABS.map((t) => {
+                {tabs.map((t) => {
                   const activeTab = tab === t.key;
                   return (
                     <button
@@ -434,7 +477,7 @@ export default function SettingsPage() {
                 subtitle="Passerelles SMS et notifications vocales/SMS OurVoice."
               >
                 <FieldsGrid
-                  fields={SMS_FIELDS}
+                  fields={smsFields}
                   values={values}
                   onChange={setValue}
                   disabled={!canManage}
@@ -442,7 +485,7 @@ export default function SettingsPage() {
                 <SaveBar
                   show={canManage}
                   pending={saveMutation.isPending}
-                  onSave={() => saveMutation.mutate(SMS_FIELDS.map((f) => f.key))}
+                  onSave={() => saveMutation.mutate(smsFields.map((f) => f.key))}
                 />
               </Card>
             )}
@@ -525,6 +568,16 @@ export default function SettingsPage() {
                 subtitle="Configuration MECeF (IFU, token, activation) appliquée aux factures."
               >
                 <InvoiceSettingsSection canManage={canManage} />
+              </Card>
+            )}
+
+            {/* ---- Biologie (module « biology ») ---- */}
+            {tab === "biology" && biology && (
+              <Card
+                title="Biologie"
+                subtitle="Circuit de validation, impression et libellés des résultats de biologie."
+              >
+                <BiologySettingsSection values={values} canManage={canManage} />
               </Card>
             )}
           </div>
@@ -1327,6 +1380,165 @@ function InvoiceSettingsForm({
           onSave={() => updateMut.mutate()}
         />
       </div>
+    </div>
+  );
+}
+
+// ===========================================================================
+// Biologie (module « biology »)
+// ===========================================================================
+
+/**
+ * Réglages de biologie de la succursale. Stockés dans `setting_apps` au format
+ * lu par le backend (`ReglagesDeBiologie`) :
+ *
+ * - `bio_validation_mode` : `TWO_STEP` | `ONE_STEP` ;
+ * - `bio_dashboard_mode` : `SEPARATE` | `COMBINED` ;
+ * - `bio_print_provisional` : `true` | `false` ;
+ * - `bio_antibiogram_labels` : JSON `{"S":…,"I":…,"R":…}` ;
+ * - `bio_flag_labels` : JSON `{"L":…,"H":…,"LL":…,"HH":…}`.
+ *
+ * Une clé absente affiche la valeur que le backend applique à défaut ; les
+ * libellés sont édités champ par champ puis sérialisés à l'enregistrement
+ * seulement (un JSON réécrit à chaque frappe ne laisserait pas vider un champ).
+ */
+function BiologySettingsSection({
+  values,
+  canManage,
+}: {
+  values: Record<string, string>;
+  canManage: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const K = BIOLOGY_SETTING_KEYS;
+  const [validationMode, setValidationMode] = useState(
+    values[K.validationMode]?.trim().toUpperCase() === "ONE_STEP" ? "ONE_STEP" : "TWO_STEP",
+  );
+  const [dashboardMode, setDashboardMode] = useState(
+    values[K.dashboardMode]?.trim().toUpperCase() === "COMBINED" ? "COMBINED" : "SEPARATE",
+  );
+  const [printProvisional, setPrintProvisional] = useState(
+    !["false", "0", "non", "no"].includes((values[K.printProvisional] ?? "").trim().toLowerCase()),
+  );
+  const [antibiogram, setAntibiogram] = useState(() =>
+    parseLabels(values[K.antibiogramLabels], DEFAULT_ANTIBIOGRAM_LABELS),
+  );
+  const [flags, setFlags] = useState(() => parseLabels(values[K.flagLabels], DEFAULT_FLAG_LABELS));
+
+  const saveMut = useMutation({
+    mutationFn: () => {
+      const entries: [string, string][] = [
+        [K.validationMode, validationMode],
+        [K.dashboardMode, dashboardMode],
+        [K.printProvisional, printProvisional ? "true" : "false"],
+        [K.antibiogramLabels, serializeLabels(antibiogram, DEFAULT_ANTIBIOGRAM_LABELS)],
+        [K.flagLabels, serializeLabels(flags, DEFAULT_FLAG_LABELS)],
+      ];
+      return Promise.all(entries.map(([key, value]) => settingAppsApi.upsert(key, value)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["all-settings"] });
+      // Mode et libellés sont servis avec chaque feuille de saisie.
+      queryClient.invalidateQueries({ queryKey: biologyResultsKeys.all });
+      toast.success("Paramètres de biologie sauvegardés");
+    },
+    onError: () => toast.error("Erreur lors de la sauvegarde"),
+  });
+
+  const labelInputs = <T extends string>(
+    labels: Record<T, string>,
+    defaults: Record<T, string>,
+    onChange: (next: Record<T, string>) => void,
+    idPrefix: string,
+  ) =>
+    (Object.keys(defaults) as T[]).map((k) => (
+      <div key={k} className="flex flex-col gap-1">
+        <label htmlFor={`${idPrefix}-${k}`} className="text-sm font-medium text-gray-700">
+          {k}
+        </label>
+        <TextInput
+          id={`${idPrefix}-${k}`}
+          value={labels[k]}
+          onChange={(e) => onChange({ ...labels, [k]: e.target.value })}
+          placeholder={defaults[k]}
+          disabled={!canManage}
+        />
+      </div>
+    ));
+
+  return (
+    <div className="space-y-8">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="bio-validation-mode" className="text-sm font-medium text-gray-700">
+            Circuit de validation
+          </label>
+          <NativeSelect
+            id="bio-validation-mode"
+            value={validationMode}
+            onChange={(e) => setValidationMode(e.target.value)}
+            disabled={!canManage}
+          >
+            <option value="TWO_STEP">En deux temps : technicien puis biologiste</option>
+            <option value="ONE_STEP">En une étape : biologiste seul</option>
+          </NativeSelect>
+          <p className="text-xs text-gray-500">
+            {validationMode === "TWO_STEP"
+              ? "Chaque analyse est validée techniquement avant la validation biologique du compte rendu."
+              : "Une analyse saisie est prête : le biologiste valide directement le compte rendu."}
+          </p>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="bio-dashboard-mode" className="text-sm font-medium text-gray-700">
+            Tableau de bord
+          </label>
+          <NativeSelect
+            id="bio-dashboard-mode"
+            value={dashboardMode}
+            onChange={(e) => setDashboardMode(e.target.value)}
+            disabled={!canManage}
+          >
+            <option value="SEPARATE">Chiffres séparés par discipline</option>
+            <option value="COMBINED">Chiffres combinés</option>
+          </NativeSelect>
+          <p className="text-xs text-gray-500">
+            Présentation des chiffres d&apos;anatomie pathologique et de biologie sur l&apos;accueil.
+          </p>
+        </div>
+        <div className="sm:col-span-2">
+          <FormToggle
+            id="bio-print-provisional"
+            label="Autoriser l'impression des résultats provisoires"
+            checked={printProvisional}
+            onChange={setPrintProvisional}
+            disabled={!canManage}
+            hint="Un compte rendu non validé s'imprime alors avec la mention « RÉSULTATS PROVISOIRES », sans signature. Désactivé, seul un compte rendu validé s'imprime."
+          />
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-[.9375rem] font-semibold text-gray-900">Libellés de l&apos;antibiogramme</h3>
+        <p className="mt-1 text-xs text-gray-500">
+          Texte affiché à l&apos;écran et sur le compte rendu. La valeur enregistrée reste S, I ou R.
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {labelInputs(antibiogram, DEFAULT_ANTIBIOGRAM_LABELS, setAntibiogram, "bio-atb")}
+        </div>
+      </section>
+
+      <section>
+        <h3 className="text-[.9375rem] font-semibold text-gray-900">Libellés des indicateurs</h3>
+        <p className="mt-1 text-xs text-gray-500">
+          Valeur hors des normes : L = basse, H = haute, LL / HH = sous ou au-delà des limites
+          critiques. Un champ vide reprend le libellé par défaut.
+        </p>
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {labelInputs(flags, DEFAULT_FLAG_LABELS, setFlags, "bio-flag")}
+        </div>
+      </section>
+
+      <SaveBar show={canManage} pending={saveMut.isPending} onSave={() => saveMut.mutate()} />
     </div>
   );
 }

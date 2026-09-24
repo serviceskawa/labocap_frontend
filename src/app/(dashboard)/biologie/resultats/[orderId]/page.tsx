@@ -236,8 +236,12 @@ export default function BiologieResultatsFeuillePage({ params, searchParams }: P
                 Compte rendu validé : les résultats ne se modifient plus.
               </p>
             )}
-            {/* Validation biologique et impression : B6/B7, à venir (F9 partie 2). */}
-            <BiologyReportActions reportId={ws.report?.id ?? null} status={ws.report?.status ?? null} />
+            <BiologyReportActions
+              reportId={ws.report?.id ?? null}
+              status={ws.report?.status ?? null}
+              testOrderId={ws.testOrderId}
+              hasUnsavedChanges={anyDirty}
+            />
           </div>
         </aside>
       </div>
