@@ -6,7 +6,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, Trash2, UserX, UserCheck, Smartphone } from "lucide-react";
+import { Eye, Trash2, UserX, UserCheck, Smartphone, BadgeCheck } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 import type { UseFormReturn } from "react-hook-form";
@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/RowActions";
 import { CrudModal } from "@/components/common/CrudModal";
 import { AccesMobile } from "./AccesMobile";
+import { PerimetreDeValidation } from "./PerimetreDeValidation";
 import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { FormField } from "@/components/ui/FormField";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -105,6 +106,7 @@ export default function UsersPage() {
 
   /// Utilisateur dont on gère l'accès mobile, ou `null` si la fenêtre est fermée.
   const [accesMobile, setAccesMobile] = useState<User | null>(null);
+  const [perimetreValidation, setPerimetreValidation] = useState<User | null>(null);
 
   // Signature (data-URL) capturée depuis le champ fichier de chaque modale.
   const createSignatureRef = useRef<string | undefined>(undefined);
@@ -306,6 +308,16 @@ export default function UsersPage() {
             variant: "secondary",
             onClick: () => setAccesMobile(utilisateur),
           });
+
+          // Séparé lui aussi : décider ce qu'une personne peut valider engage
+          // le contenu médical, là où la fiche ne porte que son état civil et
+          // ses rôles. Les mêler ferait passer ce choix pour une formalité.
+          actions.push({
+            label: "Validation",
+            icon: <BadgeCheck className="h-4 w-4" />,
+            variant: "secondary",
+            onClick: () => setPerimetreValidation(utilisateur),
+          });
         }
 
         if (can(PERMISSIONS.DELETE_USERS)) {
@@ -416,6 +428,14 @@ export default function UsersPage() {
         <AccesMobile
           utilisateur={accesMobile}
           onClose={() => setAccesMobile(null)}
+        />
+      )}
+
+      {/* ---- Types d'examen que ce compte peut valider ---- */}
+      {perimetreValidation && (
+        <PerimetreDeValidation
+          utilisateur={perimetreValidation}
+          onClose={() => setPerimetreValidation(null)}
         />
       )}
     </div>

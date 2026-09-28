@@ -63,6 +63,18 @@ export interface ReportDetail extends Report {
   signatory3Name?: string;
   reviewedById?: string;
   reviewedByName?: string;
+  /**
+   * Qui a posé l'acte de validation, et sous quel métier.
+   *
+   * Distinct des signataires — qui nomment les pathologistes dont la signature
+   * figure au document — et du relecteur. Le métier accompagne le nom parce que
+   * c'est lui qui porte le sens : « validé par Florence Hounnou » ne dit pas au
+   * lecteur si le compte rendu a reçu un jugement médical. Nuls sur les comptes
+   * rendus validés avant l'ouverture de la validation au secrétariat.
+   */
+  validatedById?: string;
+  validatedByName?: string;
+  validatedByRole?: string;
   tagIds?: string[];
   logs: ReportLog[];
   /** Discipline du compte rendu, héritée du bon d'examen. */

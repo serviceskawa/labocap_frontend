@@ -900,6 +900,20 @@ export default function ReportDetailPage({
                 <span className="font-semibold">Avis de relecture :</span>{" "}
                 {report.reviewedByName ?? "Inactif"}
               </p>
+              {/* Qui a validé, et sous quel métier. Le métier n'est pas un
+                  ornement : depuis qu'un secrétaire peut valider certains types
+                  d'examen, « validé par » ne suffit plus à dire si le document
+                  a reçu un jugement médical. Absent des comptes rendus validés
+                  avant cette ouverture — leur trace vit dans le journal. */}
+              {report.validatedByName && (
+                <p>
+                  <span className="font-semibold">Validé par :</span>{" "}
+                  {report.validatedByName}
+                  {report.validatedByRole && (
+                    <span className="text-gray-500"> ({report.validatedByRole})</span>
+                  )}
+                </p>
+              )}
             </div>
           </Card>
 
