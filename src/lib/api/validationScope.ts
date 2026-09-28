@@ -21,4 +21,24 @@ export const validationScopeApi = {
    */
   set: (userId: string, types: string[]) =>
     apiClient.put<string[]>(`/perimetres-de-validation/${userId}`, { types }),
+
+  /**
+   * L'historique des décisions prises sur ce compte.
+   *
+   * Le périmètre courant ne dit rien de ce qui a été accordé puis retiré. Un
+   * compte rendu validé six mois plus tôt ne s'explique que par l'état du
+   * périmètre à ce moment-là.
+   */
+  history: (userId: string) =>
+    apiClient.get<ValidationScopeHistory[]>(
+      `/perimetres-de-validation/${userId}/historique`,
+    ),
 };
+
+/** Une décision : quand, par qui, et ce qui a changé. */
+export interface ValidationScopeHistory {
+  quand: string;
+  accordePar?: string;
+  typesAvant: string;
+  typesApres: string;
+}

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { typeOrdersApi } from "@/lib/api/examens";
 import { validationScopeApi } from "@/lib/api/validationScope";
 import type { User } from "@/lib/api/users";
-import { nomComplet } from "@/lib/utils";
+import { formatDate, nomComplet } from "@/lib/utils";
 
 interface Props {
   utilisateur: User;
@@ -78,11 +78,24 @@ export function PerimetreDeValidation({ utilisateur, onClose }: Props) {
       .sort((a, b) => a.localeCompare(b, "fr"));
   }, [types.data]);
 
+  /**
+   * Les décisions passées. Chargées même quand le périmètre est vide : c'est
+   * justement le cas où l'on veut savoir si un type a été retiré, et quand.
+   */
+  const historique = useQuery({
+    queryKey: ["perimetre-validation-historique", utilisateur.id],
+    queryFn: () => validationScopeApi.history(utilisateur.id).then((r) => r.data),
+    enabled: !sansBorne,
+  });
+
   const enregistrer = useMutation({
     mutationFn: () => validationScopeApi.set(utilisateur.id, coches),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["perimetre-validation", utilisateur.id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["perimetre-validation-historique", utilisateur.id],
       });
       toast.success(
         coches.length
@@ -158,6 +171,32 @@ export function PerimetreDeValidation({ utilisateur, onClose }: Props) {
                 </li>
               ))}
             </ul>
+          )}
+
+          {/* Les décisions passées. Le périmètre courant ne dit rien de ce qui
+              a été accordé puis retiré, et un compte rendu validé six mois plus
+              tôt ne s'explique que par l'état du périmètre à ce moment-là. */}
+          {(historique.data?.length ?? 0) > 0 && (
+            <details className="rounded-lg border border-gray-200">
+              <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-gray-700">
+                Historique des décisions ({historique.data?.length})
+              </summary>
+              <ul className="divide-y divide-gray-100 border-t border-gray-200">
+                {historique.data?.map((ligne, i) => (
+                  <li key={i} className="px-3 py-2 text-sm">
+                    <span className="text-gray-500">{formatDate(ligne.quand)}</span>
+                    <span className="mx-2 text-gray-400">·</span>
+                    <span className="text-gray-900">
+                      {ligne.typesAvant || "aucun type"}
+                    </span>
+                    <span className="mx-2 text-gray-400">→</span>
+                    <span className="font-medium text-gray-900">
+                      {ligne.typesApres || "aucun type"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
         </div>
       )}
