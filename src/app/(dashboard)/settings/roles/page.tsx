@@ -20,6 +20,8 @@ import { FormField } from "@/components/ui/FormField";
 import { IconButton } from "@/components/ui/IconButton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { PERMISSIONS } from "@/lib/constants/permissions";
+import { useModules } from "@/hooks/useModules";
+import { permissionCacheeParModule } from "@/lib/modules";
 import { usersApi, Role, Permission, RoleRequest } from "@/lib/api/users";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
 
@@ -69,7 +71,18 @@ export default function RolesPage() {
   });
 
   const roles: Role[] = rolesData?.content ?? [];
-  const permissions: Permission[] = permissionsData ?? [];
+
+  // Les droits des modules éteints sont retirés de la matrice.
+  //
+  // Les migrations les créent et les attachent aux rôles pour que le module
+  // soit utilisable dès qu'on l'allume ; le serveur les renvoie donc tous.
+  // Les afficher ici montrerait « Valider les comptes-rendus de biologie » à
+  // un laboratoire qui n'en fait pas. Masquer n'est pas retirer : la ligne
+  // reste en base et reprend effet au rallumage.
+  const { modules } = useModules();
+  const permissions: Permission[] = (permissionsData ?? []).filter(
+    (p) => !permissionCacheeParModule(p.slug, modules),
+  );
 
   const createMutation = useMutation({
     mutationFn: (payload: RoleRequest) => usersApi.createRole(payload),

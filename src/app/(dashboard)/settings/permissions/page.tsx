@@ -14,6 +14,8 @@ import { IconButton } from "@/components/ui/IconButton";
 import { NativeSelect } from "@/components/ui/NativeSelect";
 import { FormField } from "@/components/ui/FormField";
 import { usersApi, Permission } from "@/lib/api/users";
+import { useModules } from "@/hooks/useModules";
+import { permissionCacheeParModule } from "@/lib/modules";
 import { PERMISSIONS } from "@/lib/constants/permissions";
 import type { ApiError } from "@/types/api";
 import { INPUT_CLASS as inputClass } from "@/lib/ui/inputClass";
@@ -59,10 +61,17 @@ export default function PermissionsPage() {
   const [editing, setEditing] = useState<Permission | null>(null);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
-  const { data: permissions = [], isLoading } = useQuery({
+  // Même filtre que la matrice des rôles : un module éteint ne montre pas ses
+  // droits. Le catalogue des permissions est le second endroit où ils
+  // affleuraient, et l'oublier ici aurait suffi à rendre l'autre inutile.
+  const { modules } = useModules();
+  const { data: toutesLesPermissions = [], isLoading } = useQuery({
     queryKey: ["permissions"],
     queryFn: () => usersApi.getAllPermissions().then((r) => r.data),
   });
+  const permissions = (toutesLesPermissions as Permission[]).filter(
+    (p) => !permissionCacheeParModule(p.slug, modules),
+  );
 
   // Ressources existantes (dérivées des slugs) pour alimenter le select.
   const resourceOptions = useMemo(() => {
