@@ -59,6 +59,16 @@ export interface TestOrder {
    */
   assignedUserName?: string;
   option?: boolean;
+  /**
+   * L'établissement à facturer à la place du patient.
+   *
+   * Nuls, c'est le patient qui paie — le cas ordinaire. Saisie libre : le
+   * laboratoire facture des cliniques qu'il ne reverra pas, et leur créer une
+   * fiche à chacune encombrerait un référentiel pour un seul examen.
+   */
+  factureANom?: string | null;
+  factureAAdresse?: string | null;
+  factureAIfu?: string | null;
   details: DetailTestOrderDto[];
   branchId: string;
   createdAt: string;
@@ -99,6 +109,9 @@ export interface TestOrderRequest {
   testAffiliate?: string;
   isUrgent?: boolean;
   option?: boolean;
+  factureANom?: string | null;
+  factureAAdresse?: string | null;
+  factureAIfu?: string | null;
   assignedToUserId?: string;
   details?: DetailTestOrderRequestDto[];
 }
