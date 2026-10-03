@@ -32,6 +32,8 @@ export const PERMISSIONS = {
   // Distincte de la validation, qui engage un diagnostic.
   DELIVER_REPORTS: "deliver-reports",
   SIGN_REPORTS: "sign-reports",
+  /** Versions antérieures d'un compte rendu signé : lecture seule, droit distinct. */
+  VIEW_REPORT_HISTORY: "view-report-history",
 
   // Macroscopy
   VIEW_MACRO: "view-macro",
