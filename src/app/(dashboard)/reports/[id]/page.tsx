@@ -703,9 +703,9 @@ export default function ReportDetailPage({
                 {(galleryImages ?? []).map((img) => (
                   <AuthThumbnail
                     key={img.index}
-                    filename={img.filename}
+                    fichier={{ fileId: img.fileId, path: img.filename }}
                     alt={`Image ${img.index + 1}`}
-                    onClick={() => openDocFile(img.filename)}
+                    onClick={() => openDocFile({ fileId: img.fileId, path: img.filename })}
                   />
                 ))}
               </div>

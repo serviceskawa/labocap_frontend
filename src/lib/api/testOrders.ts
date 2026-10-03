@@ -19,6 +19,8 @@ export interface ImageDto {
   index: number;
   filename: string;
   url: string;
+  /** Identifiant du fichier pour `GET /files/{id}` (cf. src/lib/fichiers.ts). */
+  fileId?: string;
 }
 
 // DiscountDto retourné par le backend
@@ -77,6 +79,7 @@ export interface TestOrder {
   reportIsDelivered?: boolean;
   invoiceId?: string;
   archive?: string;            // chemin fichier joint
+  archiveFileId?: string;      // identifiant du fichier joint (GET /files/{id})
   testAffiliate?: string;      // référence de l'examen (examen de référence Immuno)
 }
 
