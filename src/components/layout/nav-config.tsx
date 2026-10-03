@@ -21,6 +21,7 @@ import {
   FlaskConical,
   Syringe,
   BarChart3,
+  ScrollText,
 } from "lucide-react";
 import { PERMISSIONS, type Permission } from "@/lib/constants/permissions";
 import type { AppModule } from "@/lib/modules";
@@ -342,6 +343,15 @@ export const NAV: NavSection[] = [
           { kind: "link", href: "/settings/roles", label: "Rôles", gate: { permission: PERMISSIONS.VIEW_ROLES } },
           { kind: "link", href: "/settings/users", label: "Tous les utilisateurs", gate: { permission: PERMISSIONS.VIEW_USERS } },
         ],
+      },
+
+      // Journal des consultations (lecture seule)
+      {
+        kind: "link",
+        href: "/settings/journal-acces",
+        label: "Journal d'accès",
+        icon: <ScrollText className="w-5 h-5" />,
+        gate: { permission: PERMISSIONS.VIEW_AUDIT },
       },
 
       // Paramètres
