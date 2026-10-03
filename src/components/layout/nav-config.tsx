@@ -93,7 +93,13 @@ export const NAV: NavSection[] = [
   {
     label: "TABLEAU DE BORD",
     items: [
-      { kind: "link", href: "/home", label: "Tableau de bord", icon: <Home className="w-5 h-5" /> },
+      {
+        kind: "link",
+        href: "/home",
+        label: "Tableau de bord",
+        icon: <Home className="w-5 h-5" />,
+        gate: { permission: PERMISSIONS.VIEW_DASHBOARD },
+      },
       // Analyses sorties du tableau de bord : même permission, rythme de
       // consultation différent (hebdomadaire plutôt que quotidien).
       {

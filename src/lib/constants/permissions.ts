@@ -145,6 +145,10 @@ export const PERMISSIONS = {
   MANAGE_TIMEOFF: "view-employee-timeoffs",
 
   // Dashboard (rôle-based views)
+  /** Toutes les routes `/dashboard/**` : sans elle, l'API répond 403. */
+  VIEW_DASHBOARD: "view-dashboard",
+  /** Chiffre d'affaires et état des factures (`/dashboard/revenue`, `/dashboard/invoice-status`). */
+  VIEW_DASHBOARD_FINANCE: "view-dashboard-finance",
   VIEW_ADMIN_DASHBOARD: "view-admin-dashboard",
   VIEW_SECRETARIAT_DASHBOARD: "view-secretariat-dashboard",
   VIEW_PATHOLOGIST_DASHBOARD: "view-pathologist-dashboard",

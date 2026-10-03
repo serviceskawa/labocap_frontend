@@ -594,7 +594,7 @@ export default function TestOrderEditPage({ params }: EditPageProps) {
               {order?.archive && (
                 <button
                   type="button"
-                  onClick={() => openDocFile(order.archive!)}
+                  onClick={() => openDocFile({ fileId: order.archiveFileId, path: order.archive })}
                   className="mb-1 inline-flex w-fit items-center gap-1 text-xs font-medium text-blue-600 hover:underline"
                 >
                   Pièce jointe actuelle — ouvrir
