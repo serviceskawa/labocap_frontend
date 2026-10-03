@@ -182,6 +182,8 @@ export const PERMISSIONS = {
   EDIT_ROLES: "edit-roles",
   DELETE_ROLES: "delete-roles",
   MANAGE_PERMISSIONS: "manage-permissions",
+  // Journal des consultations : qui a lu, téléchargé ou imprimé quoi.
+  VIEW_AUDIT: "view-audit",
 
   // Consultations
   VIEW_CONSULTATIONS: "view-consultations",
